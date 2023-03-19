@@ -3,7 +3,8 @@ const axios = require('axios');
 const dotenv = require('dotenv');
 const { createClient } = require('@supabase/supabase-js');
 const { Configuration, OpenAIApi } = require("openai");
-const {TwitterApi} = require('twitter-api-v2')
+const { TwitterApi } = require('twitter-api-v2')
+const chance = require('chance').Chance();
 
 dotenv.config();
 
@@ -17,8 +18,6 @@ const twitterClient = new TwitterApi(
     accessSecret: process.env.TWITTER_ACCESS_TOKEN_SECRET,
   }
 );
-
-// const appOnlyClientFromConsumer = await twitterClient.appLogin();
 
 
 const client = new Client({
@@ -41,12 +40,58 @@ const configuration = new Configuration({
 });
 const openai = new OpenAIApi(configuration);
 
-async function getUserMemory(userId) {
+// This is the main function to handle responses and call the correct functions for different functionality
+client.on('messageCreate', async function (message) {
+  try {
+    const botMentioned = message.mentions.has(client.user);
+
+    if (!message.author.bot && botMentioned) {
+      // send "bot is typing" to channel
+      message.channel.sendTyping();
+
+      console.log(message.content);
+      let prompt = message.content;
+
+      // if the prompt contains @coachartive then remove it from the prompt
+      if (prompt.includes('@coachartie')) {
+        prompt = prompt.replace('@coachartie', '');
+      }
+
+      let { response, rememberMessage } = await generateResponse(prompt, message.author);
+
+      splitAndSendMessage(response, message);
+
+      // Save the message to the database
+      storeUserMessage(message.author.username, message.content);
+
+      // Check for details to remember
+
+      // if (rememberMessage.toLocaleLowerCase() !== 'no') {
+      if (!isRememberResponseFalsy(rememberMessage)) {
+        // Log memories to channel
+        // message.channel.send(`🧠 Remembering... ${rememberMessage}`);
+        console.log(`🧠 Remembering... ${rememberMessage}`);
+
+        // Save the memory to the database
+        storeUserMemory(message.author.username, rememberMessage);
+      }
+
+      // evaluate the exchange and generate a tweet
+      evaluateAndTweet(prompt, response.content, message.author, message);
+    }
+
+  } catch (error) {
+    console.log(error);
+  }
+});
+
+// Get all memories for a user
+async function getUserMemory(userId, limit = 5) {
   const { data, error } = await supabase
     .from('storage')
     .select('*')
     // limit to the last 50 memories
-    .limit(40)
+    .limit(limit)
     .eq('user_id', userId);
 
   if (error) {
@@ -57,6 +102,43 @@ async function getUserMemory(userId) {
   return data;
 }
 
+// Get all memories for a search term
+async function getSearchTermMemories(searchTerm, limit = 40) {
+  const { data, error } = await supabase
+    .from('storage')
+    .select('*')
+    // limit to the last 50 memories
+    .limit(limit)
+    .ilike('value', `%${searchTerm}%`);
+
+  if (error) {
+    console.error('Error fetching user memory:', error);
+    return null;
+  }
+
+  return data;
+}
+
+// Get message history for a user
+async function getUserMessageHistory(userId, limit = 5) {
+  const { data, error } = await supabase
+    .from('messages')
+    .select('*')
+    .limit(limit)
+    // sort so we get the most recent messages first
+    .order('created_at', { ascending: false })
+    .eq('user_id', userId);
+
+  if (error) {
+    console.error('Error fetching user memory:', error);
+    return null;
+  }
+
+  return data;
+}
+
+
+// Store a memory for a user
 async function storeUserMemory(userId, value) {
   const { data, error } = await supabase
     .from('storage')
@@ -72,6 +154,134 @@ async function storeUserMemory(userId, value) {
   }
 }
 
+// Store a message from a user
+async function storeUserMessage(userId, value) {
+  const { data, error } = await supabase
+    .from('messages')
+    .insert([
+      {
+        user_id: userId,
+        value,
+      },
+    ]);
+
+  if (error) {
+    console.error('Error storing user message:', error);
+  }
+}
+
+// Get a random N number of memories
+async function getRandomMemories(userId, numberOfMemories) {
+  const memories = await getUserMemory(userId);
+
+  if (memories) {
+    const randomMemories = chance.pickset(memories, numberOfMemories);
+    return randomMemories.map(memory => memory.value);
+  }
+
+  return null;
+}
+
+function splitAndSendMessage(message, messageObject) {
+  // refactor so that if the message is longer than 2000, it will send multiple messages
+  if (message.length < 2000) {
+    messageObject.channel.send(message);
+  }
+  else {
+    let responseArray = message.content.split(" ");
+    let responseString = "";
+    for (let i = 0; i < responseArray.length; i++) {
+      if (responseString.length + responseArray[i].length < 2000) {
+        responseString += responseArray[i] + " ";
+      }
+      else {
+        messageObject.channel.send(responseString);
+        responseString = responseArray[i] + " ";
+      }
+    }
+    messageObject.channel.send(responseString);
+  }
+}
+
+// Given a user message, generate a list of 3 search terms to query memories related to the user's message
+async function userMessageToSearchTerms(message) {
+  // randomly pick 3 words
+  // const messageArray = message.split(' ');
+  // const searchTerms = chance.pickset(messageArray, 3);
+
+
+  // use a chatgpt completion to generate 3 search terms
+  // instead of chat, we will just use davinci-003
+  const searchTerms = await openai.createCompletion({
+    model: "text-curie-001",
+    prompt: `User: ${message}\n\nGiven the user message, can you identify 0-3 search terms related to the message? Use small, simple words.\n-`,
+    temperature: 0.18,
+    max_tokens: 18
+  });
+
+  /* the completions look like this:
+  - "Mob Programming"
+  - "Programming"
+  - "Code"
+
+  so we will need to split the string and remove the quotes
+  */
+
+  const searchTermsArray = searchTerms.data.choices[0].text.split('\n');
+
+  // remove the quotes
+  const cleanedSearchTerms = searchTermsArray.map(term => term.replace(/"/g, ''));
+
+  console.log('🔎 discovered search terms: ', cleanedSearchTerms);
+
+  return cleanedSearchTerms;
+}
+
+// Interpret the response when we ask the robot "should we remember this?"
+
+function isRememberResponseFalsy(response) {
+  const lowerCaseResponse = response.toLocaleLowerCase();
+
+  // does the string contain 'no'? 
+  if (lowerCaseResponse.includes('no')) {
+    return true;
+  }
+
+  // does the string contain 'no crucial' or 'no important'?
+  if (lowerCaseResponse.includes('no crucial') || lowerCaseResponse.includes('no important')) {
+    return true;
+  }
+}
+
+// Given a message, return the last 5 memories and the last 5 messages
+async function assembleMemory(message, user) {
+  const memories = await getUserMemory(user.username, 5);
+
+  // get the last 5 messages
+  const messages = await getUserMessageHistory(user.username);
+
+  // Search for 5 messages with search terms from the user message
+  const searchTerms = await userMessageToSearchTerms(message.content);
+
+  // do search for getSearchTermMemories(searchTerm) 
+  // for each of the search terms
+  const searchTermMemories = await Promise.all(searchTerms.map(searchTerm => getSearchTermMemories(searchTerm, 5)));
+
+  console.log('🔎 I found these memories related to the search terms ', searchTermMemories);
+
+  // flatten the array of search memory arrays into a single array
+  const flattenedSearchTermMemories = searchTermMemories.flat();
+
+  // concat everything and return it
+  // const memory = lastFiveMemories.concat(messages, flattenedSearchTermMemories);
+  // Take the memories, messages, and search term memories and put them in a single array
+  const memory = memories.concat(messages, flattenedSearchTermMemories);
+
+
+
+  return memory;
+}
+
 
 // Create a function that we will call randomly
 // It will evaluate the content of an exchange between a user and the robot
@@ -79,7 +289,7 @@ async function storeUserMemory(userId, value) {
 // if it is cool enough to tweet, it sends a message to the channel asking if it should tweet it
 // and if the user says yes, it tweets it
 async function evaluateAndTweet(prompt, response, user, message) {
-  console.log('🤖 Evaluating exchange...')
+  console.log('🤖 Evaluating exchange to determine tweet...')
   // Send the prompt and response to gpt3.5
 
   // console.log stringified versions of all the args
@@ -92,7 +302,7 @@ async function evaluateAndTweet(prompt, response, user, message) {
     model: "gpt-3.5-turbo",
     max_tokens: 10,
     temperature: 0.1,
-    messages: [      
+    messages: [
       {
         role: "system",
         content: "You are Coach Artie's expert social media manager, specializing in accurately assessing the interest level of conversations. Your task is to evaluate exchanges in the studio's discord and decide if they are engaging enough to tweet. Given an exchange of messages between a user and an assistant, use your deep understanding of what makes a conversation interesting, relevant, and timely to provide a score on a scale from 1 to 100. A score of 1 indicates a dull or irrelevant exchange, while a 100 indicates a conversation that is guaranteed to go viral and attract wide attention. Base your evaluation on factors such as the uniqueness of the topic, the quality of responses, humor or entertainment value, and relevance to the target audience."
@@ -104,7 +314,7 @@ async function evaluateAndTweet(prompt, response, user, message) {
       {
         role: "assistant",
         content: '50',
-      },      
+      },
       {
         role: "user",
         content: prompt,
@@ -127,126 +337,132 @@ async function evaluateAndTweet(prompt, response, user, message) {
   // get the content out of the message
   tweetEvaluation = tweetEvaluation.content
 
-
-
-  // // If the evaluation is multiple lines, take the first line
-  // if (tweetEvaluation.includes('\n')) {
-  //   tweetEvaluation = tweetEvaluation.content.split('\n')[0]
-  // }
-
-  // // If the first line has any characters besides numbers, remove them
-  // if (tweetEvaluation.match(/[^0-9]/)) {
-  //   tweetEvaluation = tweetEvaluation.replace(/[^0-9]/g, '')
-  // }
-
-
-  // console.log('\n\n🤖 Tweet evaluation:', tweetEvaluation, '\n\n')
-
   // let tweetEvaluation = 50
 
   // If the score is high enough, tweet it
   if (+tweetEvaluation > 50) {
     console.log('🤖 I think this exchange is cool enough to tweet. Let me ask...')
-    // Send a message to the channel asking if it should tweet it
-    // and if the user says yes, it tweets it
-    // const tweetMessage = await client.channels.cache.get('CHANNEL_ID').send(`@everyone I think this exchange is cool enough to tweet. Should I tweet it? ${prompt} ${tweetEvaluation}`);
-    // this gives an error: TypeError: Cannot read properties of undefined (reading 'send')
-    // because the client is not ready yet
-    // so we need to wait for the client to be ready
 
+    // set the time to collect reactions
     const collectionTimeMs = 10000
 
 
+    // Use openAI to write a message to the channel asking for permission to tweet the exchange
+    const tweetRequestCompletion = await openai.createChatCompletion({
+      model: "gpt-3.5-turbo",
+      max_tokens: 300,
+      temperature: 1,
+      messages: [
+        {
+          role: "system",
+          content: `You are Coach Artie, a helpful AI coach for the studio. In every message, remind the user that exchange was rated *${tweetEvaluation}/100 and users have ${collectionTimeMs / 1000} seconds to approve.`
+        },
+        // write a user prompt that will inspire the assistant to respond with a message asking if the exchange should be tweeted
+        {
+          role: "user",
+          content: "tweet request"
+        },
+        {
+          role: "assistant",
+          content: `Hey party people, I think this exchange was cool (**${tweetEvaluation}** / 100) enough to tweet. Should I tweet it? If so, add a 🐦 reaction within ${collectionTimeMs / 1000} seconds to approve.`
+        },
+        {
+          role: "user",
+          content: "tweet request"
+        },
+        {
+          role: "assistant",
+          content: `I like this tweet!  (It scores ${tweetEvaluation}/100 on my Cool-o-Meter!) Can I tweet it please? If so, add a 🐦 reaction within ${collectionTimeMs / 1000} seconds to approve.`
+        },
+        {
+          role: "user",
+          content: "tweet request"
+        },
+      ],
+    });
 
-    // send message to the channel
-    message.channel.send(`Hey party people, I think this exchange was cool (**${tweetEvaluation}** / 100) enough to tweet. Should I tweet it? If so, add a 🐦 reaction within ${collectionTimeMs/1000} seconds to approve.`).then((tweetQMsg) => {
-      // add reactions to the message
-      // message.react('👍')
-      // message.react('👎')
-      // add twitter emoji reaction
-      tweetQMsg.react('🐦')
+    // get the content out of the message
+    let tweetRequest = tweetRequestCompletion.data.choices[0].message.content
 
-      // Create a filter for reactions to the message
-      const filter = (reaction, user) => {
-        // return ['🐦'].includes(reaction.emoji.name) && user.id === message.author.id;
-        return true
-      }
+    // send the tweet request to the channel
+    message.channel.send(tweetRequest)
+      .then((tweetQMsg) => {
+        // add twitter emoji reaction so users don't have to search for it
+        tweetQMsg.react('🐦')
 
-
-      // create a reaction collector
-      const collector = tweetQMsg.createReactionCollector(filter, { time: collectionTimeMs });
-
-      collector.on('collect', async (reaction, user) => {
-
-        // If the user who did the reaction is a bot, ignore it
-        if (user.bot) return
-
-        // Send a message to the channel with the JSON of the reaction
-        console.log('🤖 Someone reacted to the message!')
-
-        message.channel.send(`${user} approved the tweet! Tweeting...`)
-
-        // Compose a tweet and tweet it 
-        const tweetText = await composeTweet(prompt, response, user)
-
-        message.channel.send(`🕊️ Tweeting: ${tweetText}`)
-
-        // Tweet it out and then send a link to the tweet to the channel
-
-        try {
-          const twitterResponse = tweet(tweetText).then((twitterResponse) => {
-            console.log('twitter tweet response', twitterResponse)
-            // get the link to the tweet
-
-            // send the stringified twitter response to the channel
-            // message.channel.send(`🐦 Twitter response: 
-            // \`\`\`${JSON.stringify(twitterResponse)}
-            // \`\`\`
-            // `)
-
-            // tell the channel that this is where we would tweet the URL if Elon Musk wasn't a huge piece of shit
-            message.channel.send(`This is where I would drop in the URL for the tweet if Elon Musk wasn't a huge piece of human shit.`)
-
-            // const tweetLink = `https://twitter.com/ai_CoachArtie/status/${twitterResponse.data.id_str}`
-
-            // send the link to the tweet to the channel
-            // message.channel.send(tweetLink)
-          })
-        } catch (error) {
-          console.log('🐦 Twitter error:', error)
-
-          // send the error to the channel
-          message.channel.send(`🐦 Twitter error: ${error}`)
+        // Create a filter for reactions to the message
+        const filter = (reaction, user) => {
+          // We could filter to certain emojis and certain users
+          // return ['🐦'].includes(reaction.emoji.name) && user.username === message.author.username;
+          return true
         }
+        // create a reaction collector
+        const collector = tweetQMsg.createReactionCollector(filter, { time: collectionTimeMs });
 
+        // When we see a new reaction...
+        collector.on('collect', async (reaction, user) => {
+          // If the user who did the reaction is a bot, ignore it
+          if (user.bot) return
 
+          // console.log('🤖 Someone reacted to the message!')
+          message.channel.send(`${user} approved the tweet! Tweeting...`)
+
+          // Compose a tweet and tweet it 
+          const tweetText = await composeTweet(prompt, response, user)
+
+          message.channel.send(`🕊️ Tweeting: ${tweetText}`)
+
+          // Tweet it out and then send a link to the tweet to the channel
+          try {
+            const twitterResponse = tweet(tweetText).then((twitterResponse) => {
+              console.log('twitter tweet response', twitterResponse)
+              // get the link to the tweet
+
+              // send the stringified twitter response to the channel
+              // message.channel.send(`🐦 Twitter response: 
+              // \`\`\`${JSON.stringify(twitterResponse)}
+              // \`\`\`
+              // `)
+
+              // tell the channel that this is where we would tweet the URL if Elon Musk wasn't a huge piece of shit
+              message.channel.send(`This is where I would drop in the URL for the tweet if Elon Musk wasn't a huge piece of human shit.`)
+            })
+          } catch (error) {
+            console.log('🐦 Twitter error:', error)
+
+            // send the error to the channel
+            message.channel.send(`🐦 Twitter error: ${error}`)
+          }
+        })
+
+        // collector.on('end', collected => {
+        //   console.log(`Collected ${collected.size} reactions`);
+        //   // Send a message to the channel with the JSON of the reaction
+        //   message.channel.send(`Collected ${collected.size} reactions`)
+        // })
       })
-
-      // collector.on('end', collected => {
-      //   console.log(`Collected ${collected.size} reactions`);
-      //   // Send a message to the channel with the JSON of the reaction
-      //   message.channel.send(`Collected ${collected.size} reactions`)
-      // })
-    })
   }
 }
 
+
+// use twitterClient to tweet and return the URL of the tweet
 async function tweet(tweetText) {
-  // use twitterClient to tweet and return the URL of the tweet
   try {
-  return await twitterClient.v2.tweet(tweetText)
-  // this returns error 401 unauthorized
+    return await twitterClient.v2.tweet(tweetText)
+    // this returns error 401 unauthorized
   } catch (error) {
     console.log('🐦 Twitter error:', error)
     return error
   }
 }
 
-// Create a function to compose a tweet based on an exchange
+
+
+// Compose a tweet based on an exchange between a user and an assistant
 async function composeTweet(prompt, response, user) {
   console.log('✍️ Composing tweet...')
 
-  const memory = await getUserMemory(user.tag);
+  const memory = await getUserMemory(user);
 
   const importantMemories = memory.filter(mem => {
 
@@ -308,15 +524,14 @@ async function composeTweet(prompt, response, user) {
   return tweet;
 }
 
-
-
-
-
-
-
+// Generate a response from the assistant
 async function generateResponse(prompt, user) {
   // Retrieve user memory from Supabase
-  const memory = await getUserMemory(user.tag);
+  //const memory = await getUserMemory(user.username);
+
+  const memory = await assembleMemory(prompt, user)
+
+  console.log('memory', memory)
 
   try {
     const completion = await openai.createChatCompletion({
@@ -342,14 +557,11 @@ async function generateResponse(prompt, user) {
       ],
     });
 
-    // We have to slice to 2000 because that is the max length of a message
     const response = completion.data.choices[0].message
-
-    //
 
     const rememberCompletion = await openai.createChatCompletion({
       model: "gpt-3.5-turbo",
-      max_tokens: 400,
+      max_tokens: 100,
       messages: [
         {
           role: "system",
@@ -357,7 +569,7 @@ async function generateResponse(prompt, user) {
         },
         {
           role: "system",
-          content: `In the following dialogue between you (Coach Artie) and user ${user.tag} identify any key details to remember forever. Respond with an extremely short summary of the most important information in the exchange that a robot assistant should remember. You MUST also remember the user ID, and include that in your memory. Use that ID instead of "User" in your memory. Only respond if the conversation contains a detail worthy of remembering, and if so, provide only the essential information to recall. If nothing should be remembered, simply respond 'no'. If the memory is extremely imporant, prepend 'Remember forever:'.`,
+          content: `In the following dialogue between you (Coach Artie) and a studio member (${user.username}) identify any key details to remember forever. Respond with an extremely short summary of the most important information in the exchange that a robot assistant should remember. You MUST also remember the user's name in the memory. Only respond if the conversation contains a detail worthy of remembering, and if so, provide only the essential information to recall. If nothing should be remembered, simply respond 'no'. If the memory is extremely imporant to remember, prepend 'Remember forever:'.`,
         },
         {
           role: "user",
@@ -376,10 +588,11 @@ async function generateResponse(prompt, user) {
 
     if (rememberMessage.toLocaleLowerCase() !== 'no' && rememberMessage.toLocaleLowerCase() !== 'There are no crucial details to remember from this message.') {
       // if the remember message contains 'no crucial details', don't store it
+      // the robot says this a lot, I'm not sure why this specific phrase exactly
       if (rememberMessage.toLocaleLowerCase().includes('no crucial details')) {
         console.log('no crucial details to remember here');
       } else {
-        storeUserMemory(user.tag, rememberMessage);
+        storeUserMemory(user.username, rememberMessage);
       }
     }
 
@@ -391,13 +604,19 @@ async function generateResponse(prompt, user) {
 }
 
 client.once(Events.ClientReady, c => {
-  console.log(`Ready! Logged in as ${c.user.tag}`);
+  // Log when we are logged in
+  console.log(`⭐️ Ready! Logged in as ${c.user.username}`);
 });
 
 client.on(Events.InteractionCreate, interaction => {
+  // Log every interaction we see
   console.log(interaction);
 });
 
+// An async function to send a message to a channel
+// for the entire duration of the program
+// This is used to send a typing indicator
+// to the discord channel
 async function sendTypingIndication(channel) {
   while (true) {
     channel.sendTyping();
@@ -405,59 +624,5 @@ async function sendTypingIndication(channel) {
   }
 }
 
-
-client.on('messageCreate', async function (message) {
-  try {
-    const botMentioned = message.mentions.has(client.user);
-
-    if (!message.author.bot && botMentioned) {
-
-      // send "bot is typing" to channel
-      message.channel.sendTyping();
-
-      console.log(message.content);
-      let prompt = message.content;
-
-      // if the prompt contains @coachartive then remove it from the prompt
-      if (prompt.includes('@coachartie')) {
-        prompt = prompt.replace('@coachartie', '');
-      }
-
-      let { response, rememberMessage } = await generateResponse(prompt, message.author);
-
-      // refactor so that if the message is longer than 2000, it will send multiple messages
-      if (response.length < 2000) {
-        message.channel.send(response);
-      }
-      else {
-        let responseArray = response.content.split(" ");
-        let responseString = "";
-        for (let i = 0; i < responseArray.length; i++) {
-          if (responseString.length + responseArray[i].length < 2000) {
-            responseString += responseArray[i] + " ";
-          }
-          else {
-            message.channel.send(responseString);
-            responseString = responseArray[i] + " ";
-          }
-        }
-        message.channel.send(responseString);
-      }
-      // Check for details to remember
-
-      if (rememberMessage.toLocaleLowerCase() !== 'no') {
-        // Log memories to channel
-        // message.channel.send(`🧠 Remembering... ${rememberMessage}`);
-      }
-
-      // evaluate the exchange and generate a tweet
-      evaluateAndTweet(prompt, response.content, message.author, message);
-
-
-    }
-  } catch (error) {
-    console.log(error);
-  }
-});
 
 client.login(process.env.DISCORD_BOT_TOKEN);
