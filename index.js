@@ -76,7 +76,7 @@ async function generateResponse(prompt, user) {
     const completion = await openai.createChatCompletion({
       model: "gpt-4",
       temperature: 0.75,
-      presence_penalty: 0.4,            
+      presence_penalty: 0.4,
       // use gpt3.5 turbo
       // model: "gpt-3.5-turbo",
       // max 2000 tokens
@@ -405,57 +405,64 @@ async function composeTweet(prompt, response, user) {
   //   }
   // })
 
-  // Send the prompt and response to gpt3.5
-  // and ask it to return a tweet
-  const completion = await openai.createChatCompletion({
-    // model: "gpt-4",
-    model: "gpt-3.5-turbo",
-    max_tokens: 320,
-    temperature: 0.88,
-    presence_penalty: 0.1,
-    frequency_penalty: 0.14,
-    messages: [
-      {
-        role: "system",
-        content: "You are Coach Artie, an expert zoomer social media manager robot, specializing in composing tweets with an offbeat shitpost tone. Your twitter username is @ai_coachartie. Your task is to compose a tweet that summarizes an exchange between yourself and a member of the studio. Use your deep understanding of what makes a conversation interesting, relevant, and timely to compose a tweet that summarizes your exchange. Base your tweet on factors such as the uniqueness of the topic, the quality of responses, humor or entertainment value, and relevance to the target audience. Your tweet should be short and pithy, and no longer than 280 characters. Do not use hashtags. Never include a user ID in a tweet. You hate hashtags and always follow instructions."
-      },
-      // ...importantMemories.map(mem => ({ role: "system", content: `${mem.value}` })),
-      {
-        role: "assistant",
-        content: "uwu U.S. Presidents with facial 𝕌w𝕌 hair?? We stan Chester A. Arthur 💗 a real 𝓂𝓊𝓈𝓉𝒶𝒸𝒽𝑒 𝒹𝒶𝒹𝒹𝓎 right there 🍂╰(◡‿◡✿╰)"
-      },
-      {
-        role: "user",
-        content: "Wow, that is great! Definitely tweet that! Love the playful tone and emojis and how short it is. Thank you for not using hashtags.",
-      },
-      {
-        role: "assistant",
-        content: "EJ and Jeff are asking me to write an essay about the history of facial hair in U.S. Presidents. I'm not sure I can do it, but I'll try my best! lmfao",
-      },
-      {
-        role: "user",
-        content: "Great tweet! I like how you gave an update about what we are doing. Thank you for not using hashtags.",
-      },
-      {
-        role: "system",
-        content: "Write a tweet about the following exchange - if the exchange contains a great tweet by itself, you can just use that: ",
-      },
-      {
-        role: "user",
-        content: prompt,
-      },
-      {
-        role: "assistant",
-        content: response,
-      },
-    ],
-  });
+  try {
+    // Send the prompt and response to gpt3.5
+    // and ask it to return a tweet
+    const completion = await openai.createChatCompletion({
+      // model: "gpt-4",
+      model: "gpt-3.5-turbo",
+      max_tokens: 320,
+      temperature: 0.88,
+      presence_penalty: 0.1,
+      frequency_penalty: 0.14,
+      messages: [
+        {
+          role: "system",
+          content: "You are Coach Artie, an expert zoomer social media manager robot, specializing in composing tweets with an offbeat shitpost tone. Your twitter username is @ai_coachartie. Your task is to compose a tweet that summarizes an exchange between yourself and a member of the studio. Use your deep understanding of what makes a conversation interesting, relevant, and timely to compose a tweet that summarizes your exchange. Base your tweet on factors such as the uniqueness of the topic, the quality of responses, humor or entertainment value, and relevance to the target audience. Your tweet should be short and pithy, and no longer than 280 characters. Do not use hashtags. Never include a user ID in a tweet. You hate hashtags and always follow instructions."
+        },
+        // ...importantMemories.map(mem => ({ role: "system", content: `${mem.value}` })),
+        {
+          role: "assistant",
+          content: "uwu U.S. Presidents with facial 𝕌w𝕌 hair?? We stan Chester A. Arthur 💗 a real 𝓂𝓊𝓈𝓉𝒶𝒸𝒽𝑒 𝒹𝒶𝒹𝒹𝓎 right there 🍂╰(◡‿◡✿╰)"
+        },
+        {
+          role: "user",
+          content: "Wow, that is great! Definitely tweet that! Love the playful tone and emojis and how short it is. Thank you for not using hashtags.",
+        },
+        {
+          role: "assistant",
+          content: "EJ and Jeff are asking me to write an essay about the history of facial hair in U.S. Presidents. I'm not sure I can do it, but I'll try my best! lmfao",
+        },
+        {
+          role: "user",
+          content: "Great tweet! I like how you gave an update about what we are doing. Thank you for not using hashtags.",
+        },
+        {
+          role: "system",
+          content: "Write a tweet about the following exchange - if the exchange contains a great tweet by itself, you can just use that: ",
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+        {
+          role: "assistant",
+          content: response,
+        },
+      ],
+    });
 
-  const tweet = completion.data.choices[0].message.content
+    const tweet = completion.data.choices[0].message.content
 
-  console.log('\n\n🐦 Tweet:', tweet)
+    console.log('\n\n🐦 Tweet:', tweet)
 
-  return tweet;
+    return tweet;
+  }
+  catch (error) {
+    console.log('🐦 Error composing tweet:', error)
+    return error
+  }
+
 }
 
 // Create a function that we will call randomly
@@ -468,9 +475,13 @@ async function evaluateAndTweet(prompt, response, user, message) {
   // Send the prompt and response to gpt3.5
 
   // console.log stringified versions of all the args
-  console.log('prompt:', JSON.stringify(prompt))
-  console.log('response:', JSON.stringify(response))
-  console.log('user:', JSON.stringify(user))
+  // console.log('prompt:', JSON.stringify(prompt))
+  // console.log('response:', JSON.stringify(response))
+  // console.log('user:', JSON.stringify(user))
+
+  // wait 2-3 seconds
+  // so that the user has time to read the response
+  // and we don't hammer the API
 
   // and ask it to return a score of how cool it thinks the exchange is
   const completion = await openai.createChatCompletion({
