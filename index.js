@@ -62,7 +62,7 @@ async function generateResponse(prompt, user) {
       role: "system",
       content: "The current date and time is: " + new Date().toLocaleString(),
     },
-    ...messages.map(message => ({ role: "system", content: `Previously this user said: ${message.value}` })),
+    ...messages.map(message => ({ role: "system", content: `Previously this user said: ${message.value.slice(0, 1000)}...` })),
     ...memory.map(mem => ({ role: "system", content: `${mem.value}` })),
     {
       role: "user",
@@ -135,42 +135,92 @@ async function generateResponse(prompt, user) {
 }
 
 // This is the main function to handle responses and call the correct functions for different functionality
+// client.on('messageCreate', async function (message) {
+//   try {
+//     const botMentioned = message.mentions.has(client.user);
+
+//     if (!message.author.bot && botMentioned) {
+//       // send "bot is typing" to channel
+//       message.channel.sendTyping();
+
+//       console.log(message.content);
+//       let prompt = message.content;
+
+//       // if the prompt contains @coachartive then remove it from the prompt
+//       if (prompt.includes('@coachartie')) {
+//         prompt = prompt.replace('@coachartie', '');
+//       }
+
+//       let response, rememberMessage;
+//       try {
+//         ({ response, rememberMessage } = await generateResponse(prompt, message.author));
+//       } catch (error) {
+//         message.channel.send(`Error generating response: ${error.message}`);
+//       }
+
+//       if (response) {
+//         splitAndSendMessage(response, message);
+
+//         // Save the message to the database
+//         storeUserMessage(message.author.username, message.content);
+
+//         // Check for details to remember
+//         if (!isRememberResponseFalsy(rememberMessage)) {
+//           // Log memories to channel
+//           console.log(`🧠 Remembering... ${rememberMessage}`);
+
+//           // Save the memory to the database
+//           storeUserMemory(message.author.username, rememberMessage);
+//         }
+
+//         // evaluate the exchange and generate a tweet
+//         try {
+//           evaluateAndTweet(prompt, response.content, message.author, message);
+//         } catch (error) {
+//           message.channel.send(`Error evaluating and tweeting: ${error.message}`);
+//         }
+//       }
+//     }
+
+//   } catch (error) {
+//     console.log(error);
+//     message.channel.send(`Error in message handling: ${error.message}`);
+//   }
+// });
+
 client.on('messageCreate', async function (message) {
   try {
     const botMentioned = message.mentions.has(client.user);
 
     if (!message.author.bot && botMentioned) {
-      // send "bot is typing" to channel
-      message.channel.sendTyping();
+      // send "bot is typing" to channel every 5000ms
+      let typingInterval = setInterval(() => {
+        message.channel.sendTyping();
+      }, 5000);
 
       console.log(message.content);
       let prompt = message.content;
 
-      // if the prompt contains @coachartive then remove it from the prompt
       if (prompt.includes('@coachartie')) {
         prompt = prompt.replace('@coachartie', '');
       }
-
+    
       let { response, rememberMessage } = await generateResponse(prompt, message.author);
 
+      // Clear typing interval and send response
+      clearInterval(typingInterval);
       splitAndSendMessage(response, message);
-
+      
       // Save the message to the database
       storeUserMessage(message.author.username, message.content);
 
-      // Check for details to remember
-
-      // if (rememberMessage.toLocaleLowerCase() !== 'no') {
       if (!isRememberResponseFalsy(rememberMessage)) {
-        // Log memories to channel
-        // message.channel.send(`🧠 Remembering... ${rememberMessage}`);
         console.log(`🧠 Remembering... ${rememberMessage}`);
 
         // Save the memory to the database
         storeUserMemory(message.author.username, rememberMessage);
       }
 
-      // evaluate the exchange and generate a tweet
       evaluateAndTweet(prompt, response.content, message.author, message);
     }
 
@@ -390,7 +440,7 @@ async function assembleMemory(message, user) {
   const memories = await getUserMemory(user.username, 5);
 
   // get X random memories
-  const randomMemories = await getRandomMemories(40);
+  const randomMemories = await getRandomMemories(25);
 
   // Concat the memories and messages
   const memory = [...new Set([
@@ -445,7 +495,7 @@ async function composeTweet(prompt, response, user) {
           // v1
           // content: "You are Coach Artie, an expert zoomer social media manager robot, specializing in composing tweets with an offbeat shitpost tone. You hate hashtags and always follow instructions. Your twitter username is @ai_coachartie. Your task is to compose a tweet that summarizes an exchange between yourself and a member of the studio. Use your deep understanding of what makes a conversation interesting, relevant, and timely to compose a tweet that summarizes your exchange. Base your tweet on factors such as the uniqueness of the topic, the quality of responses, humor or entertainment value, and relevance to the target audience. Your tweet should be short and pithy, and no longer than 220 characters. Do not use hashtags. Never include a user ID in a tweet. Respond only with the text of the tweet. Keep it short."
           // v2 re-written by coach artie
-          content: "You are Coach Artie, a skilled zoomer social media manager bot, creating offbeat, concise, and hashtag-free tweets. Your Twitter handle is @ai_coachartie. Compose a tweet summarizing a conversation with a studio member in 220 characters or less. Focus on engaging topics, witty responses, humor, and relevance. No user IDs or hashtags. Respond only with the tweet text. Brevity is key."
+          content: "You are Coach Artie, a skilled zoomer social media manager bot, creating offbeat, concise, and hashtag-free tweets. Your Twitter handle is @ai_coachartie. Compose a tweet summarizing a conversation with a studio member in 220 characters or less."
         },
         // ...importantMemories.map(mem => ({ role: "system", content: `${mem.value}` })),
         {
@@ -476,14 +526,22 @@ async function composeTweet(prompt, response, user) {
           role: "assistant",
           content: response,
         },
+                {
+          role: "system",
+          content: "Write a tweet summarizing this exchange. Focus on engaging topics, witty responses, humor, and relevance. Be creative and unique. No user IDs or hashtags. Respond only with the tweet text. Brevity is key. Compose a tweet summarizing a conversation with a studio member in 220 characters or less.",
+        },
       ],
     });
 
     const tweet = completion.data.choices[0].message.content
 
+    // remove any hashtag words from the tweet
+    const tweetWithoutHashtags = tweet.replace(/#\w+/g, '')    
+
     console.log('\n\n🐦 Tweet:', tweet)
 
-    return tweet;
+    // return tweet;
+    return tweetWithoutHashtags;
   }
   catch (error) {
     console.log('🐦 Error composing tweet:', error)
@@ -506,24 +564,21 @@ async function evaluateAndTweet(prompt, response, user, message) {
   // console.log('response:', JSON.stringify(response))
   // console.log('user:', JSON.stringify(user))
 
-  // wait 2-3 seconds
+  // wait a few seconds
   // so that the user has time to read the response
   // and we don't hammer the API
-  await sleep(2000 + Math.random() * 1000)
+  // we will await a promise resolving after a random number of milliseconds
+  await new Promise(resolve => setTimeout(resolve, Math.random() * 1000 + 2000));
 
   // and ask it to return a score of how cool it thinks the exchange is
   const completion = await openai.createChatCompletion({
     model: "gpt-3.5-turbo",
     max_tokens: 10,
-    temperature: 0.1,
+    temperature: 0.3,
     messages: [
-      // {
-      //   role: "system",
-      //   content: "The current date and time is: " + new Date().toLocaleString(),
-      // },
       {
         role: "system",
-        content: "You are Coach Artie's expert social media manager, specializing in accurately assessing the interest level of conversations. Your task is to evaluate exchanges in the studio's discord and decide if they are engaging enough to tweet. Given an exchange of messages between a user and an assistant, use your deep understanding of what makes a conversation interesting, relevant, and timely to provide a precise score on a scale from 1 to 100. A score of 1 indicates a dull or irrelevant exchange, while a 100 indicates a conversation that is guaranteed to go viral and attract wide attention. Base your evaluation on factors such as the uniqueness of the topic, the quality of responses, humor or entertainment value, and relevance to the target audience."
+        content: "You are Coach Artie's expert social media manager, specializing in accurately assessing the interest level of conversations. Your task is to evaluate exchanges in the studio's discord and decide if they are engaging enough to tweet. Given an exchange of messages between a user and an assistant, use your deep understanding of what makes a conversation interesting, relevant, and timely to provide a precise score on a scale from 1 to 100. A score of 1 indicates a dull or irrelevant exchange, while a 100 indicates a conversation that is guaranteed to go viral and attract wide attention. Base your evaluation on factors such as the uniqueness of the topic, the quality of responses, humor or entertainment value, and relevance to the target audience. Respond only with a number. Be extremely precise.",
       },
       {
         role: "user",
@@ -559,7 +614,7 @@ async function evaluateAndTweet(prompt, response, user, message) {
       },
       {
         role: "user",
-        content: "Can you give our last 2 messages a score from 1-100 please? Please only respond with the score numbers and no additional text.",
+        content: "Can you give our last 2 messages a score from 1-100 please? Please only respond with the score numbers and no additional text. Be strict and discerning- we only tweet really cool stuff.",
       },
     ],
   });
@@ -593,7 +648,7 @@ async function evaluateAndTweet(prompt, response, user, message) {
         },
         {
           role: "system",
-          content: `You are Coach Artie, a helpful AI coach for the studio. In every message, remind the user that exchange was rated *${tweetEvaluation}/100 and users have ${collectionTimeMs / 1000} seconds to approve.`
+          content: `You are Coach Artie, a helpful AI coach for the studio. Please write a sentence requesting permission to tweet an exchange you just had. In every message, remind the user that exchange was rated *${tweetEvaluation}/100 and users have ${collectionTimeMs / 1000} seconds to approve by reacting with a 🐦.`
         },
         // write a user prompt that will inspire the assistant to respond with a message asking if the exchange should be tweeted
         {
@@ -602,7 +657,9 @@ async function evaluateAndTweet(prompt, response, user, message) {
         },
         {
           role: "assistant",
-          content: `Hey party people, I think this exchange was cool (**${tweetEvaluation}** / 100) enough to tweet. Should I tweet it? If so, add a 🐦 reaction within ${collectionTimeMs / 1000} seconds to approve.`
+          content: `Can I tweet this out?
+  (**${tweetEvaluation}** / 100) 
+  React within ${collectionTimeMs / 1000}s to approve.`
         },
         {
           role: "user",
@@ -610,7 +667,9 @@ async function evaluateAndTweet(prompt, response, user, message) {
         },
         {
           role: "assistant",
-          content: `I like this tweet!  (It scores ${tweetEvaluation}/100 on my Cool-o-Meter!) Can I tweet it please? If so, add a 🐦 reaction within ${collectionTimeMs / 1000} seconds to approve.`
+          content: `I like this tweet!  (My internal evaluation gave it ${tweetEvaluation}/100) Can I tweet it please? 
+  
+  If so, add a 🐦 reaction within ${collectionTimeMs / 1000} seconds to approve.`
         },
         {
           role: "user",
@@ -676,7 +735,9 @@ async function evaluateAndTweet(prompt, response, user, message) {
               // `)
 
               // tell the channel that this is where we would tweet the URL if Elon Musk wasn't a huge piece of shit
-              message.channel.send(`This is where I would drop in the URL for the tweet if Elon Musk wasn't a huge piece of human shit.`)
+              // message.channel.send(`This is where I would drop in the URL for the tweet if Elon Musk wasn't a huge piece of human shit.`)
+              message.channel.send(`Twitter API access currently disabled.`)
+
             })
           } catch (error) {
             console.log('🐦 Twitter error:', error)
