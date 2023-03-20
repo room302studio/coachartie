@@ -761,9 +761,20 @@ async function evaluateAndTweet(prompt, response, user, message) {
 
 
 
+
+
 client.once(Events.ClientReady, c => {
   // Log when we are logged in
   console.log(`⭐️ Ready! Logged in as ${c.user.username}`);
+
+  // Log any of the guilds/servers the bot is in
+  client.guilds.cache.forEach((guild) => {
+    console.log(guild.name);
+    // List all channels
+    // guild.channels.cache.forEach((channel) => {
+    //   console.log(` - ${channel.name} (${channel.type}) - ${channel.id}`);
+    // });
+  });
 });
 
 client.on(Events.InteractionCreate, interaction => {
