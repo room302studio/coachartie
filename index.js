@@ -72,6 +72,8 @@ async function generateResponse(prompt, user) {
 
   console.log('📝 Prompt:', JSON.stringify(promptMessages, null, 2))
 
+  let response
+
   try {
     const completion = await openai.createChatCompletion({
       model: "gpt-4",
@@ -84,12 +86,21 @@ async function generateResponse(prompt, user) {
       messages: promptMessages,
     });
 
-    const response = completion.data.choices[0].message
+    response = completion.data.choices[0].message
+  }
+  catch(error) {
+    console.error('Error generating response:', error)
 
+    // tell the channel there was an error
+    return 'Sorry, I could not generate a response... there was an error.'
+  }
+
+
+  try {
     const rememberCompletion = await openai.createChatCompletion({
       model: "gpt-3.5-turbo",
-      temperature: 0.1,
-      max_tokens: 100,
+      temperature: 0.25,
+      max_tokens: 250,
       // frequency_penalty: -0.2,
       messages: [
         {
@@ -118,7 +129,8 @@ async function generateResponse(prompt, user) {
     return { response, rememberMessage };
   } catch (error) {
     console.error('Error generating response:', error);
-    return 'Sorry, I could not generate a response... there was an error.';
+    // tell the channel there was an error
+    return 'Sorry, I am having trouble remembering this interaction... there was an error.';
   }
 }
 
@@ -276,6 +288,10 @@ async function getRandomMemories(numberOfMemories) {
   // const memories = await getUserMemory(userId);
   const memories = await getAllMemories();
 
+  if(!memories) {
+    console.error('Error getting random memories')
+    return [];
+  }
   if (memories && memories.length > 0) {
     const randomMemories = chance.pickset(memories, numberOfMemories);
     return randomMemories//.map(memory => memory.value);
@@ -286,6 +302,8 @@ async function getRandomMemories(numberOfMemories) {
 
 function splitAndSendMessage(message, messageObject) {
   // refactor so that if the message is longer than 2000, it will send multiple messages
+  if(!message) messageObject.channel.send(`I am so sorry, there was some sort of problem...`)
+
   if (message.length < 2000) {
     messageObject.channel.send(message);
   }
@@ -358,6 +376,12 @@ function isRememberResponseFalsy(response) {
   if (lowerCaseResponse.includes('no crucial') || lowerCaseResponse.includes('no important')) {
     return true;
   }
+
+  // does the string contain 'no key details'?
+  if (lowerCaseResponse.includes('no key details')) {
+    return true;
+  }
+
 }
 
 // Given a message, return the last 5 memories and the last 5 messages
@@ -396,14 +420,14 @@ async function tweet(tweetText) {
 async function composeTweet(prompt, response, user) {
   console.log('✍️ Composing tweet...')
 
-  // const memory = await getUserMemory(user);
+  const memory = await getUserMemory(user);
 
-  // const importantMemories = memory.filter(mem => {
-  //   // if the memory beings with "Remember forever: " then it's important
-  //   if (mem.startsWith('Remember forever: ')) {
-  //     return true
-  //   }
-  // })
+  const importantMemories = memory.filter(mem => {
+    // if the memory beings with "Remember forever: " then it's important
+    if (mem.startsWith('Remember forever: ')) {
+      return true
+    }
+  })
 
   try {
     // Send the prompt and response to gpt3.5
@@ -662,14 +686,14 @@ async function evaluateAndTweet(prompt, response, user, message) {
           }
         })
 
-        collector.on('end', collected => {
-          console.log(`Collected ${collected.size} reactions`);
-          // Send a message to the channel with the JSON of the reaction
-          message.channel.send(`Collected ${collected.size} reactions`)
+        // collector.on('end', collected => {
+        //   console.log(`Collected ${collected.size} reactions`);
+        //   // Send a message to the channel with the JSON of the reaction
+        //   message.channel.send(`Collected ${collected.size} reactions`)
 
-          // delete the tweetQMsg
-          tweetQMsg.delete()
-        })
+        //   // delete the tweetQMsg
+        //   // tweetQMsg.delete()
+        // })
       })
   }
 }
