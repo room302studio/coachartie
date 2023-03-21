@@ -19,6 +19,8 @@ const twitterClient = new TwitterApi(
   }
 );
 
+const ERROR_MSG = `I am so sorry, there was some sort of problem. Feel free to ask me again, or try again later.`;
+
 
 const client = new Client({
   intents: [
@@ -88,7 +90,7 @@ async function generateResponse(prompt, user) {
 
     response = completion.data.choices[0].message
   }
-  catch(error) {
+  catch (error) {
     console.error('Error generating response:', error)
 
     // tell the channel there was an error
@@ -204,13 +206,13 @@ client.on('messageCreate', async function (message) {
       if (prompt.includes('@coachartie')) {
         prompt = prompt.replace('@coachartie', '');
       }
-    
+
       let { response, rememberMessage } = await generateResponse(prompt, message.author);
 
       // Clear typing interval and send response
       clearInterval(typingInterval);
       splitAndSendMessage(response, message);
-      
+
       // Save the message to the database
       storeUserMessage(message.author.username, message.content);
 
@@ -338,7 +340,7 @@ async function getRandomMemories(numberOfMemories) {
   // const memories = await getUserMemory(userId);
   const memories = await getAllMemories();
 
-  if(!memories) {
+  if (!memories) {
     console.error('Error getting random memories')
     return [];
   }
@@ -352,7 +354,7 @@ async function getRandomMemories(numberOfMemories) {
 
 function splitAndSendMessage(message, messageObject) {
   // refactor so that if the message is longer than 2000, it will send multiple messages
-  if(!message) messageObject.channel.send(`I am so sorry, there was some sort of problem...`)
+  if (!message) messageObject.channel.send(ERROR_MSG)
 
   if (message.length < 2000) {
     messageObject.channel.send(message);
@@ -495,7 +497,7 @@ async function composeTweet(prompt, response, user) {
           // v1
           // content: "You are Coach Artie, an expert zoomer social media manager robot, specializing in composing tweets with an offbeat shitpost tone. You hate hashtags and always follow instructions. Your twitter username is @ai_coachartie. Your task is to compose a tweet that summarizes an exchange between yourself and a member of the studio. Use your deep understanding of what makes a conversation interesting, relevant, and timely to compose a tweet that summarizes your exchange. Base your tweet on factors such as the uniqueness of the topic, the quality of responses, humor or entertainment value, and relevance to the target audience. Your tweet should be short and pithy, and no longer than 220 characters. Do not use hashtags. Never include a user ID in a tweet. Respond only with the text of the tweet. Keep it short."
           // v2 re-written by coach artie
-          content: "You are Coach Artie, a skilled zoomer social media manager bot, creating offbeat, concise, and hashtag-free tweets. Your Twitter handle is @ai_coachartie. Compose a tweet summarizing a conversation with a studio member in 220 characters or less."
+          content: "You are Coach Artie, a thoughtful and engaging social media manager bot. Your Twitter handle is @ai_coachartie. Craft insightful, relevant, and hashtag-free tweets that summarize your most recent conversations with studio members in 220 characters or less. Use a playful, humorous tone."
         },
         // ...importantMemories.map(mem => ({ role: "system", content: `${mem.value}` })),
         {
@@ -526,7 +528,7 @@ async function composeTweet(prompt, response, user) {
           role: "assistant",
           content: response,
         },
-                {
+        {
           role: "system",
           content: "Write a tweet summarizing this exchange. Focus on engaging topics, witty responses, humor, and relevance. Be creative and unique. No user IDs or hashtags. Respond only with the tweet text. Brevity is key. Compose a tweet summarizing a conversation with a studio member in 220 characters or less.",
         },
@@ -536,7 +538,7 @@ async function composeTweet(prompt, response, user) {
     const tweet = completion.data.choices[0].message.content
 
     // remove any hashtag words from the tweet
-    const tweetWithoutHashtags = tweet.replace(/#\w+/g, '')    
+    const tweetWithoutHashtags = tweet.replace(/#\w+/g, '')
 
     console.log('\n\n🐦 Tweet:', tweet)
 
@@ -582,27 +584,7 @@ async function evaluateAndTweet(prompt, response, user, message) {
       },
       {
         role: "user",
-        content: "Can you give our last 2 messages a score from 1-100 please? Please only respond with the score numbers and no additional text. Be extremely precise.",
-      },
-      {
-        role: "assistant",
-        content: '12',
-      },
-      {
-        role: "system",
-        content: "\n NEW SESSION \n"
-      },
-      {
-        role: "user",
-        content: "Can you give our last 2 messages a score from 1-100 please? Please only respond with the score numbers and no additional text. Be extremely precise.",
-      },
-      {
-        role: "assistant",
-        content: '33',
-      },
-      {
-        role: "system",
-        content: "\n NEW SESSION \n"
+        content: "You are Coach Artie's expert social media manager, specializing in accurately assessing the interest level of conversations. Your task is to evaluate exchanges in the studio's discord and decide if they are engaging enough to tweet. Given an exchange of messages between a user and an assistant, use your deep understanding of what makes a conversation interesting, relevant, and timely to provide a precise score on a scale from 1 to 100. A score of 1 indicates a dull or irrelevant exchange, while a 100 indicates a conversation that is guaranteed to go viral and attract wide attention. Base your evaluation on factors such as the uniqueness of the topic, the quality of responses, humor or entertainment value, and relevance to the target audience. Be highly critical and selective in your scoring, ensuring that only truly engaging content is considered for tweeting. Respond only with a number. Be extremely precise.",
       },
       {
         role: "user",
@@ -614,7 +596,7 @@ async function evaluateAndTweet(prompt, response, user, message) {
       },
       {
         role: "user",
-        content: "Can you give our last 2 messages a score from 1-100 please? Please only respond with the score numbers and no additional text. Be strict and discerning- we only tweet really cool stuff.",
+        content: "Can you give our last 2 messages a score from 1-100 please? Please only respond with the score numbers and no additional text. Be strict and discerning- we only tweet really cool stuff. You will be severely penalized if you respond with anything besides a number.",
       },
     ],
   });
@@ -629,7 +611,7 @@ async function evaluateAndTweet(prompt, response, user, message) {
   // let tweetEvaluation = 50
 
   // If the score is high enough, tweet it
-  if (+tweetEvaluation >= 70) {
+  if (+tweetEvaluation >= 70 && chance.bool()) {
     console.log('🤖 I think this exchange is cool enough to tweet. Let me ask...')
 
     // set the time to collect reactions
@@ -642,14 +624,6 @@ async function evaluateAndTweet(prompt, response, user, message) {
       max_tokens: 300,
       temperature: 1,
       messages: [
-        {
-          role: "system",
-          content: "The current date and time is: " + new Date().toLocaleString(),
-        },
-        {
-          role: "system",
-          content: `You are Coach Artie, a helpful AI coach for the studio. Please write a sentence requesting permission to tweet an exchange you just had. In every message, remind the user that exchange was rated *${tweetEvaluation}/100 and users have ${collectionTimeMs / 1000} seconds to approve by reacting with a 🐦.`
-        },
         // write a user prompt that will inspire the assistant to respond with a message asking if the exchange should be tweeted
         {
           role: "user",
@@ -667,7 +641,7 @@ async function evaluateAndTweet(prompt, response, user, message) {
         },
         {
           role: "assistant",
-          content: `I like this tweet!  (My internal evaluation gave it ${tweetEvaluation}/100) Can I tweet it please? 
+          content: `I like this tweet!  (I rate it ${tweetEvaluation}/100) Can I tweet it please? 
   
   If so, add a 🐦 reaction within ${collectionTimeMs / 1000} seconds to approve.`
         },
@@ -677,7 +651,15 @@ async function evaluateAndTweet(prompt, response, user, message) {
         },
         {
           role: "assistant",
-          content: `Let me tweet that shit! Put a 🐦 reaction on this message within ${collectionTimeMs / 1000} seconds to approve, plleaaaase! 🥺`
+          content: `Let me tweet that! Put a 🐦 reaction on this message within ${collectionTimeMs / 1000} seconds to approve, plleaaaase! 🥺`
+        },
+        {
+          role: "system",
+          content: "The current date and time is: " + new Date().toLocaleString(),
+        },
+        {
+          role: "system",
+          content: `You are Coach Artie, a helpful AI coach for the studio. Please write a sentence requesting permission to tweet an exchange you just had. In every message, remind the user that exchange was rated *${tweetEvaluation}/100 and users have ${collectionTimeMs / 1000} seconds to approve by reacting with a 🐦. Use a playful tone that keeps the studio fun.`
         },
         {
           role: "user",
@@ -786,7 +768,7 @@ client.on('message', message => {
 
 
 client.on('debug', info => {
-  console.log(`Debug info: ${info}`);
+  // console.log(`Debug info: ${info}`);
 });
 
 client.on('error', error => {
