@@ -759,10 +759,6 @@ async function evaluateAndTweet(prompt, response, user, message) {
   }
 }
 
-
-
-
-
 client.once(Events.ClientReady, c => {
   // Log when we are logged in
   console.log(`⭐️ Ready! Logged in as ${c.user.username}`);
@@ -780,6 +776,21 @@ client.once(Events.ClientReady, c => {
 client.on(Events.InteractionCreate, interaction => {
   // Log every interaction we see
   console.log(interaction);
+});
+
+client.on('message', message => {
+  console.log(`Message received: ${message.content}`);
+  console.log(`From: ${message.author.username}`);
+  console.log(`Channel ID: ${message.channel.id}`);
+});
+
+
+client.on('debug', info => {
+  console.log(`Debug info: ${info}`);
+});
+
+client.on('error', error => {
+  console.error(`Client error: ${error}`);
 });
 
 // An async function to send a message to a channel
