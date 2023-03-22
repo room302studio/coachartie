@@ -45,7 +45,7 @@ const configuration = new Configuration({
 const openai = new OpenAIApi(configuration);
 
 // Generate a response from the assistant
-async function generateResponse(prompt, user, messageInsert) {
+async function generateResponse(prompt, user, messageInsert = []) {
   // Retrieve user memory from Supabase
   //const memory = await getUserMemory(user.username);
 
