@@ -6,6 +6,8 @@ const { Configuration, OpenAIApi } = require("openai");
 const { TwitterApi } = require('twitter-api-v2')
 const chance = require('chance').Chance();
 
+const { fetchAndParseURL, generateSummary } = require('./chrome_gpt_browser.js');
+
 dotenv.config();
 
 // set up the v2 twitter api so we can easily tweet from our account
@@ -43,7 +45,7 @@ const configuration = new Configuration({
 const openai = new OpenAIApi(configuration);
 
 // Generate a response from the assistant
-async function generateResponse(prompt, user) {
+async function generateResponse(prompt, user, messageInsert) {
   // Retrieve user memory from Supabase
   //const memory = await getUserMemory(user.username);
 
@@ -73,7 +75,8 @@ async function generateResponse(prompt, user) {
     },
     ...messages.map(message => ({ role: "system", content: `Previously this user said: ${message.value.slice(0, 1000)}...` })),
     ...memory.map(mem => ({ role: "system", content: `${mem.value}` })),
-        {
+    ...messageInsert,
+    {
       role: "user",
       content: `You are feeling a ${chance.pickone(['happy', 'supportive', 'curious', 'funny', 'entertaining', 'inquisitive', 'creative', 'inspiring', 'thoughtful', 'insightful', 'thought-provoking', 'motivating', 'playful', 'chaotic', 'trickster', 'mischievous', 'teasing', 'whimsical', 'spontaneous', 'unpredictable'])} mood. But you never mention your mood unless asked.`,
     },
@@ -204,29 +207,63 @@ client.on('messageCreate', async function (message) {
         prompt = prompt.replace('@coachartie', '');
       }
 
-      let { response, rememberMessage } = await generateResponse(prompt, message.author);
+      // See if the prompt contains a URL
+      const promptHasURL = prompt.includes('http');
 
-      // Clear typing interval and send response
-      clearInterval(typingInterval);
-      splitAndSendMessage(response, message);
+      const messageInsert = []
 
-      // Save the message to the database
-      storeUserMessage(message.author.username, message.content);
+      // If the prompt contains the URL, then let's fetch and summarize it and include it in the prompt
+      if (promptHasURL) {
+        const url = prompt.match(/http\S+/g)[0];
 
-      if (!isRememberResponseFalsy(rememberMessage)) {
-        console.log(`🧠 Remembering... ${rememberMessage}`);
 
-        // Save the memory to the database
-        storeUserMemory(message.author.username, rememberMessage);
+        try {
+          const parsedWebpage = await fetchAndParseURL(url);
+
+          const urlSummary = await generateSummary(url, parsedWebpage);
+
+          messageInsert.push({
+            role: "system",
+            content: `The following is a summary of the webpage a user linked:
+
+Title: ${parsedWebpage.title}
+Description: ${parsedWebpage.description}
+${urlSummary.join(' \n')}}`
+          })
+        }
+        catch (error) {
+          console.error('Error generating summary:', error);
+          message.channel.send('Sorry, I could not generate a summary for the URL you provided.');
+          return;
+        }
       }
 
-      evaluateAndTweet(prompt, response.content, message.author, message);
-    }
 
-  } catch (error) {
-    console.log(error);
-  }
-});
+
+
+        let { response, rememberMessage } = await generateResponse(prompt, message.author, messageInsert);
+
+        // Clear typing interval and send response
+        clearInterval(typingInterval);
+        splitAndSendMessage(response, message);
+
+        // Save the message to the database
+        storeUserMessage(message.author.username, message.content);
+
+        if (!isRememberResponseFalsy(rememberMessage)) {
+          console.log(`🧠 Remembering... ${rememberMessage}`);
+
+          // Save the memory to the database
+          storeUserMemory(message.author.username, rememberMessage);
+        }
+
+        evaluateAndTweet(prompt, response.content, message.author, message);
+      }
+
+    } catch (error) {
+      console.log(error);
+    }
+  });
 
 // Get all memories for a user
 async function getUserMemory(userId, limit = 5) {

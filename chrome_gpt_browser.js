@@ -5,6 +5,8 @@ const { createClient } = require('@supabase/supabase-js');
 const { Configuration, OpenAIApi } = require("openai");
 // const { TwitterApi } = require('twitter-api-v2')
 // const chance = require('chance').Chance();
+const puppeteer = require('puppeteer');
+const { fstat } = require('fs');
 
 dotenv.config();
 
@@ -19,8 +21,7 @@ const openai = new OpenAIApi(configuration);
 
 // The purpose of this file is to enable basic web browser access for the robot: given a URL, access it, parse it as JSON, and return the page contents to the main bot.
 
-const puppeteer = require('puppeteer');
-const { fstat } = require('fs');
+
 
 // Get the text from all text-like elements
 // const allowedTextEls = 'p, h1, h2, h3, h4, h5, h6, a, span, div, td, th, tr, table, blockquote, pre, code, em, strong, i, b, u, s, sub, sup, small, big, q, cite, main, nav';
@@ -64,18 +65,14 @@ async function fetchAndParseURL(url) {
   return { title, description, text };
 }
 
-const url = process.argv[2];
-
-fetchAndParseURL(url).then(async (data) => {
-  // console.log(JSON.stringify(data, null, 2));  
-
+async function generateSummary(url, data) {
   console.log('📝  Generating summary...');
 
   const pageUnderstanderPrompt = `You are an AI language model that can extract and summarize information from webpages. Read the raw dump of text from the following webpage: ${url}. Return a bulleted list of context-rich facts from the webpage that Coach Artie, an AI studio coach, should remember to support the community, offer resources, answer questions, and foster collaboration. Ensure that each fact is a standalone piece of information that is meaningful and easily understood when recalled on its own. Only respond with bullet points, no other text.`
 
   // if data.text is longer than 4096 characters, split it into chunks of 4096 characters and send each chunk as a separate message and then combine the responses
 
-  const text = data.text 
+  const text = data.text
 
   // const chunkAmount = 7000
   const chunkAmount = 4096
@@ -102,7 +99,7 @@ fetchAndParseURL(url).then(async (data) => {
 
   let chunksSent = 0
   const chunkPromises = chunks.map(async (chunk) => {
-    console.log(`📝  Sending chunk ${chunksSent+1} of ${chunks.length}...`);
+    console.log(`📝  Sending chunk ${chunksSent + 1} of ${chunks.length}...`);
     chunksSent++;
 
 
@@ -137,11 +134,16 @@ fetchAndParseURL(url).then(async (data) => {
 
   const chunkResponses = await Promise.all(chunkPromises);
 
+
   const factList = chunkResponses.join('\n');
 
-  
+  return chunkResponses;
 
-  // console.log(factList);
+  // summarizing does not seem to help much, so just return the fact list
+
+
+
+  console.log(factList);
 
   // take the fact list and split the individual bullet points into an array
   const factListArray = factList.split('\n- ');
@@ -166,6 +168,7 @@ fetchAndParseURL(url).then(async (data) => {
 
   const summaryCompletion = await openai.createChatCompletion({
     model: "gpt-4",
+    // model: "gpt-3.5-turbo",
     temperature: 0.4,
     presence_penalty: -0.5,
     frequency_penalty: 0.1,
@@ -206,11 +209,37 @@ fetchAndParseURL(url).then(async (data) => {
 
   console.log('---')
   console.log('📝  Summary of most important facts:');
-  
+
   // re-constitute the summary into a string and log it
   const filteredSummary = filteredSummaryArray.join('\n- ');
   fs.writeFileSync(`./summaries/${fileName}_summary.txt`, filteredSummary);
 
   console.log(filteredSummary);
 
-})
+  return filteredSummaryArray;
+}
+
+
+// check if this is being run as a script or imported as a module
+if (require.main === module) {
+  // if this is being run as a script, run the main function
+  main();
+} else {
+  // if this is being imported as a module, export the functions
+  module.exports = {
+    fetchAndParseURL,
+    generateSummary
+  };
+}
+
+function main() {
+
+  const url = process.argv[2];
+
+  fetchAndParseURL(url).then(async (data) => {
+    // console.log(JSON.stringify(data, null, 2));  
+
+    return generateSummary(url, data);
+  })
+
+}
