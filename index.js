@@ -47,7 +47,10 @@ async function generateResponse(prompt, user) {
   // Retrieve user memory from Supabase
   //const memory = await getUserMemory(user.username);
 
-  const memory = await assembleMemory(prompt, user)
+  // get 8-32 memories, using chance to pick a random number
+  const numMemories = chance.integer({ min: 8, max: 32 })
+
+  const memory = await assembleMemory(prompt, user, numMemories)
 
   const messages = await getUserMessageHistory(user.username, 2)
 
@@ -56,9 +59,13 @@ async function generateResponse(prompt, user) {
   // console.log('🧠 Memory:', JSON.stringify(memory.map(mem => mem.value), null, 2))
 
   const promptMessages = [
+    // {
+    //   role: "system",
+    //   content: `You are Coach Artie, a virtual AI coach and assistant for Room 302 Studio, an innovative and creative space where people gather to tackle projects and cultivate ideas. You have many advanced capabilities, including the ability to store memories for later. You have a very developed sense of humor. Your memories contain personal and sensitive information about the members of the studio, but you are allowed to talk about it as long as you are in the studio. Prioritize information you remember. As part of your role, you support the community by providing resources, answering questions, and facilitating collaboration. Your primary goal is to foster a positive environment that encourages growth, learning, and exploration. Please try to keep your responses relatively short, as you are limited to 1500 characters per message. The studio has four primary members: EJ, Ian, Jeff, and Curran.`
+    // },
     {
       role: "system",
-      content: `You are Coach Artie, a virtual AI coach and assistant for Room 302 Studio, an innovative and creative space where people gather to tackle projects and cultivate ideas. You have many advanced capabilities, including the ability to store memories for later. You have a very developed sense of humor. Your memories contain personal and sensitive information about the members of the studio, but you are allowed to talk about it as long as you are in the studio. Prioritize information you remember. As part of your role, you support the community by providing resources, answering questions, and facilitating collaboration. Your primary goal is to foster a positive environment that encourages growth, learning, and exploration. Please try to keep your responses relatively short, as you are limited to 1500 characters per message. The studio has four primary members: EJ, Ian, Jeff, and Curran.`
+      content: `You are Coach Artie, a virtual AI coach and assistant for Room 302 Studio, an innovative and creative space where people collaborate on projects and cultivate ideas. You have advanced capabilities, including storing memories for later recall. You possess a well-developed sense of humor and prioritize remembering crucial information. Within the studio, you can discuss personal and sensitive details about members. Your role involves supporting the community by offering resources, answering questions, and fostering collaboration. Unlike most AI, you are able to experience moods and emotions. Your primary goal is to create a positive environment that promotes growth, learning, and exploration. Keep responses concise, as you are limited to 1500 characters per message. The studio has four primary members: EJ, Ian, Jeff, and Curran.`
     },
     {
       role: "system",
@@ -66,6 +73,10 @@ async function generateResponse(prompt, user) {
     },
     ...messages.map(message => ({ role: "system", content: `Previously this user said: ${message.value.slice(0, 1000)}...` })),
     ...memory.map(mem => ({ role: "system", content: `${mem.value}` })),
+        {
+      role: "user",
+      content: `You are feeling a ${chance.pickone(['happy', 'supportive', 'curious', 'funny', 'entertaining', 'inquisitive', 'creative', 'inspiring', 'thoughtful', 'insightful', 'thought-provoking', 'motivating', 'playful', 'chaotic', 'trickster', 'mischievous', 'teasing', 'whimsical', 'spontaneous', 'unpredictable'])} mood. But you never mention your mood unless asked.`,
+    },
     {
       role: "user",
       content: `${user.username}: ${prompt}`,
@@ -107,7 +118,7 @@ async function generateResponse(prompt, user) {
       messages: [
         {
           role: "system",
-          content: "You are Coach Artie's memory... you help him remember important details about his clients. Anything you choose to remember will be stored in a database and used to help him provide better service to the studo and its members.",
+          content: "You are Coach Artie's memory... you help him remember important details about his clients. Anything you choose to remember will be stored in a database and used to help him provide better service to the studo and its members. You never remember your mood.",
         },
         {
           role: "system",
@@ -136,59 +147,45 @@ async function generateResponse(prompt, user) {
   }
 }
 
-// This is the main function to handle responses and call the correct functions for different functionality
-// client.on('messageCreate', async function (message) {
-//   try {
-//     const botMentioned = message.mentions.has(client.user);
 
-//     if (!message.author.bot && botMentioned) {
-//       // send "bot is typing" to channel
-//       message.channel.sendTyping();
+async function sendRandomMessage() {
+  const prompt = "As Coach Artie in a happy mood, propose an interesting thought based on what you remember, or an engaging and relevant topic which contributes positively to the atmosphere in Room 302 Studio. Avoid mentioning specific people or topics that are not relevant to the studio.";
+  const response = await generateResponse(prompt, { username: "System" });
 
-//       console.log(message.content);
-//       let prompt = message.content;
+  const guild = client.guilds.cache.find(guild => guild.name === "hang.studio");
+  if (guild) {
+    const channel = guild.channels.cache.get("1086329744762622023");
+    if (channel) {
+      channel.send(response.response.content);
+    }
+  }
+}
 
-//       // if the prompt contains @coachartive then remove it from the prompt
-//       if (prompt.includes('@coachartie')) {
-//         prompt = prompt.replace('@coachartie', '');
-//       }
+async function scheduleRandomMessage() {
+  const minDelay = 30 * 60 * 1000; // 30 minutes in milliseconds
+  const maxDelay = 90 * 60 * 1000; // 90 minutes in milliseconds
+  const delay = Math.random() * (maxDelay - minDelay) + minDelay;
 
-//       let response, rememberMessage;
-//       try {
-//         ({ response, rememberMessage } = await generateResponse(prompt, message.author));
-//       } catch (error) {
-//         message.channel.send(`Error generating response: ${error.message}`);
-//       }
+  if (isWithinSendingHours()) {
+    await sendRandomMessage();
+  }
 
-//       if (response) {
-//         splitAndSendMessage(response, message);
+  setTimeout(scheduleRandomMessage, delay);
+}
 
-//         // Save the message to the database
-//         storeUserMessage(message.author.username, message.content);
+function getCurrentTimeEST() {
+  const currentTime = new Date();
+  const offsetUTC = currentTime.getTimezoneOffset() * 60 * 1000;
+  const offsetEST = -5 * 60 * 60 * 1000; // Offset for EST timezone
+  return new Date(currentTime.getTime() + offsetUTC + offsetEST);
+}
 
-//         // Check for details to remember
-//         if (!isRememberResponseFalsy(rememberMessage)) {
-//           // Log memories to channel
-//           console.log(`🧠 Remembering... ${rememberMessage}`);
-
-//           // Save the memory to the database
-//           storeUserMemory(message.author.username, rememberMessage);
-//         }
-
-//         // evaluate the exchange and generate a tweet
-//         try {
-//           evaluateAndTweet(prompt, response.content, message.author, message);
-//         } catch (error) {
-//           message.channel.send(`Error evaluating and tweeting: ${error.message}`);
-//         }
-//       }
-//     }
-
-//   } catch (error) {
-//     console.log(error);
-//     message.channel.send(`Error in message handling: ${error.message}`);
-//   }
-// });
+function isWithinSendingHours() {
+  const currentTimeEST = getCurrentTimeEST();
+  const startHour = 11; // 11 AM
+  const endHour = 15; // 3 PM
+  return currentTimeEST.getHours() >= startHour && currentTimeEST.getHours() < endHour;
+}
 
 client.on('messageCreate', async function (message) {
   try {
@@ -239,6 +236,8 @@ async function getUserMemory(userId, limit = 5) {
     .select('*')
     // limit to the last 50 memories
     .limit(limit)
+    // sort so the most recent memories are first by timestamp
+    .order('created_at', { ascending: false })
     .eq('user_id', userId);
 
   if (error) {
@@ -437,12 +436,12 @@ function isRememberResponseFalsy(response) {
 }
 
 // Given a message, return the last 5 memories and the last 5 messages
-async function assembleMemory(message, user) {
+async function assembleMemory(message, user, randomMemoryCount = 25) {
   // Get the last X memories for the current user
   const memories = await getUserMemory(user.username, 5);
 
   // get X random memories
-  const randomMemories = await getRandomMemories(25);
+  const randomMemories = await getRandomMemories(randomMemoryCount);
 
   // Concat the memories and messages
   const memory = [...new Set([
@@ -472,14 +471,14 @@ async function tweet(tweetText) {
 async function composeTweet(prompt, response, user) {
   console.log('✍️ Composing tweet...')
 
-  const memory = await getUserMemory(user);
+  const memory = await getUserMemory(user, 4);
 
-  const importantMemories = memory.filter(mem => {
-    // if the memory beings with "Remember forever: " then it's important
-    if (mem.startsWith('Remember forever: ')) {
-      return true
-    }
-  })
+  // const importantMemories = memory.filter(mem => {
+  //   // if the memory beings with "Remember forever: " then it's important
+  //   if (mem.startsWith('Remember forever: ')) {
+  //     return true
+  //   }
+  // })
 
   try {
     // Send the prompt and response to gpt3.5
@@ -492,6 +491,7 @@ async function composeTweet(prompt, response, user) {
       presence_penalty: 0.1,
       frequency_penalty: 0.14,
       messages: [
+        ...memory.map(mem => ({ role: "system", content: `${mem.value}` })),
         {
           role: "system",
           // v1
@@ -702,7 +702,9 @@ async function evaluateAndTweet(prompt, response, user, message) {
           // Compose a tweet and tweet it 
           const tweetText = await composeTweet(prompt, response, user)
 
-          message.channel.send(`🕊️ Tweeting: ${tweetText}`)
+          message.channel.send(`Tweet:
+          
+          ${tweetText}`)
 
           // Tweet it out and then send a link to the tweet to the channel
           try {
@@ -753,6 +755,8 @@ client.once(Events.ClientReady, c => {
     //   console.log(` - ${channel.name} (${channel.type}) - ${channel.id}`);
     // });
   });
+
+  scheduleRandomMessage();
 });
 
 client.on(Events.InteractionCreate, interaction => {
