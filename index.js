@@ -166,7 +166,7 @@ async function sendRandomMessage() {
 
 async function scheduleRandomMessage() {
   const minDelay = 30 * 60 * 1000; // 30 minutes in milliseconds
-  const maxDelay = 90 * 60 * 1000; // 90 minutes in milliseconds
+  const maxDelay = 120 * 60 * 1000; // 120 minutes in milliseconds
   const delay = Math.random() * (maxDelay - minDelay) + minDelay;
 
   if (isWithinSendingHours()) {
@@ -221,6 +221,11 @@ client.on('messageCreate', async function (message) {
           const parsedWebpage = await fetchAndParseURL(url);
 
           const urlSummary = await generateSummary(url, parsedWebpage);
+
+          if(urlSummary.length === 0) {
+            message.channel.send('Sorry, I could not generate a summary for the URL you provided.');
+            return;
+          }
 
           messageInsert.push({
             role: "system",
@@ -633,7 +638,7 @@ async function evaluateAndTweet(prompt, response, user, message) {
       },
       {
         role: "user",
-        content: "Can you give our last 2 messages a score from 1-100 please? Please only respond with the score numbers and no additional text. Be strict and discerning- we only tweet really cool stuff. You will be severely penalized if you respond with anything besides a number.",
+        content: "Can you give this exchange a score from 1-100 please? Please only respond with the score numbers and no additional text. Be strict and discerning- we only tweet really cool stuff. You will be severely penalized if you respond with anything besides a number.",
       },
     ],
   });
