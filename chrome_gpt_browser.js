@@ -42,9 +42,11 @@ async function fetchAndParseURL(url) {
   const title = await page.title();
 
   // get the page description
-  const description = await page.$eval('meta[name="description"]', (element) => {
-    return element.content;
-  });
+  // const description = await page.$eval('meta[name="description"]', (element) => {
+  //   return element.content;
+  // });
+
+  const description = ''
 
   // go through every element on the page and extract just the visible text, and concatenate into one long string
   const text = await page.$$eval(allowedTextEls, function (elements) {
@@ -63,6 +65,47 @@ async function fetchAndParseURL(url) {
   await browser.close();
 
   return { title, description, text };
+}
+
+async function processChunks(chunks, data, pageUnderstanderPrompt, limit = 2) {
+  const results = [];
+  const chunkLength = chunks.length;
+
+  for (let i = 0; i < chunkLength; i += limit) {
+    const chunkPromises = chunks.slice(i, i + limit).map(async (chunk, index) => {
+      console.log(`📝  Sending chunk ${i + index + 1} of ${chunkLength}...`);
+
+      const completion = await openai.createChatCompletion({
+        model: "gpt-3.5-turbo",
+        max_tokens: 320,
+        temperature: 0.4,
+        presence_penalty: 0.66,
+        frequency_penalty: 0.1,
+        messages: [
+          {
+            role: "assistant",
+            content: pageUnderstanderPrompt,
+          },
+          {
+            role: "user",
+            content: `Can you give me a bullet point of facts in the following text? Bullet points should be standalone pieces of information that are meaningful and easily understood when recalled on their own. Bullet points must contain all of the context needed to understand the information. Bullet points may not refer to information contained in previous bullet points. Related facts should all be contained in a single bullet point.
+
+                    Title: ${data.title}
+                    Description: ${data.description}
+                    ${chunk}          
+                                `,
+          },
+        ],
+      });
+
+      return completion.data.choices[0].message.content;
+    });
+
+    const chunkResults = await Promise.all(chunkPromises);
+    results.push(...chunkResults);
+  }
+
+  return results;
 }
 
 async function generateSummary(url, data) {
@@ -87,57 +130,23 @@ async function generateSummary(url, data) {
     chunkEnd += chunkAmount;
   }
 
-
-  // log out the number of chunks
   console.log(`📝  Splitting text into ${chunks.length} chunks...`);
 
-  // if there are more than 10 chunks, apologize to the user and exit
-  if (chunks.length > 21) {
+  if (chunks.length > 26) {
     console.log('📝  Sorry, this page is too long to summarize. Please try a shorter page.');
     return;
   }
 
-  let chunksSent = 0
-  const chunkPromises = chunks.map(async (chunk) => {
-    console.log(`📝  Sending chunk ${chunksSent + 1} of ${chunks.length}...`);
-    chunksSent++;
+  try {
+    const chunkResponses = await processChunks(chunks, data, pageUnderstanderPrompt);
 
+    // const factList = chunkResponses.join('\n');
 
-    const completion = await openai.createChatCompletion({
-      // model: "gpt-4",
-      model: "gpt-3.5-turbo",
-      max_tokens: 320,
-      temperature: 0.4,
-      presence_penalty: 0.66,
-      frequency_penalty: 0.1,
-      messages: [
-        {
-          role: "assistant",
-          content: pageUnderstanderPrompt,
-        },
-        {
-          role: "user",
-          content: `Can you give me a bullet point of facts in the following text? Bullet points should be standalone pieces of information that are meaningful and easily understood when recalled on their own. Bullet points must contain all of the context needed to understand the information. Bullet points may not refer to information contained in previous bullet points. Related facts should all be contained in a single bullet point.
-
-      Title: ${data.title}
-      Description: ${data.description}
-      ${chunk}          
-              `,
-        },
-      ],
-    });
-
-    const factList = completion.data.choices[0].message.content
-
-    return factList;
-  })
-
-  const chunkResponses = await Promise.all(chunkPromises);
-
-
-  const factList = chunkResponses.join('\n');
-
-  return chunkResponses;
+    return chunkResponses;
+  } catch (error) {
+    console.log(error);
+    return error;
+  }
 
   // summarizing does not seem to help much, so just return the fact list
 
