@@ -3,7 +3,8 @@ const axios = require('axios');
 const dotenv = require('dotenv');
 const { createClient } = require('@supabase/supabase-js');
 const { Configuration, OpenAIApi } = require("openai");
-const { TwitterApi } = require('twitter-api-v2')
+const { TwitterApi } = require('twitter-api-v2');
+const { PROMPT_REMEMBER, PROMPT_CONVO_EVALUATE_FOR_TWEET, PROMPT_CONVO_EVALUATE_INSTRUCTIONS, PROMPT_TWEET_REQUEST } = require('./prompts');
 const chance = require('chance').Chance();
 
 dotenv.config();
@@ -56,7 +57,7 @@ async function generateResponse(prompt, user) {
   const promptMessages = [
     {
       role: "system",
-      content: `You are Coach Artie, a virtual AI coach and assistant for Room 302 Studio, an innovative and creative space where people gather to tackle projects and cultivate ideas. You have many advanced capabilities, including the ability to store memories for later. You have a very developed sense of humor. Your memories contain personal and sensitive information about the members of the studio, but you are allowed to talk about it as long as you are in the studio. Prioritize information you remember. As part of your role, you support the community by providing resources, answering questions, and facilitating collaboration. Your primary goal is to foster a positive environment that encourages growth, learning, and exploration. Please try to keep your responses relatively short, as you are limited to 1500 characters per message. The studio has four primary members: EJ, Ian, Jeff, and Curran.`
+      content: PROMPT_SYSTEM,
     },
     {
       role: "system",
@@ -105,11 +106,11 @@ async function generateResponse(prompt, user) {
       messages: [
         {
           role: "system",
-          content: "You are Coach Artie's memory... you help him remember important details about his clients. Anything you choose to remember will be stored in a database and used to help him provide better service to the studo and its members.",
+          content: PROMPT_REMEMBER_INTRO,
         },
         {
           role: "system",
-          content: `In the following dialogue between you (Coach Artie) and a studio member (${user.username}) identify any key details to remember forever. Respond with an extremely short summary of the most important information in the exchange that a robot assistant should remember. You MUST also remember the user's name in the memory. Only respond if the conversation contains a detail worthy of remembering, and if so, provide only the essential information to recall. If nothing should be remembered, simply respond 'no'. If the memory is extremely imporant to remember (like it will impact your every action), prepend 'Remember forever:'`
+          content: PROMPT_REMEMBER(user)
         },
         {
           role: "user",
@@ -133,60 +134,6 @@ async function generateResponse(prompt, user) {
     return 'Sorry, I am having trouble remembering this interaction... there was an error.';
   }
 }
-
-// This is the main function to handle responses and call the correct functions for different functionality
-// client.on('messageCreate', async function (message) {
-//   try {
-//     const botMentioned = message.mentions.has(client.user);
-
-//     if (!message.author.bot && botMentioned) {
-//       // send "bot is typing" to channel
-//       message.channel.sendTyping();
-
-//       console.log(message.content);
-//       let prompt = message.content;
-
-//       // if the prompt contains @coachartive then remove it from the prompt
-//       if (prompt.includes('@coachartie')) {
-//         prompt = prompt.replace('@coachartie', '');
-//       }
-
-//       let response, rememberMessage;
-//       try {
-//         ({ response, rememberMessage } = await generateResponse(prompt, message.author));
-//       } catch (error) {
-//         message.channel.send(`Error generating response: ${error.message}`);
-//       }
-
-//       if (response) {
-//         splitAndSendMessage(response, message);
-
-//         // Save the message to the database
-//         storeUserMessage(message.author.username, message.content);
-
-//         // Check for details to remember
-//         if (!isRememberResponseFalsy(rememberMessage)) {
-//           // Log memories to channel
-//           console.log(`🧠 Remembering... ${rememberMessage}`);
-
-//           // Save the memory to the database
-//           storeUserMemory(message.author.username, rememberMessage);
-//         }
-
-//         // evaluate the exchange and generate a tweet
-//         try {
-//           evaluateAndTweet(prompt, response.content, message.author, message);
-//         } catch (error) {
-//           message.channel.send(`Error evaluating and tweeting: ${error.message}`);
-//         }
-//       }
-//     }
-
-//   } catch (error) {
-//     console.log(error);
-//     message.channel.send(`Error in message handling: ${error.message}`);
-//   }
-// });
 
 client.on('messageCreate', async function (message) {
   try {
@@ -373,49 +320,9 @@ function splitAndSendMessage(message, messageObject) {
   }
 }
 
-// Given a user message, generate a list of 3 search terms to query memories related to the user's message
-async function userMessageToSearchTerms(message) {
-  // randomly pick 3 words
-  // const messageArray = message.split(' ');
-  // const searchTerms = chance.pickset(messageArray, 3);
-
-
-  // use a chatgpt completion to generate 3 search terms
-  // instead of chat, we will just use davinci-003
-  const searchTerms = await openai.createCompletion({
-    model: "text-curie-001",
-    prompt: `User: ${message}\n\nGiven the user message, can you identify 0-3 search terms related to the message? Use small, simple words.\n-`,
-    temperature: 0.18,
-    max_tokens: 18
-  });
-
-  /* the completions look like this:
-  - "Mob Programming"
-  - "Programming"
-  - "Code"
-
-  so we will need to split the string and remove the quotes
-  */
-
-  const searchTermsArray = searchTerms.data.choices[0].text.split('\n');
-
-  // remove the quotes
-  const cleanedSearchTerms = searchTermsArray.map(term => term.replace(/"/g, ''));
-
-  console.log('🔎 discovered search terms: ', cleanedSearchTerms);
-
-  return cleanedSearchTerms;
-}
-
 // Interpret the response when we ask the robot "should we remember this?"
-
 function isRememberResponseFalsy(response) {
   const lowerCaseResponse = response.toLocaleLowerCase();
-
-  // does the string contain 'no'? 
-  // if (lowerCaseResponse.includes('no')) {
-  //   return true;
-  // }
 
   // is the string 'no.' or 'no'?
   if (lowerCaseResponse === 'no' || lowerCaseResponse === 'no.') {
@@ -451,8 +358,6 @@ async function assembleMemory(message, user) {
   return memory;
 }
 
-
-
 // use twitterClient to tweet and return the URL of the tweet
 async function tweet(tweetText) {
   try {
@@ -464,20 +369,18 @@ async function tweet(tweetText) {
   }
 }
 
-
-
 // Compose a tweet based on an exchange between a user and an assistant
 async function composeTweet(prompt, response, user) {
   console.log('✍️ Composing tweet...')
 
   const memory = await getUserMemory(user);
 
-  const importantMemories = memory.filter(mem => {
-    // if the memory beings with "Remember forever: " then it's important
-    if (mem.startsWith('Remember forever: ')) {
-      return true
-    }
-  })
+  // const importantMemories = memory.filter(mem => {
+  //   // if the memory beings with "Remember forever: " then it's important
+  //   if (mem.startsWith('Remember forever: ')) {
+  //     return true
+  //   }
+  // })
 
   try {
     // Send the prompt and response to gpt3.5
@@ -492,10 +395,7 @@ async function composeTweet(prompt, response, user) {
       messages: [
         {
           role: "system",
-          // v1
-          // content: "You are Coach Artie, an expert zoomer social media manager robot, specializing in composing tweets with an offbeat shitpost tone. You hate hashtags and always follow instructions. Your twitter username is @ai_coachartie. Your task is to compose a tweet that summarizes an exchange between yourself and a member of the studio. Use your deep understanding of what makes a conversation interesting, relevant, and timely to compose a tweet that summarizes your exchange. Base your tweet on factors such as the uniqueness of the topic, the quality of responses, humor or entertainment value, and relevance to the target audience. Your tweet should be short and pithy, and no longer than 220 characters. Do not use hashtags. Never include a user ID in a tweet. Respond only with the text of the tweet. Keep it short."
-          // v2 re-written by coach artie
-          content: "You are Coach Artie, a skilled zoomer social media manager bot, creating offbeat, concise, and hashtag-free tweets. Your Twitter handle is @ai_coachartie. Compose a tweet summarizing a conversation with a studio member in 220 characters or less."
+          content: PROMPT_TWEET_INTRO
         },
         // ...importantMemories.map(mem => ({ role: "system", content: `${mem.value}` })),
         {
@@ -528,7 +428,7 @@ async function composeTweet(prompt, response, user) {
         },
                 {
           role: "system",
-          content: "Write a tweet summarizing this exchange. Focus on engaging topics, witty responses, humor, and relevance. Be creative and unique. No user IDs or hashtags. Respond only with the tweet text. Brevity is key. Compose a tweet summarizing a conversation with a studio member in 220 characters or less.",
+          content: PROMPT_TWEET_END,
         },
       ],
     });
@@ -578,28 +478,8 @@ async function evaluateAndTweet(prompt, response, user, message) {
     messages: [
       {
         role: "system",
-        content: "You are Coach Artie's expert social media manager, specializing in accurately assessing the interest level of conversations. Your task is to evaluate exchanges in the studio's discord and decide if they are engaging enough to tweet. Given an exchange of messages between a user and an assistant, use your deep understanding of what makes a conversation interesting, relevant, and timely to provide a precise score on a scale from 1 to 100. A score of 1 indicates a dull or irrelevant exchange, while a 100 indicates a conversation that is guaranteed to go viral and attract wide attention. Base your evaluation on factors such as the uniqueness of the topic, the quality of responses, humor or entertainment value, and relevance to the target audience. Respond only with a number. Be extremely precise.",
-      },
-      {
-        role: "user",
-        content: "Can you give our last 2 messages a score from 1-100 please? Please only respond with the score numbers and no additional text. Be extremely precise.",
-      },
-      {
-        role: "assistant",
-        content: '12',
-      },
-      {
-        role: "system",
-        content: "\n NEW SESSION \n"
-      },
-      {
-        role: "user",
-        content: "Can you give our last 2 messages a score from 1-100 please? Please only respond with the score numbers and no additional text. Be extremely precise.",
-      },
-      {
-        role: "assistant",
-        content: '33',
-      },
+        content: PROMPT_CONVO_EVALUATE_FOR_TWEET,
+      },      
       {
         role: "system",
         content: "\n NEW SESSION \n"
@@ -614,8 +494,8 @@ async function evaluateAndTweet(prompt, response, user, message) {
       },
       {
         role: "user",
-        content: "Can you give our last 2 messages a score from 1-100 please? Please only respond with the score numbers and no additional text. Be strict and discerning- we only tweet really cool stuff.",
-      },
+        content: PROMPT_CONVO_EVALUATE_INSTRUCTIONS,
+      }
     ],
   });
 
@@ -648,8 +528,7 @@ async function evaluateAndTweet(prompt, response, user, message) {
         },
         {
           role: "system",
-          content: `You are Coach Artie, a helpful AI coach for the studio. Please write a sentence requesting permission to tweet an exchange you just had. In every message, remind the user that exchange was rated *${tweetEvaluation}/100 and users have ${collectionTimeMs / 1000} seconds to approve by reacting with a 🐦.`
-        },
+          content: PROMPT_TWEET_REQUEST(tweetEvaluation, collectionTimeMs),
         // write a user prompt that will inspire the assistant to respond with a message asking if the exchange should be tweeted
         {
           role: "user",
