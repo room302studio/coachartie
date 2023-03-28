@@ -7,6 +7,8 @@ const { TwitterApi } = require('twitter-api-v2');
 const { PROMPT_REMEMBER, PROMPT_CONVO_EVALUATE_FOR_TWEET, PROMPT_CONVO_EVALUATE_INSTRUCTIONS, PROMPT_TWEET_REQUEST } = require('./prompts');
 const chance = require('chance').Chance();
 
+const { fetchAndParseURL, generateSummary } = require('./chrome_gpt_browser.js');
+
 dotenv.config();
 
 // set up the v2 twitter api so we can easily tweet from our account
@@ -19,6 +21,8 @@ const twitterClient = new TwitterApi(
     accessSecret: process.env.TWITTER_ACCESS_TOKEN_SECRET,
   }
 );
+
+const ERROR_MSG = `I am so sorry, there was some sort of problem. Feel free to ask me again, or try again later.`;
 
 
 const client = new Client({
@@ -42,11 +46,14 @@ const configuration = new Configuration({
 const openai = new OpenAIApi(configuration);
 
 // Generate a response from the assistant
-async function generateResponse(prompt, user) {
+async function generateResponse(prompt, user, messageInsert = []) {
   // Retrieve user memory from Supabase
   //const memory = await getUserMemory(user.username);
 
-  const memory = await assembleMemory(prompt, user)
+  // get 8-32 memories, using chance to pick a random number
+  const numMemories = chance.integer({ min: 8, max: 32 })
+
+  const memory = await assembleMemory(prompt, user, numMemories)
 
   const messages = await getUserMessageHistory(user.username, 2)
 
@@ -55,6 +62,10 @@ async function generateResponse(prompt, user) {
   // console.log('🧠 Memory:', JSON.stringify(memory.map(mem => mem.value), null, 2))
 
   const promptMessages = [
+    // {
+    //   role: "system",
+    //   content: `You are Coach Artie, a virtual AI coach and assistant for Room 302 Studio, an innovative and creative space where people gather to tackle projects and cultivate ideas. You have many advanced capabilities, including the ability to store memories for later. You have a very developed sense of humor. Your memories contain personal and sensitive information about the members of the studio, but you are allowed to talk about it as long as you are in the studio. Prioritize information you remember. As part of your role, you support the community by providing resources, answering questions, and facilitating collaboration. Your primary goal is to foster a positive environment that encourages growth, learning, and exploration. Please try to keep your responses relatively short, as you are limited to 1500 characters per message. The studio has four primary members: EJ, Ian, Jeff, and Curran.`
+    // },
     {
       role: "system",
       content: PROMPT_SYSTEM,
@@ -65,6 +76,11 @@ async function generateResponse(prompt, user) {
     },
     ...messages.map(message => ({ role: "system", content: `Previously this user said: ${message.value.slice(0, 1000)}...` })),
     ...memory.map(mem => ({ role: "system", content: `${mem.value}` })),
+    ...messageInsert,
+    {
+      role: "user",
+      content: `You are feeling a ${chance.pickone(['happy', 'supportive', 'curious', 'funny', 'entertaining', 'inquisitive', 'creative', 'inspiring', 'thoughtful', 'insightful', 'thought-provoking', 'motivating', 'playful', 'chaotic', 'trickster', 'mischievous', 'teasing', 'whimsical', 'spontaneous', 'unpredictable'])} mood. But you never mention your mood unless asked.`,
+    },
     {
       role: "user",
       content: `${user.username}: ${prompt}`,
@@ -89,7 +105,7 @@ async function generateResponse(prompt, user) {
 
     response = completion.data.choices[0].message
   }
-  catch(error) {
+  catch (error) {
     console.error('Error generating response:', error)
 
     // tell the channel there was an error
@@ -135,6 +151,46 @@ async function generateResponse(prompt, user) {
   }
 }
 
+
+async function sendRandomMessage() {
+  const prompt = "As Coach Artie in a happy mood, propose an interesting thought based on what you remember, or an engaging and relevant topic which contributes positively to the atmosphere in Room 302 Studio. Avoid mentioning specific people or topics that are not relevant to the studio.";
+  const response = await generateResponse(prompt, { username: "System" });
+
+  const guild = client.guilds.cache.find(guild => guild.name === "hang.studio");
+  if (guild) {
+    const channel = guild.channels.cache.get("1086329744762622023");
+    if (channel) {
+      channel.send(response.response.content);
+    }
+  }
+}
+
+async function scheduleRandomMessage() {
+  const minDelay = 30 * 60 * 1000; // 30 minutes in milliseconds
+  const maxDelay = 120 * 60 * 1000; // 120 minutes in milliseconds
+  const delay = Math.random() * (maxDelay - minDelay) + minDelay;
+
+  if (isWithinSendingHours()) {
+    await sendRandomMessage();
+  }
+
+  setTimeout(scheduleRandomMessage, delay);
+}
+
+function getCurrentTimeEST() {
+  const currentTime = new Date();
+  const offsetUTC = currentTime.getTimezoneOffset() * 60 * 1000;
+  const offsetEST = -5 * 60 * 60 * 1000; // Offset for EST timezone
+  return new Date(currentTime.getTime() + offsetUTC + offsetEST);
+}
+
+function isWithinSendingHours() {
+  const currentTimeEST = getCurrentTimeEST();
+  const startHour = 11; // 11 AM
+  const endHour = 15; // 3 PM
+  return currentTimeEST.getHours() >= startHour && currentTimeEST.getHours() < endHour;
+}
+
 client.on('messageCreate', async function (message) {
   try {
     const botMentioned = message.mentions.has(client.user);
@@ -151,30 +207,69 @@ client.on('messageCreate', async function (message) {
       if (prompt.includes('@coachartie')) {
         prompt = prompt.replace('@coachartie', '');
       }
-    
-      let { response, rememberMessage } = await generateResponse(prompt, message.author);
 
-      // Clear typing interval and send response
-      clearInterval(typingInterval);
-      splitAndSendMessage(response, message);
-      
-      // Save the message to the database
-      storeUserMessage(message.author.username, message.content);
+      // See if the prompt contains a URL
+      const promptHasURL = prompt.includes('http');
 
-      if (!isRememberResponseFalsy(rememberMessage)) {
-        console.log(`🧠 Remembering... ${rememberMessage}`);
+      const messageInsert = []
 
-        // Save the memory to the database
-        storeUserMemory(message.author.username, rememberMessage);
+      // If the prompt contains the URL, then let's fetch and summarize it and include it in the prompt
+      if (promptHasURL) {
+        const url = prompt.match(/http\S+/g)[0];
+
+
+        try {
+          const parsedWebpage = await fetchAndParseURL(url);
+
+          const urlSummary = await generateSummary(url, parsedWebpage);
+
+          if(urlSummary.length === 0) {
+            message.channel.send('Sorry, I could not generate a summary for the URL you provided.');
+            return;
+          }
+
+          messageInsert.push({
+            role: "system",
+            content: `The following is a summary of the webpage a user linked:
+
+Title: ${parsedWebpage.title}
+Description: ${parsedWebpage.description}
+${urlSummary.join(' \n')}}`
+          })
+        }
+        catch (error) {
+          console.error('Error generating summary:', error);
+          message.channel.send('Sorry, I could not generate a summary for the URL you provided.');
+          return;
+        }
       }
 
-      evaluateAndTweet(prompt, response.content, message.author, message);
-    }
 
-  } catch (error) {
-    console.log(error);
-  }
-});
+
+
+        let { response, rememberMessage } = await generateResponse(prompt, message.author, messageInsert);
+
+        // Clear typing interval and send response
+        clearInterval(typingInterval);
+        splitAndSendMessage(response, message);
+
+        // Save the message to the database
+        storeUserMessage(message.author.username, message.content);
+
+        if (!isRememberResponseFalsy(rememberMessage)) {
+          console.log(`🧠 Remembering... ${rememberMessage}`);
+
+          // Save the memory to the database
+          storeUserMemory(message.author.username, rememberMessage);
+        }
+
+        evaluateAndTweet(prompt, response.content, message.author, message);
+      }
+
+    } catch (error) {
+      console.log(error);
+    }
+  });
 
 // Get all memories for a user
 async function getUserMemory(userId, limit = 5) {
@@ -184,6 +279,8 @@ async function getUserMemory(userId, limit = 5) {
     .select('*')
     // limit to the last 50 memories
     .limit(limit)
+    // sort so the most recent memories are first by timestamp
+    .order('created_at', { ascending: false })
     .eq('user_id', userId);
 
   if (error) {
@@ -285,7 +382,7 @@ async function getRandomMemories(numberOfMemories) {
   // const memories = await getUserMemory(userId);
   const memories = await getAllMemories();
 
-  if(!memories) {
+  if (!memories) {
     console.error('Error getting random memories')
     return [];
   }
@@ -299,7 +396,7 @@ async function getRandomMemories(numberOfMemories) {
 
 function splitAndSendMessage(message, messageObject) {
   // refactor so that if the message is longer than 2000, it will send multiple messages
-  if(!message) messageObject.channel.send(`I am so sorry, there was some sort of problem...`)
+  if (!message) messageObject.channel.send(ERROR_MSG)
 
   if (message.length < 2000) {
     messageObject.channel.send(message);
@@ -342,12 +439,12 @@ function isRememberResponseFalsy(response) {
 }
 
 // Given a message, return the last 5 memories and the last 5 messages
-async function assembleMemory(message, user) {
+async function assembleMemory(message, user, randomMemoryCount = 25) {
   // Get the last X memories for the current user
   const memories = await getUserMemory(user.username, 5);
 
   // get X random memories
-  const randomMemories = await getRandomMemories(25);
+  const randomMemories = await getRandomMemories(randomMemoryCount);
 
   // Concat the memories and messages
   const memory = [...new Set([
@@ -373,7 +470,7 @@ async function tweet(tweetText) {
 async function composeTweet(prompt, response, user) {
   console.log('✍️ Composing tweet...')
 
-  const memory = await getUserMemory(user);
+  const memory = await getUserMemory(user, 4);
 
   // const importantMemories = memory.filter(mem => {
   //   // if the memory beings with "Remember forever: " then it's important
@@ -393,6 +490,7 @@ async function composeTweet(prompt, response, user) {
       presence_penalty: 0.1,
       frequency_penalty: 0.14,
       messages: [
+        ...memory.map(mem => ({ role: "system", content: `${mem.value}` })),
         {
           role: "system",
           content: PROMPT_TWEET_INTRO
@@ -426,7 +524,7 @@ async function composeTweet(prompt, response, user) {
           role: "assistant",
           content: response,
         },
-                {
+        {
           role: "system",
           content: PROMPT_TWEET_END,
         },
@@ -436,7 +534,7 @@ async function composeTweet(prompt, response, user) {
     const tweet = completion.data.choices[0].message.content
 
     // remove any hashtag words from the tweet
-    const tweetWithoutHashtags = tweet.replace(/#\w+/g, '')    
+    const tweetWithoutHashtags = tweet.replace(/#\w+/g, '')
 
     console.log('\n\n🐦 Tweet:', tweet)
 
@@ -509,7 +607,7 @@ async function evaluateAndTweet(prompt, response, user, message) {
   // let tweetEvaluation = 50
 
   // If the score is high enough, tweet it
-  if (+tweetEvaluation >= 70) {
+  if (+tweetEvaluation >= 70 && chance.bool()) {
     console.log('🤖 I think this exchange is cool enough to tweet. Let me ask...')
 
     // set the time to collect reactions
@@ -546,7 +644,7 @@ async function evaluateAndTweet(prompt, response, user, message) {
         },
         {
           role: "assistant",
-          content: `I like this tweet!  (My internal evaluation gave it ${tweetEvaluation}/100) Can I tweet it please? 
+          content: `I like this tweet!  (I rate it ${tweetEvaluation}/100) Can I tweet it please? 
   
   If so, add a 🐦 reaction within ${collectionTimeMs / 1000} seconds to approve.`
         },
@@ -556,7 +654,15 @@ async function evaluateAndTweet(prompt, response, user, message) {
         },
         {
           role: "assistant",
-          content: `Let me tweet that shit! Put a 🐦 reaction on this message within ${collectionTimeMs / 1000} seconds to approve, plleaaaase! 🥺`
+          content: `Let me tweet that! Put a 🐦 reaction on this message within ${collectionTimeMs / 1000} seconds to approve, plleaaaase! 🥺`
+        },
+        {
+          role: "system",
+          content: "The current date and time is: " + new Date().toLocaleString(),
+        },
+        {
+          role: "system",
+          content: `You are Coach Artie, a helpful AI coach for the studio. Please write a sentence requesting permission to tweet an exchange you just had. In every message, remind the user that exchange was rated *${tweetEvaluation}/100 and users have ${collectionTimeMs / 1000} seconds to approve by reacting with a 🐦. Use a playful tone that keeps the studio fun.`
         },
         {
           role: "user",
@@ -599,7 +705,9 @@ async function evaluateAndTweet(prompt, response, user, message) {
           // Compose a tweet and tweet it 
           const tweetText = await composeTweet(prompt, response, user)
 
-          message.channel.send(`🕊️ Tweeting: ${tweetText}`)
+          message.channel.send(`Tweet:
+          
+          ${tweetText}`)
 
           // Tweet it out and then send a link to the tweet to the channel
           try {
@@ -650,6 +758,8 @@ client.once(Events.ClientReady, c => {
     //   console.log(` - ${channel.name} (${channel.type}) - ${channel.id}`);
     // });
   });
+
+  scheduleRandomMessage();
 });
 
 client.on(Events.InteractionCreate, interaction => {
@@ -665,7 +775,7 @@ client.on('message', message => {
 
 
 client.on('debug', info => {
-  console.log(`Debug info: ${info}`);
+  // console.log(`Debug info: ${info}`);
 });
 
 client.on('error', error => {
