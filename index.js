@@ -626,7 +626,8 @@ async function evaluateAndTweet(prompt, response, user, message) {
         },
         {
           role: "system",
-          content: PROMPT_TWEET_REQUEST(tweetEvaluation, collectionTimeMs),
+          content: PROMPT_TWEET_REQUEST(tweetEvaluation, collectionTimeMs)
+        },
         // write a user prompt that will inspire the assistant to respond with a message asking if the exchange should be tweeted
         {
           role: "user",
