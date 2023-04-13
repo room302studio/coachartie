@@ -4,7 +4,16 @@ const dotenv = require('dotenv');
 const { createClient } = require('@supabase/supabase-js');
 const { Configuration, OpenAIApi } = require("openai");
 const { TwitterApi } = require('twitter-api-v2');
-const { PROMPT_REMEMBER, PROMPT_CONVO_EVALUATE_FOR_TWEET, PROMPT_CONVO_EVALUATE_INSTRUCTIONS, PROMPT_TWEET_REQUEST } = require('./prompts');
+// const { PROMPT_REMEMBER, PROMPT_CONVO_EVALUATE_FOR_TWEET, PROMPT_CONVO_EVALUATE_INSTRUCTIONS, PROMPT_TWEET_REQUEST } = require('./prompts');
+const prompts = require('./prompts');
+
+const {
+  PROMPT_REMEMBER,
+  PROMPT_CONVO_EVALUATE_FOR_TWEET,
+  PROMPT_CONVO_EVALUATE_INSTRUCTIONS,
+  PROMPT_TWEET_REQUEST
+} = prompts;
+
 const chance = require('chance').Chance();
 
 const { fetchAndParseURL, generateSummary } = require('./chrome_gpt_browser.js');
@@ -628,6 +637,7 @@ async function evaluateAndTweet(prompt, response, user, message) {
           role: "system",
           content: PROMPT_TWEET_REQUEST(tweetEvaluation, collectionTimeMs),
         // write a user prompt that will inspire the assistant to respond with a message asking if the exchange should be tweeted
+        },
         {
           role: "user",
           content: "tweet request"
