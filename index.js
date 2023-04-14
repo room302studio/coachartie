@@ -1,33 +1,16 @@
 const { Client, GatewayIntentBits, Events } = require("discord.js");
 const axios = require("axios");
 const dotenv = require("dotenv");
+const { encode, decode } = require("@nem035/gpt-3-encoder");
 const { Configuration, OpenAIApi } = require("openai");
 const prompts = require("./prompts");
 
-// get the list of capabilities from the capabilities manifest
-const capabilities = require("./capabilities/_manifest.json");
-
-// capability prompt
-// to tell the robot all the capabilities it has and what they do
-const capabilityPrompt = `You have a limited number of capabilities that let you do things by asking the system to do them.
-
-If you want to use a capability's method, you can ask the system to do it by making sure you are on a newline, and saying "<SYSTEM, CAPABILITY, METHOD>". For example, if you want to use the "remember" capability's "store" method, you can say:
-"\\n<SYSTEM, REMEMBER, STORE, The value of the memory>"
-and the system will store the memory for you. You may only use one capability at a time.
-
-Not all capabilities require arguments, for example:
-"\\n<SYSTEM, REMEMBER, ASSEMBLEMEMORY>" will assemble your memories for you.
-
-The responses to these capabilities will appear as system messages in your conversation.
-
-These are all of your capabilities:
-${capabilities.map((capability) => {
-  return `* ${capability.name}: ${capability.description}, methods: ${capability.methods.join(' ')}`;
-}).join('\n')}
-`;
+const { assembleMemory, getUserMessageHistory, getUserMemory, storeUserMessage, storeUserMemory } = require("./capabilities/remember.js");
 
 const {
+  PROMPT_SYSTEM,
   PROMPT_REMEMBER,
+  PROMPT_REMEMBER_INTRO,
   PROMPT_CONVO_EVALUATE_FOR_TWEET,
   PROMPT_CONVO_EVALUATE_INSTRUCTIONS,
   PROMPT_TWEET_REQUEST,
@@ -109,134 +92,257 @@ client.on("messageCreate", async function (message) {
       }
 
       // See if the prompt contains a URL
-      const promptHasURL = prompt.includes("http");
+      // const promptHasURL = prompt.includes("http");
 
       const messageInsert = [];
-      // If the prompt contains the URL, then let's fetch and summarize it and include it in the prompt
-      if (promptHasURL) {
-        const url = prompt.match(/http\S+/g)[0];
 
-        try {
-          const parsedWebpage = await fetchAndParseURL(url);
+      // let { response } = await generateResponse(
+      //   prompt,
+      //   message.author.username,
+      //   messageInsert
+      // );
 
-          const urlSummary = await generateSummary(url, parsedWebpage);
-
-          if (urlSummary.length === 0) {
-            message.channel.send(
-              "Sorry, I could not generate a summary for the URL you provided."
-            );
-            return;
-          }
-
-          messageInsert.push({
-            role: "system",
-            content: `The following is a summary of the webpage a user linked:
-
-Title: ${parsedWebpage.title}
-Description: ${parsedWebpage.description}
-${urlSummary.join(" \n")}}`,
-          });
-        } catch (error) {
-          console.error("Error generating summary:", error);
-          message.channel.send(
-            "Sorry, I could not generate a summary for the URL you provided."
-          );
-          return;
-        }
-      }
-
-      let { response, rememberMessage } = await generateResponse(
+      // instead of awaiting, lets move it into a .then
+      // so we can do other things while we wait
+      await generateResponse(
         prompt,
-        message.author,
+        message.author.username,
         messageInsert
-      );
+      ).then(async ({ response }) => {
+        // Clear typing interval and send response
+        clearInterval(typingInterval);
+        splitAndSendMessage(response, message);
 
-      // Clear typing interval and send response
-      clearInterval(typingInterval);
-      splitAndSendMessage(response, message);
+        // generate a memory from the exchange
+        const rememberCompletion = await openai.createChatCompletion({
+          model: "gpt-3.5-turbo",
+          temperature: 0.75,
+          max_tokens: 320,
+          messages: [
+            {
+              role: "system",
+              content: PROMPT_REMEMBER_INTRO,
+            },
+            {
+              role: "system",
+              content: PROMPT_REMEMBER(message.author.username),
+            },
+            {
+              role: "user",
+              content: prompt,
+            },
+            {
+              role: "assistant",
+              content: response
+            }
+          ],
+        });
 
-      // Save the message to the database
-      storeUserMessage(message.author.username, message.content);
+        const rememberMessage = rememberCompletion.data.choices[0].message.content;
 
-      if (!isRememberResponseFalsy(rememberMessage)) {
-        console.log(`🧠 Remembering... ${rememberMessage}`);
+        // Save the message to the database
+        storeUserMessage(message.author.username, message.content);
 
         // Save the memory to the database
         storeUserMemory(message.author.username, rememberMessage);
-      }
+      })
     }
   } catch (error) {
     console.log(error);
   }
 });
 
-// Generate a response from the assistant
-async function generateResponse(prompt, user, messageInsert = []) {
-  const numMemories = chance.integer({ min: 8, max: 32 });
-  const memory = await assembleMemory(prompt, user, numMemories);
-  const messages = await getUserMessageHistory(user.username, 2);
-  const promptMessages = [
-    {
-      role: "system",
-      content: PROMPT_SYSTEM,
-    },
-    {
-      role: "system",
-      content: "The current date and time is: " + new Date().toLocaleString(),
-    },
-    ...messages.map((message) => ({
-      role: "system",
-      content: `Previously this user said: ${message.value.slice(0, 1000)}...`,
-    })),
-    ...memory.map((mem) => ({ role: "system", content: `${mem.value}` })),
-    ...messageInsert,
-    {
-      role: "user",
-      content: `You are feeling a ${chance.pickone([
-        "happy",
-        "supportive",
-        "curious",
-        "funny",
-        "entertaining",
-        "inquisitive",
-        "creative",
-        "inspiring",
-        "thoughtful",
-        "insightful",
-        "thought-provoking",
-        "motivating",
-        "playful",
-        "chaotic",
-        "trickster",
-        "mischievous",
-        "teasing",
-        "whimsical",
-        "spontaneous",
-        "unpredictable",
-      ])} mood. But you never mention your mood unless asked.`,
-    },
-    {
-      role: "user",
-      content: `${user.username}: ${prompt}`,
-    },
-  ];
-  console.log("📝 Prompt:", JSON.stringify(promptMessages, null, 2));
-  let response;
 
-  // First we generate a response
-  try {
+// get the list of capabilities from the capabilities manifest
+// const capabilities = require("./capabilities/_manifest.json");
+// this makes an error:
+// Error: Cannot find module './capabilities/_manifest.json'
+// which is weird because
+// it exists, and also
+// it begins with module.exports = { ... data ... }
+// so we should be able to require it like:
+const capabilities = require("./capabilities/_manifest.js").capabilities;
+
+// capability prompt
+// to tell the robot all the capabilities it has and what they do
+const capabilityPrompt = `You have a limited number of capabilities that let you do things by asking the system to do them.
+
+If you want to use a capability's method, you can ask the system to do it by making sure you are on a newline, and saying "<SYSTEM, CAPABILITY, METHOD>". For example, if you want to use the "remember" capability's "store" method, you can say:
+"\\n<SYSTEM, REMEMBER, STORE, The value of the memory>"
+and the system will store the memory for you. You may only use one capability at a time.
+
+Not all capabilities require arguments, for example:
+"\\n<SYSTEM, REMEMBER, ASSEMBLEMEMORY>" will assemble your memories for you.
+
+The responses to these capabilities will appear as system messages in your conversation.
+
+These are all of your capabilities:
+${capabilities.map((capability) => {
+  return `* ${capability.slug}: ${capability.description}, methods: ${capability.methods?.map((method) => {
+    return method.name;
+  }).join(', ')
+    }`;
+}).join('\n')}
+`;
+
+async function handleMessage(inputMessage, user) {
+  console.log("Received message:", inputMessage);
+  console.log("User:", user);
+
+  // This function simulates the process of calling the capability methods.
+  async function callCapabilityMethod(capabilitySlug, methodName, args) {
+    console.log(`Calling capability method: ${capabilitySlug}.${methodName} with args: ${args}`);
+
+    let capabilityResponse = ''
+
+    if (capabilitySlug === 'remember') {
+      if (methodName === 'store') {
+        // store the memory
+        capabilityResponse = 'Memory stored!';
+      } else if (methodName === 'assembleMemory') {
+        // assemble the memory
+        capabilityResponse = 'Assembled memories!';
+      } else if (methodName === 'getRandomMemories') {
+        // get random memories
+        capabilityResponse = 'Got random memories!';
+      }
+    }
+
+    // You can replace this with actual capability method implementation.
+    return `System response for ${capabilitySlug}.${methodName}: 
+    ${capabilityResponse}`;
+  }
+
+  async function processMessageChain(messages) {
+    console.log("Processing message chain:", messages);
+    console.log("Messages: ", messages.length)
+
+    const lastMessage = messages[messages.length - 1];
+    console.log("Last message: \n", lastMessage);
+    const currentTokenCount = countMessageTokens(messages);
+    console.log("Current token count: ", currentTokenCount);
+
+    const apiTokenLimit = 8000
+
+    if (currentTokenCount >= apiTokenLimit - 900) {
+      console.log("Token limit reached, adding system message to the chain reminding the bot to wrap it up.");
+      messages.push({
+        role: "system",
+        content: "You are reaching the token limit. In the next response, you may not use a capability but must use all of this information to respond to the user."
+      });
+      return messages;
+    }
+
+    // const capabilityRegex = /\\n<SYSTEM, (.+?), (.+?)(?:, (.*?))?>/;
+    // needs to handle `<SYSTEM, REMEMBER, STORE, EJ asked me to demonstrate the store method in the remember capability.>
+    const capabilityRegex = /(?:\\n)?<SYSTEM, (.+?), (.+?)(?:, (.*?))?>/; // Remove the 'g' flag
+    const capabilityMatch = capabilityRegex.exec(lastMessage.content); // Use 'exec' instead of 'match'
+
+    console.log("Capability match: ", capabilityMatch);
+
+    if (!capabilityMatch) {
+      console.log("No capability found in the last message, breaking the chain.");
+      return messages;
+    }
+
+    const [_, capSlug, capMethod, capArgs] = capabilityMatch;
+    const capabilityResponse = await callCapabilityMethod(capSlug, capMethod, capArgs);
+
+    const systemMessage = {
+      role: "system",
+      content: capabilityResponse,
+    };
+
+    console.log("Adding system message to the chain:", systemMessage);
+    messages.push(systemMessage);
+
+    // Call the OpenAI API to get the AI response based on the system message
     const completion = await openai.createChatCompletion({
       model: "gpt-4",
       temperature: 0.75,
       presence_penalty: 0.4,
-      // use gpt3.5 turbo
-      // model: "gpt-3.5-turbo",
-      // max 2000 tokens
-      max_tokens: 1200,
-      messages: promptMessages,
+      max_tokens: 900,
+      messages: messages,
     });
 
-    response = completion.data.choices[0].message;
+    const aiResponse = completion.data.choices[0].message;
+
+    messages.push(aiResponse);
+
+    console.log("Continuing the message chain.");
+    return processMessageChain(messages);
+  }
+
+  // except user is not defined here
+
+  const memory = await assembleMemory(user, 5);
+  const messages = await getUserMessageHistory(user, 2);
+
+  const systemPrompt = {
+    role: "system",
+    content: PROMPT_SYSTEM
+  };
+
+  const userMessage = {
+    role: "user",
+    content: `<${user}>: ${inputMessage}`,
+  };
+
+  const capabilityMessage = {
+    role: "system",
+    content: capabilityPrompt,
+  };
+
+  const initialMessages = [
+    systemPrompt,
+    // memory.map((mem) => {
+    //   return {
+    //     role: "system",
+    //     content: mem.value,
+    //   };
+    // }),
+    capabilityMessage,
+    // messages.map((mem) => {
+    //   return {
+    //     role: "user",
+    //     content: mem.value,
+    //   };
+    // }),
+    userMessage
+  ];
+
+  // Call the OpenAI API to get the AI response
+  const completion = await openai.createChatCompletion({
+    model: "gpt-4",
+    temperature: 0.75,
+    presence_penalty: 0.4,
+    max_tokens: 900,
+    messages: initialMessages,
+  });
+
+  const aiResponse = completion.data.choices[0].message;
+
+  initialMessages.push(aiResponse);
+
+  const processedMessages = await processMessageChain(initialMessages);
+  // console.log("Finished message chain processing, output messages:", processedMessages);
+
+  const userMessages = processedMessages.filter((msg) => msg.role !== "system");
+  const finalMessage = userMessages[userMessages.length - 1];
+  console.log("Final message for the user:", finalMessage);
+
+  return finalMessage.content;
+}
+
+// Generate a response from the assistant
+async function generateResponse(prompt, user, messageInsert = []) {
+  console.log("Generating response for prompt:", prompt, "and user:", user);
+
+  let response;
+
+  // First we generate a response
+  try {
+    response = await handleMessage(prompt, user);
   } catch (error) {
     console.error("Error generating response:", error);
 
@@ -245,47 +351,17 @@ async function generateResponse(prompt, user, messageInsert = []) {
   }
 
   // Then we generate a memory based on the exchange
-  try {
-    const rememberCompletion = await openai.createChatCompletion({
-      model: "gpt-3.5-turbo",
-      temperature: 0.25,
-      max_tokens: 250,
-      messages: [
-        {
-          role: "system",
-          content: PROMPT_REMEMBER_INTRO,
-        },
-        {
-          role: "system",
-          content: PROMPT_REMEMBER(user),
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
-        // If we include the assistant's response, it ends up re-remembering things over and over... it would be nice to sometimes know what the robot said back when it was remembering, but it's not crucial
-        // {
-        //   role: "assistant",
-        //   content: response.content
-        // }
-      ],
-    });
 
-    const rememberMessage = rememberCompletion.data.choices[0].message.content;
-
-    // Then we return the response and the memory contents
-    return { response, rememberMessage };
-  } catch (error) {
-    console.error("Error generating response:", error);
-    // tell the channel there was an error
-    return "Sorry, I am having trouble remembering this interaction... there was an error.";
-  }
+  // Then we return the response and the memory contents
+  return { response }
 }
 
 
 function splitAndSendMessage(message, messageObject) {
+  console.log("Sending message:", message);
   // refactor so that if the message is longer than 2000, it will send multiple messages
-  if (!message) messageObject.channel.send(ERROR_MSG);
+  if (!message) return messageObject.channel.send(ERROR_MSG);
+  // if (!message.content) messageObject.channel.send(ERROR_MSG);
 
   if (message.length < 2000) {
     messageObject.channel.send(message);
@@ -309,6 +385,8 @@ async function sendRandomMessage() {
   const prompt =
     "As Coach Artie in a happy mood, propose an interesting thought based on what you remember, or an engaging and relevant topic which contributes positively to the atmosphere in Room 302 Studio. Avoid mentioning specific people or topics that are not relevant to the studio.";
   const response = await generateResponse(prompt, { username: "System" });
+
+
 
   const guild = client.guilds.cache.find(
     (guild) => guild.name === "hang.studio"
@@ -348,4 +426,16 @@ function isWithinSendingHours() {
     currentTimeEST.getHours() >= startHour &&
     currentTimeEST.getHours() < endHour
   );
+}
+
+
+function countMessageTokens(messageArray = []) {
+  let totalTokens = 0;
+  messageArray.forEach((message) => {
+    // encode message.content
+    const encodedMessage = encode(JSON.stringify(message));
+    // console.log('Encoded Message: ', encodedMessage)
+    totalTokens += encodedMessage.length;
+  });
+  return totalTokens;
 }

@@ -1,9 +1,14 @@
 const { createClient } = require("@supabase/supabase-js");
+const dotenv = require("dotenv");
+const chance = require("chance").Chance();
+
+dotenv.config();
+
+
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_API_KEY
 );
-
 
 // Get all memories for a user
 async function getUserMemory(userId, limit = 5) {
@@ -123,18 +128,22 @@ async function getRandomMemories(numberOfMemories) {
 
 
 // Given a message, return the last 5 memories and the last 5 messages
-async function assembleMemory(message, user, randomMemoryCount = 25) {
+async function assembleMemory(user, randomMemoryCount = 25) {
+  if(!user) {
+    console.error("No user provided to assembleMemory");
+    return [];
+  }
   // Get the last X memories for the current user
-  const memories = await getUserMemory(user.username, 5);
+  const memories = await getUserMemory(user, 5);
 
   // get X random memories
-  const randomMemories = await getRandomMemories(randomMemoryCount);
+  // const randomMemories = await getRandomMemories(randomMemoryCount);
 
   // Concat the memories and messages
   const memory = [
     ...new Set([
       ...memories, //.map(mem => mem.value)
-      ...randomMemories,
+      // ...randomMemories,
     ]),
   ];
 
@@ -163,3 +172,12 @@ function isRememberResponseFalsy(response) {
     return true;
   }
 }
+
+module.exports = {
+  getUserMemory,
+  getUserMessageHistory,
+  storeUserMemory,
+  storeUserMessage,
+  assembleMemory,
+  isRememberResponseFalsy,
+};

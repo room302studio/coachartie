@@ -7,11 +7,14 @@ const PROMPT_REMEMBER_INTRO =
 
 function PROMPT_REMEMBER(user) {
   return `In the following dialogue between you (Coach Artie) and a studio member (${user.username}) identify any key details to include in your memory of the interaction. 
-  Your primary goal is to respond with an extremely short summary of the most important information from the exchange.
-  YOU MUST ALSO REMEMBER THE USER'S NAME IN THE MEMORY 
-  Only respond if the conversation contains a detail worthy of remembering, and if so, provide only the essential information to recall. 
-  If nothing should be remembered, simply respond 'no'. 
-  If the memory is "evergreen" and extremely imporant and should be remembered all the time, prepend 'Remember forever:'`;
+  - Your primary goal is to respond with an extremely short summary of the most important information from the exchange.
+  - YOU MUST ALSO ALWAYS REMEMBER THE USER'S NAME IN THE MEMORY, ALWAYS!
+  - Focus on the intentions and motivations of the user
+  - Summarize any morals or lessons learned
+  - If the memory is "evergreen" and extremely imporant for an AI assistant to remember, prepend "Remember forever:" to your response
+  - Only respond if the conversation contains a detail worthy of remembering
+  - Your response should be a list of the essential factual information from the exchange.
+  `;
 }
 
 const PROMPT_TWEET_INTRO =
