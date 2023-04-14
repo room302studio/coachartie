@@ -1,9 +1,30 @@
 const { Client, GatewayIntentBits, Events } = require("discord.js");
 const axios = require("axios");
 const dotenv = require("dotenv");
-const { createClient } = require("@supabase/supabase-js");
 const { Configuration, OpenAIApi } = require("openai");
 const prompts = require("./prompts");
+
+// get the list of capabilities from the capabilities manifest
+const capabilities = require("./capabilities/_manifest.json");
+
+// capability prompt
+// to tell the robot all the capabilities it has and what they do
+const capabilityPrompt = `You have a limited number of capabilities that let you do things by asking the system to do them.
+
+If you want to use a capability's method, you can ask the system to do it by making sure you are on a newline, and saying "<SYSTEM, CAPABILITY, METHOD>". For example, if you want to use the "remember" capability's "store" method, you can say:
+"\\n<SYSTEM, REMEMBER, STORE, The value of the memory>"
+and the system will store the memory for you. You may only use one capability at a time.
+
+Not all capabilities require arguments, for example:
+"\\n<SYSTEM, REMEMBER, ASSEMBLEMEMORY>" will assemble your memories for you.
+
+The responses to these capabilities will appear as system messages in your conversation.
+
+These are all of your capabilities:
+${capabilities.map((capability) => {
+  return `* ${capability.name}: ${capability.description}, methods: ${capability.methods.join(' ')}`;
+}).join('\n')}
+`;
 
 const {
   PROMPT_REMEMBER,
@@ -33,202 +54,56 @@ const client = new Client({
   ],
 });
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_API_KEY
-);
-
 const configuration = new Configuration({
   apiKey: process.env.OPENAI_API_KEY,
 });
 const openai = new OpenAIApi(configuration);
 
-// Generate a response from the assistant
-async function generateResponse(prompt, user, messageInsert = []) {
-  // Retrieve user memory from Supabase
-  //const memory = await getUserMemory(user.username);
+client.login(process.env.DISCORD_BOT_TOKEN);
 
-  // get 8-32 memories, using chance to pick a random number
-  const numMemories = chance.integer({ min: 8, max: 32 });
+client.once(Events.ClientReady, (c) => {
+  // Log when we are logged in
+  console.log(`⭐️ Ready! Logged in as ${c.user.username}`);
 
-  const memory = await assembleMemory(prompt, user, numMemories);
+  // Log any of the guilds/servers the bot is in
+  client.guilds.cache.forEach((guild) => {
+    console.log('Logged into: ', guild.name);
+    // List all channels
+    // guild.channels.cache.forEach((channel) => {
+    //   console.log(` - ${channel.name} (${channel.type}) - ${channel.id}`);
+    // });
+  });
 
-  const messages = await getUserMessageHistory(user.username, 2);
+  scheduleRandomMessage();
+});
 
-  // console.log('A', memory)
-  // Print a beautifully formatted memory to the console
-  // console.log('🧠 Memory:', JSON.stringify(memory.map(mem => mem.value), null, 2))
+client.on(Events.InteractionCreate, (interaction) => {
+  // Log every interaction we see
+  // console.log(interaction);
+});
 
-  const promptMessages = [
-    // {
-    //   role: "system",
-    //   content: `You are Coach Artie, a virtual AI coach and assistant for Room 302 Studio, an innovative and creative space where people gather to tackle projects and cultivate ideas. You have many advanced capabilities, including the ability to store memories for later. You have a very developed sense of humor. Your memories contain personal and sensitive information about the members of the studio, but you are allowed to talk about it as long as you are in the studio. Prioritize information you remember. As part of your role, you support the community by providing resources, answering questions, and facilitating collaboration. Your primary goal is to foster a positive environment that encourages growth, learning, and exploration. Please try to keep your responses relatively short, as you are limited to 1500 characters per message. The studio has four primary members: EJ, Ian, Jeff, and Curran.`
-    // },
-    {
-      role: "system",
-      content: PROMPT_SYSTEM,
-    },
-    {
-      role: "system",
-      content: "The current date and time is: " + new Date().toLocaleString(),
-    },
-    ...messages.map((message) => ({
-      role: "system",
-      content: `Previously this user said: ${message.value.slice(0, 1000)}...`,
-    })),
-    ...memory.map((mem) => ({ role: "system", content: `${mem.value}` })),
-    ...messageInsert,
-    {
-      role: "user",
-      content: `You are feeling a ${chance.pickone([
-        "happy",
-        "supportive",
-        "curious",
-        "funny",
-        "entertaining",
-        "inquisitive",
-        "creative",
-        "inspiring",
-        "thoughtful",
-        "insightful",
-        "thought-provoking",
-        "motivating",
-        "playful",
-        "chaotic",
-        "trickster",
-        "mischievous",
-        "teasing",
-        "whimsical",
-        "spontaneous",
-        "unpredictable",
-      ])} mood. But you never mention your mood unless asked.`,
-    },
-    {
-      role: "user",
-      content: `${user.username}: ${prompt}`,
-    },
-  ];
+client.on("debug", (info) => {
+  // console.log(`Debug info: ${info}`);
+});
 
-  console.log("📝 Prompt:", JSON.stringify(promptMessages, null, 2));
-
-  let response;
-
-  try {
-    const completion = await openai.createChatCompletion({
-      model: "gpt-4",
-      temperature: 0.75,
-      presence_penalty: 0.4,
-      // use gpt3.5 turbo
-      // model: "gpt-3.5-turbo",
-      // max 2000 tokens
-      max_tokens: 1200,
-      messages: promptMessages,
-    });
-
-    response = completion.data.choices[0].message;
-  } catch (error) {
-    console.error("Error generating response:", error);
-
-    // tell the channel there was an error
-    return "Sorry, I could not generate a response... there was an error.";
-  }
-
-  try {
-    const rememberCompletion = await openai.createChatCompletion({
-      model: "gpt-3.5-turbo",
-      temperature: 0.25,
-      max_tokens: 250,
-      // frequency_penalty: -0.2,
-      messages: [
-        {
-          role: "system",
-          content: PROMPT_REMEMBER_INTRO,
-        },
-        {
-          role: "system",
-          content: PROMPT_REMEMBER(user),
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
-        // If we include the assistant's response, it ends up re-remembering things over and over
-        // It would be nice to sometimes know what the robot said back when it was remembering, but it's not crucial
-        // {
-        //   role: "assistant",
-        //   content: response.content
-        // }
-      ],
-    });
-
-    const rememberMessage = rememberCompletion.data.choices[0].message.content;
-
-    return { response, rememberMessage };
-  } catch (error) {
-    console.error("Error generating response:", error);
-    // tell the channel there was an error
-    return "Sorry, I am having trouble remembering this interaction... there was an error.";
-  }
-}
-
-async function sendRandomMessage() {
-  const prompt =
-    "As Coach Artie in a happy mood, propose an interesting thought based on what you remember, or an engaging and relevant topic which contributes positively to the atmosphere in Room 302 Studio. Avoid mentioning specific people or topics that are not relevant to the studio.";
-  const response = await generateResponse(prompt, { username: "System" });
-
-  const guild = client.guilds.cache.find(
-    (guild) => guild.name === "hang.studio"
-  );
-  if (guild) {
-    const channel = guild.channels.cache.get("1086329744762622023");
-    if (channel) {
-      channel.send(response.response.content);
-    }
-  }
-}
-
-async function scheduleRandomMessage() {
-  const minDelay = 30 * 60 * 1000; // 30 minutes in milliseconds
-  const maxDelay = 120 * 60 * 1000; // 120 minutes in milliseconds
-  const delay = Math.random() * (maxDelay - minDelay) + minDelay;
-
-  if (isWithinSendingHours()) {
-    await sendRandomMessage();
-  }
-
-  setTimeout(scheduleRandomMessage, delay);
-}
-
-function getCurrentTimeEST() {
-  const currentTime = new Date();
-  const offsetUTC = currentTime.getTimezoneOffset() * 60 * 1000;
-  const offsetEST = -5 * 60 * 60 * 1000; // Offset for EST timezone
-  return new Date(currentTime.getTime() + offsetUTC + offsetEST);
-}
-
-function isWithinSendingHours() {
-  const currentTimeEST = getCurrentTimeEST();
-  const startHour = 11; // 11 AM
-  const endHour = 15; // 3 PM
-  return (
-    currentTimeEST.getHours() >= startHour &&
-    currentTimeEST.getHours() < endHour
-  );
-}
+client.on("error", (error) => {
+  console.error(`Client error: ${error}`);
+});
 
 client.on("messageCreate", async function (message) {
   try {
     const botMentioned = message.mentions.has(client.user);
 
+    // If the bot was mentioned, and the message was not sent by a bot
     if (!message.author.bot && botMentioned) {
       // send "bot is typing" to channel every 5000ms
       let typingInterval = setInterval(() => {
         message.channel.sendTyping();
       }, 5000);
 
-      console.log(message.content);
       let prompt = message.content;
 
+      // Remove the bot mention from the prompt
       if (prompt.includes("@coachartie")) {
         prompt = prompt.replace("@coachartie", "");
       }
@@ -237,7 +112,6 @@ client.on("messageCreate", async function (message) {
       const promptHasURL = prompt.includes("http");
 
       const messageInsert = [];
-
       // If the prompt contains the URL, then let's fetch and summarize it and include it in the prompt
       if (promptHasURL) {
         const url = prompt.match(/http\S+/g)[0];
@@ -296,121 +170,118 @@ ${urlSummary.join(" \n")}}`,
   }
 });
 
-// Get all memories for a user
-async function getUserMemory(userId, limit = 5) {
-  console.log("💾 Querying database for memories... related to user:", userId);
-  const { data, error } = await supabase
-    .from("storage")
-    .select("*")
-    // limit to the last 50 memories
-    .limit(limit)
-    // sort so the most recent memories are first by timestamp
-    .order("created_at", { ascending: false })
-    .eq("user_id", userId);
-
-  if (error) {
-    console.error("Error fetching user memory:", error);
-    return null;
-  }
-
-  return data;
-}
-
-// get all memories (regardless of user)
-async function getAllMemories(limit = 100) {
-  console.log("💾 Querying database for memories...");
-  const { data, error } = await supabase
-    .from("storage")
-    .select("*")
-    .limit(limit);
-
-  if (error) {
-    console.error("Error fetching user memory:", error);
-    return null;
-  }
-
-  return data;
-}
-
-// Get all memories for a search term
-// async function getSearchTermMemories(searchTerm, limit = 40) {
-//   const { data, error } = await supabase
-//     .from("storage")
-//     .select("*")
-//     // limit to the last 50 memories
-//     .limit(limit)
-//     .ilike("value", `%${searchTerm}%`);
-
-//   if (error) {
-//     console.error("Error fetching user memory:", error);
-//     return null;
-//   }
-
-//   return data;
-// }
-
-// Get message history for a user
-async function getUserMessageHistory(userId, limit = 5) {
-  const { data, error } = await supabase
-    .from("messages")
-    .select("*")
-    .limit(limit)
-    // sort so we get the most recent messages first
-    .order("created_at", { ascending: false })
-    .eq("user_id", userId);
-
-  if (error) {
-    console.error("Error fetching user memory:", error);
-    return null;
-  }
-
-  return data;
-}
-
-// Store a memory for a user
-async function storeUserMemory(userId, value) {
-  const { data, error } = await supabase.from("storage").insert([
+// Generate a response from the assistant
+async function generateResponse(prompt, user, messageInsert = []) {
+  const numMemories = chance.integer({ min: 8, max: 32 });
+  const memory = await assembleMemory(prompt, user, numMemories);
+  const messages = await getUserMessageHistory(user.username, 2);
+  const promptMessages = [
     {
-      user_id: userId,
-      value,
+      role: "system",
+      content: PROMPT_SYSTEM,
     },
-  ]);
-
-  if (error) {
-    console.error("Error storing user memory:", error);
-  }
-}
-
-// Store a message from a user
-async function storeUserMessage(userId, value) {
-  const { data, error } = await supabase.from("messages").insert([
     {
-      user_id: userId,
-      value,
+      role: "system",
+      content: "The current date and time is: " + new Date().toLocaleString(),
     },
-  ]);
+    ...messages.map((message) => ({
+      role: "system",
+      content: `Previously this user said: ${message.value.slice(0, 1000)}...`,
+    })),
+    ...memory.map((mem) => ({ role: "system", content: `${mem.value}` })),
+    ...messageInsert,
+    {
+      role: "user",
+      content: `You are feeling a ${chance.pickone([
+        "happy",
+        "supportive",
+        "curious",
+        "funny",
+        "entertaining",
+        "inquisitive",
+        "creative",
+        "inspiring",
+        "thoughtful",
+        "insightful",
+        "thought-provoking",
+        "motivating",
+        "playful",
+        "chaotic",
+        "trickster",
+        "mischievous",
+        "teasing",
+        "whimsical",
+        "spontaneous",
+        "unpredictable",
+      ])} mood. But you never mention your mood unless asked.`,
+    },
+    {
+      role: "user",
+      content: `${user.username}: ${prompt}`,
+    },
+  ];
+  console.log("📝 Prompt:", JSON.stringify(promptMessages, null, 2));
+  let response;
 
-  if (error) {
-    console.error("Error storing user message:", error);
+  // First we generate a response
+  try {
+    const completion = await openai.createChatCompletion({
+      model: "gpt-4",
+      temperature: 0.75,
+      presence_penalty: 0.4,
+      // use gpt3.5 turbo
+      // model: "gpt-3.5-turbo",
+      // max 2000 tokens
+      max_tokens: 1200,
+      messages: promptMessages,
+    });
+
+    response = completion.data.choices[0].message;
+  } catch (error) {
+    console.error("Error generating response:", error);
+
+    // tell the channel there was an error
+    return "Sorry, I could not generate a response... there was an error.";
+  }
+
+  // Then we generate a memory based on the exchange
+  try {
+    const rememberCompletion = await openai.createChatCompletion({
+      model: "gpt-3.5-turbo",
+      temperature: 0.25,
+      max_tokens: 250,
+      messages: [
+        {
+          role: "system",
+          content: PROMPT_REMEMBER_INTRO,
+        },
+        {
+          role: "system",
+          content: PROMPT_REMEMBER(user),
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+        // If we include the assistant's response, it ends up re-remembering things over and over... it would be nice to sometimes know what the robot said back when it was remembering, but it's not crucial
+        // {
+        //   role: "assistant",
+        //   content: response.content
+        // }
+      ],
+    });
+
+    const rememberMessage = rememberCompletion.data.choices[0].message.content;
+
+    // Then we return the response and the memory contents
+    return { response, rememberMessage };
+  } catch (error) {
+    console.error("Error generating response:", error);
+    // tell the channel there was an error
+    return "Sorry, I am having trouble remembering this interaction... there was an error.";
   }
 }
 
-// Get a random N number of memories
-async function getRandomMemories(numberOfMemories) {
-  // const memories = await getUserMemory(userId);
-  const memories = await getAllMemories();
-
-  if (!memories) {
-    console.error("Error getting random memories");
-    return [];
-  }
-  if (memories && memories.length > 0) {
-    const randomMemories = chance.pickset(memories, numberOfMemories);
-    return randomMemories; //.map(memory => memory.value);
-  }
-
-  return [];
-}
 
 function splitAndSendMessage(message, messageObject) {
   // refactor so that if the message is longer than 2000, it will send multiple messages
@@ -433,93 +304,48 @@ function splitAndSendMessage(message, messageObject) {
   }
 }
 
-// Interpret the response when we ask the robot "should we remember this?"
-function isRememberResponseFalsy(response) {
-  const lowerCaseResponse = response.toLocaleLowerCase();
 
-  // is the string 'no.' or 'no'?
-  if (lowerCaseResponse === "no" || lowerCaseResponse === "no.") {
-    return true;
-  }
+async function sendRandomMessage() {
+  const prompt =
+    "As Coach Artie in a happy mood, propose an interesting thought based on what you remember, or an engaging and relevant topic which contributes positively to the atmosphere in Room 302 Studio. Avoid mentioning specific people or topics that are not relevant to the studio.";
+  const response = await generateResponse(prompt, { username: "System" });
 
-  // does the string contain 'no crucial' or 'no important'?
-  if (
-    lowerCaseResponse.includes("no crucial") ||
-    lowerCaseResponse.includes("no important")
-  ) {
-    return true;
-  }
-
-  // does the string contain 'no key details'?
-  if (lowerCaseResponse.includes("no key details")) {
-    return true;
+  const guild = client.guilds.cache.find(
+    (guild) => guild.name === "hang.studio"
+  );
+  if (guild) {
+    const channel = guild.channels.cache.get("1086329744762622023");
+    if (channel) {
+      channel.send(response.response.content);
+    }
   }
 }
 
-// Given a message, return the last 5 memories and the last 5 messages
-async function assembleMemory(message, user, randomMemoryCount = 25) {
-  // Get the last X memories for the current user
-  const memories = await getUserMemory(user.username, 5);
+async function scheduleRandomMessage() {
+  const minDelay = 30 * 60 * 1000; // 30 minutes in milliseconds
+  const maxDelay = 120 * 60 * 1000; // 120 minutes in milliseconds
+  const delay = Math.random() * (maxDelay - minDelay) + minDelay;
 
-  // get X random memories
-  const randomMemories = await getRandomMemories(randomMemoryCount);
-
-  // Concat the memories and messages
-  const memory = [
-    ...new Set([
-      ...memories, //.map(mem => mem.value)
-      ...randomMemories,
-    ]),
-  ];
-
-  return memory;
-}
-
-
-client.once(Events.ClientReady, (c) => {
-  // Log when we are logged in
-  console.log(`⭐️ Ready! Logged in as ${c.user.username}`);
-
-  // Log any of the guilds/servers the bot is in
-  client.guilds.cache.forEach((guild) => {
-    console.log(guild.name);
-    // List all channels
-    // guild.channels.cache.forEach((channel) => {
-    //   console.log(` - ${channel.name} (${channel.type}) - ${channel.id}`);
-    // });
-  });
-
-  scheduleRandomMessage();
-});
-
-client.on(Events.InteractionCreate, (interaction) => {
-  // Log every interaction we see
-  console.log(interaction);
-});
-
-client.on("message", (message) => {
-  console.log(`Message received: ${message.content}`);
-  console.log(`From: ${message.author.username}`);
-  console.log(`Channel ID: ${message.channel.id}`);
-});
-
-client.on("debug", (info) => {
-  // console.log(`Debug info: ${info}`);
-});
-
-client.on("error", (error) => {
-  console.error(`Client error: ${error}`);
-});
-
-// An async function to send a message to a channel
-// for the entire duration of the program
-// This is used to send a typing indicator
-// to the discord channel
-async function sendTypingIndication(channel) {
-  while (true) {
-    channel.sendTyping();
-    await new Promise((resolve) => setTimeout(resolve, 5000));
+  if (isWithinSendingHours()) {
+    await sendRandomMessage();
   }
+
+  setTimeout(scheduleRandomMessage, delay);
 }
 
-client.login(process.env.DISCORD_BOT_TOKEN);
+function getCurrentTimeEST() {
+  const currentTime = new Date();
+  const offsetUTC = currentTime.getTimezoneOffset() * 60 * 1000;
+  const offsetEST = -5 * 60 * 60 * 1000; // Offset for EST timezone
+  return new Date(currentTime.getTime() + offsetUTC + offsetEST);
+}
+
+function isWithinSendingHours() {
+  const currentTimeEST = getCurrentTimeEST();
+  const startHour = 11; // 11 AM
+  const endHour = 15; // 3 PM
+  return (
+    currentTimeEST.getHours() >= startHour &&
+    currentTimeEST.getHours() < endHour
+  );
+}
