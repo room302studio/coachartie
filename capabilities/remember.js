@@ -110,44 +110,50 @@ async function storeUserMessage(userId, value) {
 }
 
 // Get a random N number of memories
-async function getRandomMemories(numberOfMemories) {
-  // const memories = await getUserMemory(userId);
-  const memories = await getAllMemories();
+// async function getRandomMemories(numberOfMemories) {
+//   // const memories = await getUserMemory(userId);
+//   const memories = await getAllMemories();
 
-  if (!memories) {
-    console.error("Error getting random memories");
-    return [];
-  }
-  if (memories && memories.length > 0) {
-    const randomMemories = chance.pickset(memories, numberOfMemories);
-    return randomMemories; //.map(memory => memory.value);
-  }
+//   if (!memories) {
+//     console.error("Error getting random memories");
+//     return [];
+//   }
+//   if (memories && memories.length > 0) {
+//     const randomMemories = chance.pickset(memories, numberOfMemories);
+//     return randomMemories; //.map(memory => memory.value);
+//   }
 
-  return [];
-}
+//   return [];
+// }
 
 
 // Given a message, return the last 5 memories and the last 5 messages
 async function assembleMemory(user, randomMemoryCount = 25) {
-  if(!user) {
-    console.error("No user provided to assembleMemory");
-    return [];
+  try {
+    if(!user) {
+      console.error("No user provided to assembleMemory");
+      return [];
+    }
+    // Get the last X memories for the current user
+    const memories = await getUserMemory(user, 5);
+
+    console.log(' assembling memories for user: ', memories);
+
+    // get X random memories
+    // const randomMemories = await getRandomMemories(randomMemoryCount);
+
+    // Concat the memories and messages
+    const memory = [
+      ...new Set([
+        ...memories.map(mem => mem.value)
+        // ...randomMemories,
+      ]),
+    ];
+
+    return memory;
+  } catch (e) {
+    console.error("assembleMemory error: ", e);
   }
-  // Get the last X memories for the current user
-  const memories = await getUserMemory(user, 5);
-
-  // get X random memories
-  // const randomMemories = await getRandomMemories(randomMemoryCount);
-
-  // Concat the memories and messages
-  const memory = [
-    ...new Set([
-      ...memories, //.map(mem => mem.value)
-      // ...randomMemories,
-    ]),
-  ];
-
-  return memory;
 }
 
 // Interpret the response when we ask the robot "should we remember this?"
@@ -162,7 +168,8 @@ function isRememberResponseFalsy(response) {
   // does the string contain 'no crucial' or 'no important'?
   if (
     lowerCaseResponse.includes("no crucial") ||
-    lowerCaseResponse.includes("no important")
+    lowerCaseResponse.includes("no important") ||
+    lowerCaseResponse.includes("✨")
   ) {
     return true;
   }
