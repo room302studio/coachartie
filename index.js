@@ -4,6 +4,21 @@ In this realm, we import the necessary modules, packages,
 and wire up our bot's brain to bring it to life. Let's go!
 */
 
+// 📜 prompts: our guidebook of conversational cues
+const prompts = require("./prompts");
+
+// 🚦 Constants Corner: prepping our prompts and error message
+const {
+  PROMPT_SYSTEM,
+  PROMPT_REMEMBER,
+  PROMPT_REMEMBER_INTRO,
+  PROMPT_CONVO_EVALUATE_FOR_TWEET,
+  PROMPT_CONVO_EVALUATE_INSTRUCTIONS,
+  PROMPT_TWEET_REQUEST,
+  CAPABILITY_PROMPT_INTRO,
+} = prompts;
+const ERROR_MSG = `I am so sorry, there was some sort of problem. Feel free to ask me again, or try again later.`;
+
 // 🧩 Importing essential building blocks from the Discord package
 const { Client, GatewayIntentBits, Events } = require("discord.js");
 
@@ -20,9 +35,6 @@ const { Configuration, OpenAIApi } = require("openai");
 const { Chance } = require("chance");
 const chance = new Chance();
 
-// 📜 prompts: our guidebook of conversational cues
-const prompts = require("./prompts");
-
 /*
 💾 Memory Lane: the 'remember' capability for our bot.
 The ability to store and retrieve memories and message history.
@@ -35,13 +47,16 @@ const {
   storeUserMemory,
 } = require("./capabilities/remember.js");
 
+const {
+  calculate
+} = require("./capabilities/calculator.js");
+
 /*
 🌐 Our trusty browsing companion! The 'chrome_gpt_browser' module,
 giving us fetching and parsing superpowers for URLs.
 */
 const {
-  fetchAndParseURL,
-  generateSummary,
+  fetchAndSummarizeUrl
 } = require("./chrome_gpt_browser.js");
 
 // 💪 Flexin' on 'em with our list of cool capabilities!
@@ -49,16 +64,7 @@ const capabilities = require("./capabilities/_manifest.js").capabilities;
 
 // capability prompt
 // to tell the robot all the capabilities it has and what they do
-const capabilityPrompt = `You have a limited number of capabilities that let you do things by asking the system to do them.
-
-If you want to use a capability's method, you can ask the system to do it by making sure you are on a newline, and saying "<SYSTEM, CAPABILITY, METHOD>". For example, if you want to use the "remember" capability's "store" method, you can say:
-"\\n<SYSTEM, REMEMBER, STORE, The value of the memory>"
-and the system will store the memory for you. You may only use one capability at a time.
-
-Not all capabilities require arguments, for example:
-"\\n<SYSTEM, REMEMBER, ASSEMBLEMEMORY>" will assemble your memories for you.
-
-The responses to these capabilities will appear as system messages in your conversation.
+const capabilityPrompt = `${CAPABILITY_PROMPT_INTRO}
 
 These are all of your capabilities:
 ${capabilities
@@ -67,7 +73,7 @@ ${capabilities
       capability.description
     }, methods: ${capability.methods
       ?.map((method) => {
-        return method.name;
+        return method.name + ' Parameters: ' + JSON.stringify(method.parameters)
       })
       .join(", ")}`;
   })
@@ -81,17 +87,6 @@ const configuration = new Configuration({
   organization: process.env.OPENAI_API_ORGANIZATION,
 });
 const openai = new OpenAIApi(configuration);
-
-// 🚦 Constants Corner: prepping our prompts and error message
-const {
-  PROMPT_SYSTEM,
-  PROMPT_REMEMBER,
-  PROMPT_REMEMBER_INTRO,
-  PROMPT_CONVO_EVALUATE_FOR_TWEET,
-  PROMPT_CONVO_EVALUATE_INSTRUCTIONS,
-  PROMPT_TWEET_REQUEST,
-} = prompts;
-const ERROR_MSG = `I am so sorry, there was some sort of problem. Feel free to ask me again, or try again later.`;
 
 /*
 🤖 Assemble! The Discord client creation begins here.
@@ -149,20 +144,34 @@ async function onMessageCreate(message) {
       );
       const prompt = removeMentionFromMessage(message.content, "@coachartie");
 
-      generateResponse(prompt, message.author.username).then(
-        async ({ response }) => {
-          clearInterval(typingInterval);
-          splitAndSendMessage(response, message);
+      // generateResponse(prompt, message.author.username).then(
+      //   async ({ response }) => {
+      //     clearInterval(typingInterval);
+      //     splitAndSendMessage(response, message);
 
-          const rememberMessage = await generateAndStoreRememberCompletion(
-            prompt,
-            response,
-            message.author.username
-          );
-          storeUserMessage(message.author.username, message.content);
-          storeUserMemory(message.author.username, rememberMessage);
-        }
-      );
+      //     const rememberMessage = await generateAndStoreRememberCompletion(
+      //       prompt,
+      //       response,
+      //       message.author.username
+      //     );
+      //     storeUserMessage(message.author.username, message.content);
+      //     storeUserMemory(message.author.username, rememberMessage);
+      //   }
+      // );
+
+      const chainMessageStart = [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ];
+
+      const response = await processMessageChain(chainMessageStart);
+      const robotResponse = response[response.length - 1].content;
+      // stop typing
+      clearInterval(typingInterval);
+      // split and send the response
+      return splitAndSendMessage(robotResponse, message);
     }
   } catch (error) {
     console.log(error);
@@ -238,22 +247,14 @@ async function generateAndStoreRememberCompletion(prompt, response, username) {
   return rememberCompletion.data.choices[0].message.content;
 }
 
-// 📨 handleMessage: the brain center for processing user messages
-async function handleMessage(userMessage, username) {
+function assembleMessagePreamble(username) {
   const messages = [];
 
-  const msg = replaceRobotIdWithName(userMessage);
-
-  // add the current date and time as a system message
+    // add the current date and time as a system message
   messages.push({
     role: "system",
     content: `Today is ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`,
   });
-
-  const messageHistory = await getUserMessageHistory(username);
-
-  // do a beautiful log of the user's message
-  console.log(`\n👤 <${username}>: ${msg}`);
 
   // add all the system prompts to the messsage
   messages.push({
@@ -279,11 +280,28 @@ Remember, I'm here to foster a positive environment that encourages growth, lear
 
   messages.push(capabilityMessage);
 
+  return messages
+
+}
+
+// 📨 handleMessage: the brain center for processing user messages
+async function handleMessage(userMessage, username) {
+  let messages = [];
+
+  const msg = replaceRobotIdWithName(userMessage);
+
+  // add premable to messages
+  messages = assembleMessagePreamble(username);
+
   const memories = await assembleMemory(username, getRandomInt(3, 20));
+
+  const messageHistory = await getUserMessageHistory(username);
 
   // add the messagehistory to the memories
   messageHistory.forEach((message) => {
-    memories.push(`previously this user said: <${message.user_id}>: ${message.value}`);
+    memories.push(
+      `previously this user said: <${message.user_id}>: ${message.value}`
+    );
   });
 
   // turn memories into chatbot messages for completion
@@ -303,6 +321,9 @@ Remember, I'm here to foster a positive environment that encourages growth, lear
   // use chance to make a temperature between 0.7 and 0.99
   const temperature = chance.floating({ min: 0.7, max: 0.99 });
 
+  // use chance to pick max_tokens between 500 and 1200
+  const maxTokens = chance.integer({ min: 500, max: 1200 });
+
   // console.log the messages for debugging
   messages.forEach((message) => {
     const roleEmoji = (message) => {
@@ -321,7 +342,7 @@ Remember, I'm here to foster a positive environment that encourages growth, lear
   const chatCompletion = await openai.createChatCompletion({
     model: "gpt-4",
     temperature,
-    max_tokens: 900,
+    max_tokens: maxTokens,
     messages: messages,
   });
 
@@ -330,7 +351,13 @@ Remember, I'm here to foster a positive environment that encourages growth, lear
     `🤖 <Coach Artie>: ${chatCompletion.data.choices[0].message.content}`
   );
 
-  return chatCompletion.data.choices[0].message.content;
+  // return chatCompletion.data.choices[0].message.content;
+  return [
+    {
+      role: "assistant",
+      content: chatCompletion.data.choices[0].message.content,
+    },
+  ];
 }
 
 // 📦 logGuildsAndChannels: a handy helper for listing servers and channels
@@ -360,36 +387,52 @@ function getRandomInt(min, max) {
 
 // 🤖 replaceRobotIdWithName: given a string, replace the robot id with the robot name
 function replaceRobotIdWithName(string) {
-  console.log('Replacing robot id with name');
+  // console.log("Replacing robot id with name");
   const coachArtieId = client.user.id;
-  console.log('coachArtieId', coachArtieId);
+  // console.log("coachArtieId", coachArtieId);
   const coachArtieName = client.user.username;
-  console.log('coachArtieName', coachArtieName);
+  // console.log("coachArtieName", coachArtieName);
 
-  console.log('Before replace', string);
+  // console.log("Before replace", string);
   const replaced = string.replace(`<@!${coachArtieId}>`, coachArtieName);
-  console.log('After replace', replaced);
-  return replaced
+  // console.log("After replace", replaced);
+  return replaced;
 }
 
 // 📝 callCapabilityMethod: a function for calling capability methods
 async function callCapabilityMethod(capabilitySlug, methodName, args) {
+  console.log("✨✨✨✨✨✨✨✨✨");
   console.log(
     `Calling capability method: ${capabilitySlug}.${methodName} with args: ${args}`
   );
 
-  let capabilityResponse = "";
+  // now we need to figure out what the capability is
+  const capability = capabilities.find(
+    (capability) => capability.slug === capabilitySlug
+  );
+  // if those don't exist, we should throw an error
+  if (!capability) {
+    const error = `Capability not found for ${capabilitySlug}`;
+    console.error(error);
+    return `Error: ${error}`;
+  }
 
-  if (capabilitySlug === "remember") {
-    if (methodName === "store") {
-      // store the memory
-      capabilityResponse = "Memory stored!";
-    } else if (methodName === "assembleMemory") {
-      // assemble the memory
-      capabilityResponse = "Assembled memories!";
-    } else if (methodName === "getRandomMemories") {
-      // get random memories
-      capabilityResponse = "Got random memories!";
+  // but if they DO exist, we are in business!
+  // let's call the method assuming it has been imported already
+  if(capabilitySlug === 'web') {
+    if (methodName === 'fetchAndSummarizeUrl') {
+      const url = args
+      const summary = await fetchAndSummarizeUrl(url);
+      return summary;
+    }
+  } else if (capabilitySlug === 'calculator') {
+    if (methodName === 'calculate') {
+      // const expression = args;
+      // split the expression into an array on commas
+      // const expressionArray = expression.split(",");
+      // const result = calculate(expressionArray[0], expressionArray[1], expressionArray[2]);
+      const result = calculate(args);
+      return 'Calculator result: ' + result.toString();
     }
   }
 
@@ -400,15 +443,23 @@ async function callCapabilityMethod(capabilitySlug, methodName, args) {
 
 // 📝 processMessageChain: a function for processing message chains
 async function processMessageChain(messages) {
-  console.log("Processing message chain:", messages);
-  console.log("Messages: ", messages.length);
+  // console.log("Processing message chain:", messages);
+  // console.log("Messages: ", messages.length);
+
+  if(!messages.length) {
+    return [];
+  }
+
 
   const lastMessage = messages[messages.length - 1];
-  console.log("Last message: \n", lastMessage);
+  // console.log("Last message: \n", lastMessage);
   const currentTokenCount = countMessageTokens(messages);
   console.log("Current token count: ", currentTokenCount);
 
   const apiTokenLimit = 8000;
+
+  // add preamble to messages
+  messages = [...assembleMessagePreamble(), ...messages];
 
   if (currentTokenCount >= apiTokenLimit - 900) {
     console.log(
@@ -422,32 +473,51 @@ async function processMessageChain(messages) {
     return messages;
   }
 
-  // const capabilityRegex = /\\n<SYSTEM, (.+?), (.+?)(?:, (.*?))?>/;
-  // needs to handle `<SYSTEM, REMEMBER, STORE, EJ asked me to demonstrate the store method in the remember capability.>
-  const capabilityRegex = /(?:\\n)?<SYSTEM, (.+?), (.+?)(?:, (.*?))?>/; // Remove the 'g' flag
-  const capabilityMatch = capabilityRegex.exec(lastMessage.content); // Use 'exec' instead of 'match'
+  // NEW:
+  // capability commands look like
+  // capability:method(args)
+
+  // examples:
+  // remember:storeUserMemory(remember this for later)
+  // or
+  // remember:assembleMemories()
+  // or
+  // web:readWebPage(https://example.com)
+
+  const capabilityRegex = /(\w+):(\w+)\((.*)\)/;
+  const capabilityMatch = lastMessage.content.match(capabilityRegex);
 
   console.log("Capability match: ", capabilityMatch);
 
-  if (!capabilityMatch) {
+  // if (!capabilityMatch) {
+  // if there is no capability match and the last message is not from the user
+  if (!capabilityMatch && lastMessage.role !== "user" && lastMessage.role !== "system") {
     console.log("No capability found in the last message, breaking the chain.");
     return messages;
   }
 
-  const [_, capSlug, capMethod, capArgs] = capabilityMatch;
-  const capabilityResponse = await callCapabilityMethod(
-    capSlug,
-    capMethod,
-    capArgs
-  );
+  if (capabilityMatch) {
+    const [_, capSlug, capMethod, capArgs] = capabilityMatch;
+    const capabilityResponse = await callCapabilityMethod(
+      capSlug,
+      capMethod,
+      capArgs
+    );
 
-  const systemMessage = {
-    role: "system",
-    content: capabilityResponse,
-  };
+    const systemMessage = {
+      role: "system",
+      content: capabilityResponse,
+    };
 
-  console.log("Adding system message to the chain:", systemMessage);
-  messages.push(systemMessage);
+    console.log("Adding system message to the chain:", systemMessage);
+    messages.push(systemMessage);
+  }
+
+  // beautiful console.log for messages
+  console.log("📝 Message chain:");
+  messages.forEach((message) => {
+    console.log(` - ${message.role}: ${message.content}`);
+  });
 
   // Call the OpenAI API to get the AI response based on the system message
   const completion = await openai.createChatCompletion({
@@ -458,10 +528,41 @@ async function processMessageChain(messages) {
     messages: messages,
   });
 
+
+
+
   const aiResponse = completion.data.choices[0].message;
 
   messages.push(aiResponse);
 
   console.log("Continuing the message chain.");
   return processMessageChain(messages);
+}
+
+function countMessageTokens(messageArray = []) {
+  let totalTokens = 0;
+  // console.log("Message Array: ", messageArray);
+  if (!messageArray) {
+    return totalTokens;
+  }
+  if (messageArray.length === 0) {
+    return totalTokens;
+  }
+  messageArray.forEach((message) => {
+    // encode message.content
+    const encodedMessage = encode(JSON.stringify(message));
+    // console.log('Encoded Message: ', encodedMessage)
+    totalTokens += encodedMessage.length;
+  });
+  return totalTokens;
+}
+
+function isWithinSendingHours() {
+  const currentTimeEST = getCurrentTimeEST();
+  const startHour = 11; // 11 AM
+  const endHour = 15; // 3 PM
+  return (
+    currentTimeEST.getHours() >= startHour &&
+    currentTimeEST.getHours() < endHour
+  );
 }

@@ -40,6 +40,29 @@ module.exports = {
         },
       ]
     },
+    {
+      slug: 'calculator',
+      description: 'This capability gives you the ability to do math.',
+      methods: [
+        {
+          name: 'calculate',
+          description: 'This method gives you the ability to add, subtract, multiply, and divide numbers.',
+          returns: 'number',
+          parameters: [
+            {
+              name: 'operation',
+              type: 'string',
+              description: 'The operation to perform. Can be "add", "subtract", "multiply", or "divide".'
+            },
+            {
+              name: 'numbers',
+              type: 'array',
+              description: 'An array of numbers to perform the operation on.'
+            }
+          ]
+        },
+      ]
+    },
     // {
     //   slug: 'evaluate',
     //   description: 'This capability gives you the ability to evaluate an exchange between a human-user and yourself and determine if you were helpful, if there are any ways you can improve, and if there are any further tasks you can do to help the user.',
@@ -62,23 +85,23 @@ module.exports = {
     //     },
     //   ]
     // },
-    // {
-    //   slug: 'web',
-    //   description: 'This capability gives you the ability to access a website and read all of the text on it, and then return an array of facts that you can use to generate a memory or form a message to a user.',
-    //   enabled: false,
-    //   methods: [
-    //     {
-    //       name: 'readWebPage',
-    //       parameters: [
-    //         {
-    //           name: 'url',
-    //           type: 'string',
-    //         }
-    //       ],
-    //       returns: 'array',
-    //     }
-    //   ]
-    // },
+    {
+      slug: 'web',
+      description: 'This capability gives you the ability to access a website and read all of the text on it, and then return an array of facts that you can use to generate a memory or form a message to a user.',
+      enabled: false,
+      methods: [
+        {
+          name: 'fetchAndSummarizeUrl',
+          parameters: [
+            {
+              name: 'url',
+              type: 'string',
+            }
+          ],
+          returns: 'array',
+        }
+      ]
+    },
     // {
     //   slug: 'chance',
     //   description: 'This capability gives you ability to harness the power of chance and randomness through chance.js - given an array of strings that represent choices, randomly choose one and return it.',

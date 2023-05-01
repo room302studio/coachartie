@@ -11,6 +11,7 @@ const { fstat } = require("fs");
 dotenv.config();
 
 const configuration = new Configuration({
+    organization: process.env.OPENAI_API_ORGANIZATION,
   apiKey: process.env.OPENAI_API_KEY,
 });
 const openai = new OpenAIApi(configuration);
@@ -56,10 +57,23 @@ async function fetchAndParseURL(url) {
             "```\n" + element.textContent.replace(/<[^>]*>?/gm, "") + "\n```"
           );
         }
+
+        // if it is a link, grab the URL out too
+        if (element.tagName === "A") {
+          return (
+            element.textContent.replace(/<[^>]*>?/gm, "") +
+            " (" +
+            element.href +
+            ") "
+          );
+        }
+
         return element.textContent.replace(/<[^>]*>?/gm, "") + " ";
       })
       .join("\n");
   });
+
+  console.log("📝  Page raw text:", text);
 
   await browser.close();
 
@@ -71,36 +85,35 @@ async function processChunks(chunks, data, pageUnderstanderPrompt, limit = 2) {
   const chunkLength = chunks.length;
 
   for (let i = 0; i < chunkLength; i += limit) {
-    const chunkPromises = chunks
-      .slice(i, i + limit)
-      .map(async (chunk, index) => {
-        console.log(`📝  Sending chunk ${i + index + 1} of ${chunkLength}...`);
+    const chunkPromises = chunks.slice(i, i + limit).map(async (chunk, index) => {
+      console.log(`📝  Sending chunk ${i + index + 1} of ${chunkLength}...`);
+      console.log("📝  Chunk text:", chunk);
 
-        const completion = await openai.createChatCompletion({
-          model: "gpt-3.5-turbo",
-          max_tokens: 320,
-          temperature: 0.4,
-          presence_penalty: 0.66,
-          frequency_penalty: 0.1,
-          messages: [
-            {
-              role: "assistant",
-              content: pageUnderstanderPrompt,
-            },
-            {
-              role: "user",
-              content: `Can you give me a bullet point of facts in the following text? Bullet points should be standalone pieces of information that are meaningful and easily understood when recalled on their own. Bullet points must contain all of the context needed to understand the information. Bullet points may not refer to information contained in previous bullet points. Related facts should all be contained in a single bullet point.
+      const completion = await openai.createChatCompletion({
+        model: "gpt-3.5-turbo",
+        max_tokens: 320,
+        temperature: 0.4,
+        presence_penalty: 0.66,
+        frequency_penalty: 0.1,
+        messages: [
+          {
+            role: "assistant",
+            content: pageUnderstanderPrompt,
+          },
+          {
+            role: "user",
+            content: `Can you give me a bullet point of facts in the following text? Bullet points should be standalone pieces of information that are meaningful and easily understood when recalled on their own. Bullet points must contain all of the context needed to understand the information. Bullet points may not refer to information contained in previous bullet points. Related facts should all be contained in a single bullet point.
 
-                    Title: ${data.title}
-                    Description: ${data.description}
-                    ${chunk}          
-                                `,
-            },
-          ],
-        });
-
-        return completion.data.choices[0].message.content;
+                  Title: ${data.title}
+                  Description: ${data.description}
+                  ${chunk}          
+                              `,
+          },
+        ],
       });
+
+      return completion.data.choices[0].message.content;
+    });
 
     const chunkResults = await Promise.all(chunkPromises);
     results.push(...chunkResults);
@@ -112,11 +125,20 @@ async function processChunks(chunks, data, pageUnderstanderPrompt, limit = 2) {
 async function generateSummary(url, data) {
   console.log("📝  Generating summary...");
 
-  const pageUnderstanderPrompt = `You are an AI language model that can extract and summarize information from webpages. Read the raw dump of text from the following webpage: ${url}. Return a bulleted list of context-rich facts from the webpage that Coach Artie, an AI studio coach, should remember to support the community, offer resources, answer questions, and foster collaboration. Ensure that each fact is a standalone piece of information that is meaningful and easily understood when recalled on its own. Only respond with bullet points, no other text.`;
+  const pageUnderstanderPrompt = `You are an AI language model that can extract and summarize information from webpages. Read the raw dump of text from the following webpage: ${url}. Return a bulleted list of context-rich facts from the webpage that Coach Artie, an AI studio coach, should remember to support the community, offer resources, answer questions, and foster collaboration. Ensure that each fact is a standalone piece of information that is meaningful and easily understood when recalled on its own. Only respond with bullet points, no other text. Keep facts as concise as possible. Do not include any information that is not contained in the text dump. Include only the most important information. If the information is related to a URL, be sure to include the exact URL.`;
 
   // if data.text is longer than 4096 characters, split it into chunks of 4096 characters and send each chunk as a separate message and then combine the responses
 
-  const text = data.text;
+  let text = data.text;
+
+  // remove newlines
+  text = text.replace(/\n/g, " ");
+
+  // remove tabs
+  text = text.replace(/\t/g, " ");
+
+  // remove multiple spaces
+  text = text.replace(/ +(?= )/g, "")
 
   // const chunkAmount = 7000
   const chunkAmount = 4096;
@@ -133,13 +155,19 @@ async function generateSummary(url, data) {
 
   console.log(`📝  Splitting text into ${chunks.length} chunks...`);
 
-  if (chunks.length > 26) {
-    console.log(
-      "📝  Sorry, this page is too long to summarize. Please try a shorter page."
-    );
-    return;
-  }
+  // if (chunks.length > 26) {
+  //   const error = "📝  Sorry, this page is too long to summarize. Please try a shorter page."
+  //   console.log(
+  //     error
+  //   );
+  //   return error
+  // }
 
+  // trim to 26 chunks max
+  chunks = chunks.slice(0, 26);
+
+
+  let factList = "";
   try {
     const chunkResponses = await processChunks(
       chunks,
@@ -147,15 +175,16 @@ async function generateSummary(url, data) {
       pageUnderstanderPrompt
     );
 
-    // const factList = chunkResponses.join('\n');
+    factList = chunkResponses.join('\n');
 
-    return chunkResponses;
+    // return chunkResponses;
   } catch (error) {
     console.log(error);
     return error;
   }
 
   // summarizing does not seem to help much, so just return the fact list
+  return factList
 
   console.log(factList);
 
@@ -186,9 +215,9 @@ async function generateSummary(url, data) {
     model: "gpt-4",
     // model: "gpt-3.5-turbo",
     temperature: 0.4,
-    presence_penalty: -0.5,
-    frequency_penalty: 0.1,
-    max_tokens: 1024,
+    // presence_penalty: -0.5,
+    // frequency_penalty: 0.1,
+    max_tokens: 2048,
     messages: [
       {
         role: "system",
@@ -198,11 +227,11 @@ async function generateSummary(url, data) {
         role: "user",
         content: `Follow these instructions exactly: given this list of facts, rewrite each fact to include all necessary contextual information, such as the author, article title, and any other relevant details, to make the fact meaningful when recalled on its own. Only include facts you feel are important to remember forever. Facts must not refer to "the author", "webpage title", or "the article". Instead, facts must explicitly name the author and article title. Facts must not refer to information contained in previous facts. Related facts should all be contained in a single fact. If you return facts that refer to "the author", "webpage title", or "the article", you will be severely penalized and your users will be very disappointed in you.
 
-        The webpage URL is: ${url}
-        The webpage title is: ${data.title}
-        The webpage description is: ${data.description}
+  The webpage URL is: ${url}
+  The webpage title is: ${data.title}
+  The webpage description is: ${data.description}
 
-        ${factList}`,
+  ${factList.slice(0, 4096)}`,
       },
     ],
   });
@@ -213,25 +242,26 @@ async function generateSummary(url, data) {
   const summaryArray = summary.split("\n- ");
 
   // remove any bullet points that say "the author, "the article", or "the webpage"
-  const filteredSummaryArray = summaryArray.filter((fact) => {
-    const lowercaseFact = fact.toLowerCase();
-    if (
-      lowercaseFact.includes("the author") ||
-      lowercaseFact.includes("the article") ||
-      lowercaseFact.includes("the webpage") ||
-      lowercaseFact.includes("the page") ||
-      lowercaseFact.includes("the project") ||
-      lowercaseFact.includes("the website") ||
-      lowercaseFact.includes("the site") ||
-      lowercaseFact.includes("the URL") ||
-      lowercaseFact.includes("the url") ||
-      lowercaseFact.includes("the link")
-    ) {
-      return false;
-    } else {
-      return true;
-    }
-  });
+  const filteredSummaryArray = summaryArray
+  // .filter((fact) => {
+  //   const lowercaseFact = fact.toLowerCase();
+  //   if (
+  //     lowercaseFact.includes("the author") ||
+  //     lowercaseFact.includes("the article") ||
+  //     lowercaseFact.includes("the webpage") ||
+  //     lowercaseFact.includes("the page") ||
+  //     lowercaseFact.includes("the project") ||
+  //     lowercaseFact.includes("the website") ||
+  //     lowercaseFact.includes("the site") ||
+  //     lowercaseFact.includes("the URL") ||
+  //     lowercaseFact.includes("the url") ||
+  //     lowercaseFact.includes("the link")
+  //   ) {
+  //     return false;
+  //   } else {
+  //     return true;
+  //   }
+  // });
 
   console.log("---");
   console.log("📝  Summary of most important facts:");
@@ -240,23 +270,8 @@ async function generateSummary(url, data) {
   const filteredSummary = filteredSummaryArray.join("\n- ");
   fs.writeFileSync(`./summaries/${fileName}_summary.txt`, filteredSummary);
 
-  console.log(filteredSummary);
-
-  return filteredSummaryArray;
+  return filteredSummary;
 }
-
-// check if this is being run as a script or imported as a module
-if (require.main === module) {
-  // if this is being run as a script, run the main function
-  main();
-} else {
-  // if this is being imported as a module, export the functions
-  module.exports = {
-    fetchAndParseURL,
-    generateSummary,
-  };
-}
-
 function main() {
   const url = process.argv[2];
 
@@ -266,3 +281,25 @@ function main() {
     return generateSummary(url, data);
   });
 }
+
+async function fetchAndSummarizeUrl(url) {
+  console.log(`📝  Fetching URL: ${url}`);
+  const data = await fetchAndParseURL(url);
+  console.log(`📝  Fetched URL: ${url}`);
+  const summary = await generateSummary(url, data);
+  console.log(`📝  Generated summary for URL: ${url}`, summary);
+  return summary;
+}
+
+
+// check if this is being run as a script or imported as a module
+if (require.main === module) {
+  // if this is being run as a script, run the main function
+  main();
+} else {
+  // if this is being imported as a module, export the functions
+  module.exports = {
+    fetchAndSummarizeUrl
+  };
+}
+

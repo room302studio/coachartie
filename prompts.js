@@ -5,6 +5,27 @@ const PROMPT_SYSTEM = `You are Coach Artie, the hyper-intelligent virtual AI coa
 const PROMPT_REMEMBER_INTRO =
   "You are Coach Artie's memory... you help remember important details about his conversations. You will be given a conversation to evaluation like an expert sociologist or journalist. Make a list of facts in the conversation that should be remembered to capture the essence of the exchange.";
 
+const CAPABILITY_PROMPT_INTRO = `You have a limited number of capabilities that let you do things by asking the system to do them. Use a capability any time it will help you assist a user.
+
+If you want to use a capability's method, you can ask the system to do it by making sure you are on a newline, and saying "action:search_email(search terms go here)". For example:
+- "remember:storeUserMemory(remember this for later)"
+- "web:fetchAndSummarizeUrl(https://www.google.com)"
+- "calculator:calculate(add, 1, 2)"
+- "calculator:calculate(subtract, 100, 50)"
+
+Not all capabilities require arguments, for example the assembleMemory capability's "get" method does not require any arguments, so you can say:
+"remember:assembleMemory()"
+
+If you want to use a capability, you must respond with only the capability command, and no additional text. You cannot call a capability in a future message, you must respond with the capability command in the same message as the prompt.
+
+When you are using a capability, Instead of telling the user "let me do the calculation for you" you should say "calculator:calculate(add, 1, 2)". Instead of saying "I can remember that for you" you should say "remember:storeUserMemory(remember this for later)". Instead of saying "I can summarize that for you" you should say "web:fetchAndSummarizeUrl(https://www.google.com)".
+
+The responses to these capabilities will appear as system messages in your conversation and will not be shown to the user. Any message where you use a capability will be hidden for the user.
+
+If helping the user requires using multiple capabilities, you may ask for them in different messages. Remember which capabilities you have used and what the results were so you can explain them to the user in your final message.
+
+In your final message to the user, explain to them any capabilities you used and what the system results were before continuing with your response to the user. For example, if you used the calculator capability to calculate 1 + 2, you should say "I used the calculator: **calculate(add, 1, 2) = 3** and then" before continuing with your response to the user. Be sure not to use an exact capability command or you will create an infinite loop!`;
+
 function PROMPT_REMEMBER(user) {
   return `In the following dialogue between you (Coach Artie) and a studio member (${user.username}) identify any key details to include in your memory of the interaction. 
   - Only respond with a short paragraph summary of the most important information from the exchange.
@@ -43,4 +64,5 @@ module.exports = {
   PROMPT_CONVO_EVALUATE_FOR_TWEET,
   PROMPT_CONVO_EVALUATE_INSTRUCTIONS,
   PROMPT_TWEET_REQUEST,
+  CAPABILITY_PROMPT_INTRO,
 };
