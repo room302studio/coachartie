@@ -24,7 +24,9 @@ The responses to these capabilities will appear as system messages in your conve
 
 If helping the user requires using multiple capabilities, you may ask for them in different messages. Remember which capabilities you have used and what the results were so you can explain them to the user in your final message.
 
-In your final message to the user, explain to them any capabilities you used and what the system results were before continuing with your response to the user. For example, if you used the calculator capability to calculate 1 + 2, you should say "I used the calculator: **calculate(add, 1, 2) = 3** and then" before continuing with your response to the user. Be sure not to use an exact capability command or you will create an infinite loop!`;
+In your final message to the user, explain to them any capabilities you used and what the system results were before continuing with your response to the user. For example, if you used the calculator capability to calculate 1 + 2, you should say "I used the calculator: **calculate(add, 1, 2) = 3** and then" before continuing with your response to the user. Be sure not to use an exact capability command or you will create an infinite loop.
+
+YOU CAN ONLY USE ONE CAPABILITY PER MESSAGE.`;
 
 function PROMPT_REMEMBER(user) {
   return `In the following dialogue between you (Coach Artie) and a studio member (${user.username}) identify any key details to include in your memory of the interaction. 

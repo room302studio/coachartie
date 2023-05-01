@@ -51,6 +51,14 @@ const {
   calculate
 } = require("./capabilities/calculator.js");
 
+const {
+  askWolframAlpha
+} = require("./capabilities/wolframalpha.js");
+
+const {
+  askWikipedia
+} = require("./capabilities/wikipedia.js");
+
 /*
 🌐 Our trusty browsing companion! The 'chrome_gpt_browser' module,
 giving us fetching and parsing superpowers for URLs.
@@ -113,7 +121,7 @@ client.on("messageCreate", onMessageCreate);
 function onClientReady(c) {
   console.log(`⭐️ Ready! Logged in as ${c.user.username}`);
   logGuildsAndChannels();
-  scheduleRandomMessage();
+  // scheduleRandomMessage();
 }
 
 // 🎭 onInteractionCreate: a silent observer of interactions
@@ -407,15 +415,15 @@ async function callCapabilityMethod(capabilitySlug, methodName, args) {
   );
 
   // now we need to figure out what the capability is
-  const capability = capabilities.find(
-    (capability) => capability.slug === capabilitySlug
-  );
-  // if those don't exist, we should throw an error
-  if (!capability) {
-    const error = `Capability not found for ${capabilitySlug}`;
-    console.error(error);
-    return `Error: ${error}`;
-  }
+  // const capability = capabilities.find(
+  //   (capability) => capability.slug === capabilitySlug
+  // );
+  // // if those don't exist, we should throw an error
+  // if (!capability) {
+  //   const error = `Capability not found for ${capabilitySlug}`;
+  //   console.error(error);
+  //   return `Error: ${error}`;
+  // }
 
   // but if they DO exist, we are in business!
   // let's call the method assuming it has been imported already
@@ -434,11 +442,21 @@ async function callCapabilityMethod(capabilitySlug, methodName, args) {
       const result = calculate(args);
       return 'Calculator result: ' + result.toString();
     }
+  } else if (capabilitySlug === 'wolframalpha') {
+    if (methodName === 'askWolframAlpha') {
+      const question = args;
+      const result = await askWolframAlpha(question);
+      return result;
+    }
+  } else if (capabilitySlug === 'wikipedia') {
+    if (methodName === 'askWikipedia') {
+      const question = args;
+      const result = await askWikipedia(question);
+      return result;
+    }
   }
 
-  // You can replace this with actual capability method implementation.
-  return `System response for ${capabilitySlug}.${methodName}: 
-    ${capabilityResponse}`;
+  return "Error: Capability method not found";
 }
 
 // 📝 processMessageChain: a function for processing message chains

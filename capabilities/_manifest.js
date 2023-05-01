@@ -22,7 +22,7 @@ module.exports = {
         },
         {
           name: 'assembleMemory',
-          description: 'This method gives you the ability to assemble a bunch of memories based on a conversation. The memories are an assortment of random, relevant memories, and messages this user has sent in the past. If you are in a Discord thread, the memories will include all of the most recent messages in the thread within the token limit. If you are in a DM, the memories will include the most recent messages in the DM within the token limit.',
+          description: 'This method gives you the ability to assemble a bunch of memories based on a conversation. T he memories are an assortment of random, relevant memories, and messages this user has sent in the past. If you are in a Discord thread, the memories will include all of the most recent messages in the thread within the token limit. If you are in a DM, the memories will include the most recent messages in the DM within the token limit.',
           returns: 'array',
           parameters: []
         },
@@ -98,7 +98,7 @@ module.exports = {
               type: 'string',
             }
           ],
-          returns: 'array',
+          returns: 'string',
         }
       ]
     },
@@ -241,40 +241,40 @@ module.exports = {
     //     }
     //   ],
     // },
-    // {
-    //   slug: 'wolfram-alpha',
-    //   description: 'This capability gives you the ability to ask Wolfram Alpha questions and get answers.',
-    //   enabled: false,
-    //   methods: [
-    //     {
-    //       name: 'askWolframAlpha',
-    //       parameters: [
-    //         {
-    //           name: 'question',
-    //           type: 'string',
-    //         }
-    //       ],
-    //       returns: 'string',
-    //     }
-    //   ]
-    // },
-    // {
-    //   slug: 'wikipedia',
-    //   description: 'This capability gives you the ability to search a term on wikipedia and read the article and turn it into a list of facts.',
-    //   enabled: false,
-    //   methods: [
-    //     {
-    //       name: 'askWikipedia',
-    //       parameters: [
-    //         {
-    //           name: 'query',
-    //           type: 'string',
-    //         }
-    //       ],
-    //       returns: 'array',
-    //     }
-    //   ]
-    // },
+    {
+      slug: 'wolframalpha',
+      description: 'This capability gives you the ability to ask Wolfram Alpha questions and get answers.',
+      enabled: false,
+      methods: [
+        {
+          name: 'askWolframAlpha',
+          parameters: [
+            {
+              name: 'question',
+              type: 'string',
+            }
+          ],
+          returns: 'string',
+        }
+      ]
+    },
+    {
+      slug: 'wikipedia',
+      description: 'This capability gives you the ability to search a term on wikipedia and read the article and turn it into a list of facts.',
+      enabled: false,
+      methods: [
+        {
+          name: 'askWikipedia',
+          parameters: [
+            {
+              name: 'query',
+              type: 'string',
+            }
+          ],
+          returns: 'array',
+        }
+      ]
+    },
     // {
     //   slug: 'memory-embedding-search',
     //   description: 'This capability lets you search memories using pgvector and the memory embeddings to find similar memories.',
