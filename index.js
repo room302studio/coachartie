@@ -59,7 +59,7 @@ const {
   searchWikipedia
 } = require("./capabilities/wikipedia.js");
 
-const GithubCoach = require("./capabilities/github.js");
+const { GithubCoach } = require("./capabilities/github.js");
 const github = new GithubCoach();
 
 
