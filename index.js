@@ -307,7 +307,7 @@ Remember, I'm here to foster a positive environment that encourages growth, lear
   });
   
   // get user messages
-  const userMessages = await getUserMessageHistory(username).reverse()
+  const userMessages = await getUserMessageHistory(username)
 
   // turn previous user messages into chatbot messages
   userMessages.forEach((message) => {
