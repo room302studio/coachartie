@@ -420,7 +420,7 @@ module.exports = {
       enabled: false,
       methods: [
         {
-          name: 'askWikipedia',
+          name: 'searchWikipedia',
           parameters: [
             {
               name: 'query',
