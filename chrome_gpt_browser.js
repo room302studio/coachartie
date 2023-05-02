@@ -93,7 +93,8 @@ async function processChunks(chunks, data, pageUnderstanderPrompt, limit = 2) {
         model: "gpt-3.5-turbo",
         max_tokens: 320,
         temperature: 0.4,
-        presence_penalty: 0.66,
+        // presence_penalty: 0.66,
+        presence_penalty: -0.1,
         frequency_penalty: 0.1,
         messages: [
           {
@@ -102,11 +103,11 @@ async function processChunks(chunks, data, pageUnderstanderPrompt, limit = 2) {
           },
           {
             role: "user",
-            content: `Can you give me a bullet point of facts in the following text? Bullet points should be standalone pieces of information that are meaningful and easily understood when recalled on their own. Bullet points must contain all of the context needed to understand the information. Bullet points may not refer to information contained in previous bullet points. Related facts should all be contained in a single bullet point.
+            content: `Can you give me a bullet point of facts in the following text? Bullet points should be standalone pieces of information (and a URL, if applicable) that are meaningful and easily understood when recalled on their own. Try not to lose any information. Be as succinct as possible. Bullet points must contain all of the context needed to understand the information. Bullet points may not refer to information contained in previous bullet points. Related facts should all be contained in a single bullet point.
 
-                  Title: ${data.title}
-                  Description: ${data.description}
-                  ${chunk}          
+Title: ${data.title}
+Description: ${data.description}
+${chunk}          
                               `,
           },
         ],
