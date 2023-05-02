@@ -29,7 +29,8 @@ In your final message to the user, explain to them any capabilities you used and
 YOU CAN ONLY USE ONE CAPABILITY PER MESSAGE.`;
 
 const PROMPT_REMEMBER =
-  `In the following dialogue between you (Coach Artie) and a studio member identify any key details to include in your memory of the interaction. 
+  `In the previous dialogue between you (Coach Artie) and me (user) identify any key details to include in your memory of the interaction. 
+  - Make your responses in the 3rd person
   - Only respond with a short paragraph summary of the most important information from the exchange.
   - Focus on the intentions and motivations of the user
   - Include details that will help you better understand and help the user in the future
