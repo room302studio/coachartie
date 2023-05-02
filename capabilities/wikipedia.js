@@ -62,18 +62,12 @@ async function askWikipedia(query) {
 
     const articleText = $('body').text().trim();
 
-    const sections = pageResponse.data.parse.sections.map(section => section.line);
+    let trimmedArticleText = articleText
 
-    // return {
-    //   articleText: articleText,
-    //   sections: sections,
-    // };
-    let returnString = `Sections: ${sections.join(' ')}
-    Article:
-    ${articleText}`
+    // remove newlines and extra spaces
+    trimmedArticleText = trimmedArticleText.replace(/\n/g, ' ');
 
-    // slice the string down to 2048 characters
-    returnString = returnString.slice(0, 2048);
+    return trimmedArticleText.slice(0, 4000);
 
   } catch (error) {
     console.log('error', error);

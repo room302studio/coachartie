@@ -33,7 +33,7 @@ async function askWolframAlpha(question) {
     const response = await axios.get(wolframUrl);
     return response.data;
   } catch (error) {
-    return 'Error occurred while contacting Wolfram Alpha. Please try again later.';
+    return `Error occurred while contacting Wolfram Alpha. Please try again later. ${error}`;
   }
 }
 

@@ -85,7 +85,7 @@ ${capabilities
       capability.description
     }, methods: ${capability.methods
       ?.map((method) => {
-        return method.name + ' Parameters: ' + JSON.stringify(method.parameters)
+        return method.name //+ ' Parameters: ' + JSON.stringify(method.parameters)
       })
       .join(", ")}`;
   })
@@ -149,6 +149,8 @@ async function onMessageCreate(message) {
   try {
     const botMentioned = message.mentions.has(client.user);
 
+    const username = message.author.username;
+
     if (!message.author.bot && botMentioned) {
       const typingInterval = setInterval(
         () => message.channel.sendTyping(),
@@ -163,48 +165,23 @@ async function onMessageCreate(message) {
         },
       ];
 
-      const response = await processMessageChain(chainMessageStart);
+      const response = await processMessageChain(message, chainMessageStart, username);
       const robotResponse = response[response.length - 1].content;
       // stop typing
       clearInterval(typingInterval);
       // split and send the response
       splitAndSendMessage(robotResponse, message);
+      console.log(`🤖 Response: ${robotResponse}`);
 
-      // generate a memory from the exchange
-      const rememberCompletion = await openai.createChatCompletion({
-        model: "gpt-3.5-turbo",
-        temperature: 0.95,
-        frequency_penalty: 0.55,
-        presence_penalty: 0.55,
-        max_tokens: 320,
-        messages: [
-          {
-            role: "system",
-            content: PROMPT_REMEMBER_INTRO,
-          },
-          {
-            role: "system",
-            content: PROMPT_REMEMBER(message.author.username),
-          },
-          {
-            role: "user",
-            content: prompt,
-          },
-          {
-            role: "assistant",
-            content: response.slice(0,6144),
-          },
-        ],
-      });
-
-      const rememberMessage =
-        rememberCompletion.data.choices[0].message.content;      
-
-      // Save the memory to the database
-      storeUserMemory(message.author.username, rememberMessage);
+      const rememberMessage = await generateAndStoreRememberCompletion(message, prompt, robotResponse);
 
       // Save the message to the database
-      storeUserMessage(message.author.username, message.content);
+      await storeUserMessage(message.author.username, message.content);
+
+      console.log(`🧠 Message saved to database: ${message.content}`);
+      console.log(`🧠 Memory saved to database: ${JSON.stringify(rememberMessage)}`);
+
+
     }
   } catch (error) {
     console.log(error);
@@ -219,16 +196,16 @@ function removeMentionFromMessage(message, mention) {
 }
 
 // 💬 generateResponse: a masterful weaver of AI-generated replies
-async function generateResponse(prompt, username) {
-  try {
-    const response = await handleMessage(prompt, username);
-    return { response };
-  } catch (error) {
-    console.error("Error generating response:", error);
-    // return "Sorry, I could not generate a response... there was an error.";
-    return { response: ERROR_MSG };
-  }
-}
+// async function generateResponse(prompt, username) {
+//   try {
+//     const response = await handleMessage(prompt, username);
+//     return { response };
+//   } catch (error) {
+//     console.error("Error generating response:", error);
+//     // return "Sorry, I could not generate a response... there was an error.";
+//     return { response: ERROR_MSG };
+//   }
+// }
 
 // 📤 splitAndSendMessage: a reliable mailman for handling lengthy messages
 function splitAndSendMessage(message, messageObject) {
@@ -252,7 +229,7 @@ function splitAndSendMessage(message, messageObject) {
 }
 
 // 🧠 generateAndStoreRememberCompletion: the architect of our bot's memory palace
-async function generateAndStoreRememberCompletion(prompt, response, username) {
+async function generateAndStoreRememberCompletion(message, prompt, response, username = '') {
   const rememberCompletion = await openai.createChatCompletion({
     model: "gpt-3.5-turbo",
     temperature: 0.75,
@@ -264,7 +241,7 @@ async function generateAndStoreRememberCompletion(prompt, response, username) {
       },
       {
         role: "system",
-        content: PROMPT_REMEMBER(username),
+        content: PROMPT_REMEMBER,
       },
       {
         role: "user",
@@ -277,11 +254,16 @@ async function generateAndStoreRememberCompletion(prompt, response, username) {
     ],
   });
 
-  return rememberCompletion.data.choices[0].message.content;
+  const rememberText = rememberCompletion.data.choices[0].message.content;
+  await storeUserMemory(message.author.username, rememberText);
+
+  return rememberText;
 }
 
-function assembleMessagePreamble(username) {
+async function assembleMessagePreamble(username) {
   const messages = [];
+
+  
 
     // add the current date and time as a system message
   messages.push({
@@ -313,85 +295,107 @@ Remember, I'm here to foster a positive environment that encourages growth, lear
 
   messages.push(capabilityMessage);
 
+  // get user memories
+  const userMemories = await getUserMemory(username);
+
+  // turn user memories into chatbot messages
+  userMemories.forEach((memory) => {
+    messages.push({
+      role: "system",
+      content: `You remember ${memory.value}`,
+    });
+  });
+  
+  // get user messages
+  const userMessages = await getUserMessageHistory(username).reverse()
+
+  // turn previous user messages into chatbot messages
+  userMessages.forEach((message) => {
+    messages.push({
+      role: "system",
+      content: `previously this user said: <${message.user_id}>: ${message.value}`,
+    });
+  });
+
   return messages
 
 }
 
 // 📨 handleMessage: the brain center for processing user messages
-async function handleMessage(userMessage, username) {
-  let messages = [];
+// async function handleMessage(userMessage, username) {
+//   let messages = [];
 
-  const msg = replaceRobotIdWithName(userMessage);
+//   const msg = replaceRobotIdWithName(userMessage);
 
-  // add premable to messages
-  messages = assembleMessagePreamble(username);
+//   // add premable to messages
+//   messages = await assembleMessagePreamble(username);
 
-  const memories = await assembleMemory(username, getRandomInt(3, 20));
+//   const memories = await assembleMemory(username, getRandomInt(3, 20));
 
-  const messageHistory = await getUserMessageHistory(username);
+//   const messageHistory = await getUserMessageHistory(username);
 
-  // add the messagehistory to the memories
-  messageHistory.forEach((message) => {
-    memories.push(
-      `previously this user said: <${message.user_id}>: ${message.value}`
-    );
-  });
+//   // add the messagehistory to the memories
+//   messageHistory.forEach((message) => {
+//     memories.push(
+//       `previously this user said: <${message.user_id}>: ${message.value}`
+//     );
+//   });
 
-  // turn memories into chatbot messages for completion
-  memories.forEach((memory) => {
-    console.log("memory -->", memory);
-    messages.push({
-      role: "system",
-      content: `You remember ${memory}`,
-    });
-  });
+//   // turn memories into chatbot messages for completion
+//   memories.forEach((memory) => {
+//     console.log("memory -->", memory);
+//     messages.push({
+//       role: "system",
+//       content: `You remember ${memory}`,
+//     });
+//   });
 
-  messages.push({
-    role: "user",
-    content: msg,
-  });
+//   messages.push({
+//     role: "user",
+//     content: msg,
+//   });
 
-  // use chance to make a temperature between 0.7 and 0.99
-  const temperature = chance.floating({ min: 0.7, max: 0.99 });
+//   // use chance to make a temperature between 0.7 and 0.99
+//   const temperature = chance.floating({ min: 0.7, max: 0.99 });
 
-  // use chance to pick max_tokens between 500 and 1200
-  const maxTokens = chance.integer({ min: 500, max: 1200 });
+//   // use chance to pick max_tokens between 500 and 1200
+//   const maxTokens = chance.integer({ min: 500, max: 1200 });
 
-  // console.log the messages for debugging
-  messages.forEach((message) => {
-    const roleEmoji = (message) => {
-      if (message.role === "system") {
-        return "🔦";
-      } else if (message.role === "user") {
-        return "👤";
-      } else if (message.role === "assistant") {
-        return "🤖";
-      }
-    };
+//   // console.log the messages for debugging
+//   messages.forEach((message) => {
+//     const roleEmoji = (message) => {
+//       if (message.role === "system") {
+//         return "🔦";
+//       } else if (message.role === "user") {
+//         return "👤";
+//       } else if (message.role === "assistant") {
+//         return "🤖";
+//       }
+//     };
 
-    console.log(`${roleEmoji(message)} <${message.role}>: ${message.content}`);
-  });
+//     console.log(`${roleEmoji(message)} <${message.role}>: ${message.content}`);
+//   });
 
-  const chatCompletion = await openai.createChatCompletion({
-    model: "gpt-4",
-    temperature,
-    max_tokens: maxTokens,
-    messages: messages,
-  });
+//   const chatCompletion = await openai.createChatCompletion({
+//     model: "gpt-4",
+//     temperature,
+//     max_tokens: maxTokens,
+//     messages: messages,
+//   });
 
-  // do a beautiful log of the chatbot's response
-  console.log(
-    `🤖 <Coach Artie>: ${chatCompletion.data.choices[0].message.content}`
-  );
+//   // do a beautiful log of the chatbot's response
+//   console.log(
+//     `🤖 <Coach Artie>: ${chatCompletion.data.choices[0].message.content}`
+//   );
 
-  // return chatCompletion.data.choices[0].message.content;
-  return [
-    {
-      role: "assistant",
-      content: chatCompletion.data.choices[0].message.content,
-    },
-  ];
-}
+//   // return chatCompletion.data.choices[0].message.content;
+//   return [
+//     {
+//       role: "assistant",
+//       content: chatCompletion.data.choices[0].message.content,
+//     },
+//   ];
+// }
 
 // 📦 logGuildsAndChannels: a handy helper for listing servers and channels
 function logGuildsAndChannels() {
@@ -470,6 +474,7 @@ async function callCapabilityMethod(capabilitySlug, methodName, args) {
   } else if (capabilitySlug === 'wolframalpha') {
     if (methodName === 'askWolframAlpha') {
       const question = args;
+      console.log('Asking wolfram alpha', question);
       const result = await askWolframAlpha(question);
       return result;
     }
@@ -552,7 +557,7 @@ async function callCapabilityMethod(capabilitySlug, methodName, args) {
 }
 
 // 📝 processMessageChain: a function for processing message chains
-async function processMessageChain(messages) {
+async function processMessageChain(message, messages, username) {
   // console.log("Processing message chain:", messages);
   // console.log("Messages: ", messages.length);
 
@@ -568,8 +573,10 @@ async function processMessageChain(messages) {
 
   const apiTokenLimit = 8000;
 
+  const preamble = await assembleMessagePreamble(username);
+
   // add preamble to messages
-  messages = [...assembleMessagePreamble(), ...messages];
+  messages = [...preamble, ...messages];
 
   if (currentTokenCount >= apiTokenLimit - 900) {
     console.log(
@@ -608,16 +615,38 @@ async function processMessageChain(messages) {
 
   if (capabilityMatch) {
     const [_, capSlug, capMethod, capArgs] = capabilityMatch;
+
+    // tell the channel about the capability being run
+    message.channel.send(
+      `🤖 Running capability ${capSlug}:${capMethod}(${capArgs})`
+    );
+
     const capabilityResponse = await callCapabilityMethod(
       capSlug,
       capMethod,
       capArgs
     );
 
+    try{
+    message.channel.send(
+      `🔭 Capability ${capSlug}:${capMethod}(${capArgs}) responded with: 
+
+\`\`\`
+${capabilityResponse.slice(0, 500)}...
+\`\`\``
+    );
+    } catch (e) {
+      console.log("Error sending message: ", e);
+    }
+
+    const trimmedCapabilityResponse = capabilityResponse.slice(0, 4096)
+
     const systemMessage = {
       role: "system",
-      content: capabilityResponse,
+      content: `Capability ${capSlug}:${capMethod}(${capArgs}) responded with: ${trimmedCapabilityResponse}`
     };
+
+    
 
     console.log("Adding system message to the chain:", systemMessage);
     messages.push(systemMessage);
@@ -637,16 +666,14 @@ async function processMessageChain(messages) {
     max_tokens: 900,
     messages: messages,
   });
-
-
-
+  
 
   const aiResponse = completion.data.choices[0].message;
 
   messages.push(aiResponse);
 
   console.log("Continuing the message chain.");
-  return processMessageChain(messages);
+  return processMessageChain(message, messages);
 }
 
 function countMessageTokens(messageArray = []) {
