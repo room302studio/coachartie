@@ -80,6 +80,38 @@ async function fetchAndParseURL(url) {
   return { title, description, text };
 }
 
+async function fetchAllLinks(url) {
+  // navigate to a page and fetch all of the anchor tags
+  const browser = await puppeteer.launch();
+  const page = await browser.newPage();
+  await page.goto(url);
+
+  console.log("🕸️  Navigating to " + url);
+
+  // wait for body to load
+  await page.waitForSelector("body");
+
+  // get all the links and the link text
+  const links = await page.$$eval("a", function (elements) {
+    return elements.map((element) => {
+      return {
+        href: element.href,
+        text: element.textContent,
+      };
+    });
+  });
+
+  await browser.close();
+
+  // return the links as a newline delimited list prepared for GPT-3
+  return links.map((link) => {
+    return link.text + " (" + link.href + ") ";
+  });
+}
+
+
+
+
 async function processChunks(chunks, data, pageUnderstanderPrompt, limit = 2) {
   const results = [];
   const chunkLength = chunks.length;

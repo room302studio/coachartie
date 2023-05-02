@@ -60,6 +60,7 @@ const {
 } = require("./capabilities/wikipedia.js");
 
 const GithubCoach = require("./capabilities/github.js");
+const github = new GithubCoach();
 
 
 
@@ -68,7 +69,8 @@ const GithubCoach = require("./capabilities/github.js");
 giving us fetching and parsing superpowers for URLs.
 */
 const {
-  fetchAndSummarizeUrl
+  fetchAndSummarizeUrl,
+  fetchAllLinks
 } = require("./chrome_gpt_browser.js");
 
 // 💪 Flexin' on 'em with our list of cool capabilities!
@@ -465,6 +467,10 @@ async function callCapabilityMethod(capabilitySlug, methodName, args) {
       const url = args
       const summary = await fetchAndSummarizeUrl(url);
       return summary;
+    } else if (methodName === 'fetchAllLinks') {
+      const url = args
+      const links = await fetchAllLinks(url);
+      return links;
     }
   } else if (capabilitySlug === 'calculator') {
     if (methodName === 'calculate') {
@@ -491,18 +497,18 @@ async function callCapabilityMethod(capabilitySlug, methodName, args) {
   } else if (capabilitySlug === 'github') {
     if (methodName === 'createRepo') {
       const repoName = args;
-      const result = await GithubCoach.createRepo(repoName);
+      const result = await github.createRepo(repoName);
       return result;
     } else if (methodName === 'listRepos') {
-      const result = await GithubCoach.listRepos();
+      const result = await github.listRepos();
       return result;
     } else if (methodName === 'listBranches') {
       const repoName = args;
-      const result = await GithubCoach.listBranches(repoName);
+      const result = await github.listBranches(repoName);
       return result;
     } else if (methodName === 'createFile') {
       const repoName = args;
-      const result = await GithubCoach.createFile(repoName);
+      const result = await github.createFile(repoName);
       return result;
     } else if (methodName === 'editFile') {
       const arguments = args.split(',');
@@ -510,20 +516,20 @@ async function callCapabilityMethod(capabilitySlug, methodName, args) {
       const filePath = arguments[1];
       const content = arguments[2];
       const commitMessage = arguments[3];
-      const result = await GithubCoach.editFile(repoName, filePath, content, commitMessage);
+      const result = await github.editFile(repoName, filePath, content, commitMessage);
       return result;
     } else if (methodName === 'deleteFile') {
       const arguments = args.split(',');
       const repoName = arguments[0];
       const filePath = arguments[1];
       const commitMessage = arguments[2];
-      const result = await GithubCoach.deleteFile(repoName, filePath, commitMessage);
+      const result = await github.deleteFile(repoName, filePath, commitMessage);
       return result;
     } else if (methodName === 'createBranch') {
       const arguments = args.split(',');
       const repoName = arguments[0];
       const branchName = arguments[1];
-      const result = await GithubCoach.createBranch(repoName, branchName);
+      const result = await github.createBranch(repoName, branchName);
       return result;
     } else if (methodName === 'createPullReuqest') {
       const arguments = args.split(',');
@@ -532,13 +538,13 @@ async function callCapabilityMethod(capabilitySlug, methodName, args) {
       const headBranch = arguments[2];
       const baseBranch = arguments[3];
       const prDescription = arguments[4];
-      const result = await GithubCoach.createPullReuqest(repoName, title, headBranch, baseBranch, prDescription);
+      const result = await github.createPullReuqest(repoName, title, headBranch, baseBranch, prDescription);
       return result;
     } else if (methodName === 'readFileContents') {
       const arguments = args.split(',');
       const repoName = arguments[0];
       const filePath = arguments[1];
-      const result = await GithubCoach.readFileContents(repoName, filePath);
+      const result = await github.readFileContents(repoName, filePath);
       return result;
     }
   } else if (capabilitySlug === 'chance') {

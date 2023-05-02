@@ -227,7 +227,17 @@ module.exports = {
             }
           ],
           returns: 'string',
-        }
+        },
+        {
+          name: 'fetchAllLinks',
+          parameters: [
+            {
+              name: 'url',
+              type: 'string',
+            }
+          ],
+          returns: 'string',
+        },
       ]
     },
     {
