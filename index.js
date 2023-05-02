@@ -56,7 +56,7 @@ const {
 } = require("./capabilities/wolframalpha.js");
 
 const {
-  askWikipedia
+  searchWikipedia
 } = require("./capabilities/wikipedia.js");
 
 const GithubCoach = require("./capabilities/github.js");
@@ -232,24 +232,28 @@ function splitAndSendMessage(message, messageObject) {
 async function generateAndStoreRememberCompletion(message, prompt, response, username = '') {
   const rememberCompletion = await openai.createChatCompletion({
     model: "gpt-3.5-turbo",
-    temperature: 0.75,
-    max_tokens: 320,
+    temperature: 0.82,
+    max_tokens: 600,
     messages: [
       {
         role: "system",
         content: PROMPT_REMEMBER_INTRO,
       },
-      {
-        role: "system",
-        content: PROMPT_REMEMBER,
-      },
+      // {
+      //   role: "system",
+      //   content: PROMPT_REMEMBER,
+      // },
       {
         role: "user",
-        content: prompt,
+        content: '<User>: '+prompt,
       },
       {
         role: "assistant",
-        content: response,
+        content: '<Coach Artie>: '+response,
+      },
+      {
+        role: "user",
+        content: PROMPT_REMEMBER,
       },
     ],
   });
@@ -479,9 +483,9 @@ async function callCapabilityMethod(capabilitySlug, methodName, args) {
       return result;
     }
   } else if (capabilitySlug === 'wikipedia') {
-    if (methodName === 'askWikipedia') {
+    if (methodName === 'searchWikipedia') {
       const question = args;
-      const result = await askWikipedia(question);
+      const result = await searchWikipedia(question);
       return result;
     }
   } else if (capabilitySlug === 'github') {
@@ -621,11 +625,18 @@ async function processMessageChain(message, messages, username) {
       `🤖 Running capability ${capSlug}:${capMethod}(${capArgs})`
     );
 
-    const capabilityResponse = await callCapabilityMethod(
+    let capabilityResponse;
+
+    try {
+    capabilityResponse = await callCapabilityMethod(
       capSlug,
       capMethod,
       capArgs
     );
+    } catch (e) {
+      console.log("Error calling capability method: ", e);
+      capabilityResponse = "Error calling capability method: " + e;
+    }
 
     try{
     message.channel.send(
@@ -658,12 +669,17 @@ ${capabilityResponse.slice(0, 500)}...
     console.log(` - ${message.role}: ${message.content}`);
   });
 
+  // use chance to make a random temperature between 0.5 and 0.99
+  const temperature = chance.floating({ min: 0.5, max: 0.99 });
+
+  const presence_penalty = chance.floating({ min: 0.2, max: 0.66 });
+
   // Call the OpenAI API to get the AI response based on the system message
   const completion = await openai.createChatCompletion({
     model: "gpt-4",
-    temperature: 0.75,
-    presence_penalty: 0.4,
-    max_tokens: 900,
+    temperature,
+    presence_penalty,
+    max_tokens: 1000,
     messages: messages,
   });
   
