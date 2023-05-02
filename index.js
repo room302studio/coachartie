@@ -173,7 +173,9 @@ async function onMessageCreate(message) {
       // generate a memory from the exchange
       const rememberCompletion = await openai.createChatCompletion({
         model: "gpt-3.5-turbo",
-        temperature: 0.75,
+        temperature: 0.95,
+        frequency_penalty: 0.55,
+        presence_penalty: 0.55,
         max_tokens: 320,
         messages: [
           {
@@ -190,7 +192,7 @@ async function onMessageCreate(message) {
           },
           {
             role: "assistant",
-            content: response,
+            content: response.slice(0,6144),
           },
         ],
       });
