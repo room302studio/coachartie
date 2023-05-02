@@ -1,46 +1,6 @@
 module.exports = {
   capabilities: [
     {
-      slug: 'remember',
-      description: 'This capability gives you the ability to remember things.',
-      methods: [
-        {
-          name: 'storeUserMemory',
-          description: 'This method gives you the ability to store a memory about a user, which is bound to their user ID in the database.',
-          returns: null,
-          parameters: [
-            {
-              name: 'userId',
-              type: 'string',
-            },
-            {
-              name: 'value',
-              description: 'The text of the memory.',
-              type: 'string',
-            },
-          ]
-        },
-        {
-          name: 'assembleMemory',
-          description: 'This method gives you the ability to assemble a bunch of memories based on a conversation. T he memories are an assortment of random, relevant memories, and messages this user has sent in the past. If you are in a Discord thread, the memories will include all of the most recent messages in the thread within the token limit. If you are in a DM, the memories will include the most recent messages in the DM within the token limit.',
-          returns: 'array',
-          parameters: []
-        },
-        {
-          name: 'getRandomMemories',
-          description: 'This method gives you the ability to get a random N number of memories from the database.',
-          returns: 'array',
-          parameters: [
-            {
-              name: 'numberOfMemories',
-              type: 'number',
-              description: 'The number of memories to get.'
-            }
-          ]
-        },
-      ]
-    },
-    {
       slug: 'calculator',
       description: 'This capability gives you the ability to do math.',
       methods: [
@@ -62,6 +22,174 @@ module.exports = {
           ]
         },
       ]
+    },
+    {
+      slug: 'github',
+      description: 'This capability gives you the ability to interact with GitHub repositories.',
+      methods: [
+        {
+          name: 'createRepo',
+          description: 'Create a new repository.',
+          returns: 'object',
+          parameters: [
+            {
+              name: 'repositoryName',
+              type: 'string',
+              description: 'The name of the new repository.',
+            },
+          ],
+        },
+        {
+          name: 'cloneRepo',
+          description: 'Clone an existing repository.',
+          returns: 'void',
+          parameters: [
+            {
+              name: 'repositoryUrl',
+              type: 'string',
+              description: 'The URL of the repository to clone.',
+            },
+          ],
+        },
+        {
+          name: 'listRepos',
+          description: 'List all repositories for the authenticated user.',
+          returns: 'array',
+          parameters: [],
+        },
+        {
+          name: 'createBranch',
+          description: 'Create a new branch in a repository.',
+          returns: 'void',
+          parameters: [
+            {
+              name: 'repositoryName',
+              type: 'string',
+              description: 'The name of the repository.',
+            },
+            {
+              name: 'branchName',
+              type: 'string',
+              description: 'The name of the new branch.',
+            },
+          ],
+        },
+        {
+          name: 'listBranches',
+          description: 'List all branches in a repository.',
+          returns: 'array',
+          parameters: [
+            {
+              name: 'repositoryName',
+              type: 'string',
+              description: 'The name of the repository.',
+            },
+          ],
+        },
+        {
+          name: 'createFile',
+          description: 'Create a new file in a repository with the specified content and commit message.',
+          returns: 'object',
+          parameters: [
+            {
+              name: 'repositoryName',
+              type: 'string',
+              description: 'The name of the repository.',
+            },
+            {
+              name: 'filePath',
+              type: 'string',
+              description: 'The path to the new file.',
+            },
+            {
+              name: 'content',
+              type: 'string',
+              description: 'The content of the new file.',
+            },
+            {
+              name: 'commitMessage',
+              type: 'string',
+              description: 'The commit message for the new file.',
+            },
+          ],
+        },
+        {
+          name: 'editFile',
+          description: 'Edit an existing file in a repository with the specified new content and commit message.',
+          returns: 'object',
+          parameters: [
+            {
+              name: 'repositoryName',
+              type: 'string',
+              description: 'The name of the repository.',
+            },
+            {
+              name: 'filePath',
+              type: 'string',
+              description: 'The path to the file to edit.',
+            },
+            {
+              name: 'newContent',
+              type: 'string',
+              description: 'The new content of the file.',
+            },
+            {
+              name: 'commitMessage',
+              type: 'string',
+              description: 'The commit message for the file edit.',
+            },
+          ],
+        },
+        {
+          name: 'createPullRequest',
+          description: 'Create a new pull request.',
+          returns: 'object',
+          parameters: [
+            {
+              name: 'repositoryName',
+              type: 'string',
+              description: 'The name of the repository.',
+            },
+            {
+              name: 'title',
+              type: 'string',
+              description: 'The title of the pull request.',
+            },
+            {
+              name: 'headBranch',
+              type: 'string',
+              description: 'The name of the branch containing the changes you want to merge.',
+            },
+            {
+              name: 'baseBranch',
+              type: 'string',
+              description: 'The name of the branch you want your changes to be pulled into.',
+            },
+            {
+              name: 'description',
+              type: 'string',
+              description: 'The description of the changes in the pull request.',
+            },
+          ],
+        },
+        {
+          name: 'readFileContents',
+          description: 'Read the contents of a file in a repository.',
+          returns: 'string',
+          parameters: [
+            {
+              name: 'repositoryName',
+              type: 'string',
+              description: 'The name of the repository.',
+            },
+            {
+              name: 'filePath',
+              type: 'string',
+              description: 'The path to the file to read.',
+            },
+          ],
+        },
+      ],
     },
     // {
     //   slug: 'evaluate',
@@ -102,23 +230,51 @@ module.exports = {
         }
       ]
     },
-    // {
-    //   slug: 'chance',
-    //   description: 'This capability gives you ability to harness the power of chance and randomness through chance.js - given an array of strings that represent choices, randomly choose one and return it.',
-    //   enabled: false,
-    //   methods: [
-    //     {
-    //       name: 'choose',
-    //       parameters: [
-    //         {
-    //           name: 'Choice array',
-    //           type: 'array',
-    //         }
-    //       ],
-    //       returns: 'string',
-    //     }
-    //   ]
-    // },
+    {
+      slug: 'chance',
+      description: 'This capability gives you ability to harness the power of chance and randomness through chance.js - given an array of strings that represent choices, randomly choose one and return it.',
+      enabled: false,
+      methods: [
+        {
+          name: 'choose',
+          parameters: [
+            {
+              name: 'Choice array',
+              type: 'array',
+            }
+          ],
+          returns: 'string',
+        },
+        {
+          name: 'floating',
+          parameters: [
+            {
+              name: 'min',
+              type: 'number',
+            },
+            {
+              name: 'max',
+              type: 'number',
+            }
+          ],
+          returns: 'number',
+        },
+        {
+          name: 'integer',
+          parameters: [
+            {
+              name: 'min',
+              type: 'number',
+            },
+            {
+              name: 'max',
+              type: 'number',
+            }
+          ],
+          returns: 'number',
+        },
+      ]
+    },
     // {
     //   slug: 'agent-generation',
     //   description: 'This capability gives you the ability to generate a new agent, which means write a prompt that gives the agent a goal and a personality. These agents will run until they decide to stop or determine they have achieved their goal. Agent prompts are stored for reuse later.',
@@ -348,11 +504,6 @@ module.exports = {
     // {
     //   slug: 'youtube',
     //   description: 'This capability gives you the ability to search YouTube for videos and get a list of results, and also access a video and get the title, description, and transcript.',
-    //   enabled: false,
-    // },
-    // {
-    //   slug: 'github',
-    //   description: 'This capability gives you the ability to access the studio GitHub repos and read their files.',
     //   enabled: false,
     // },
     // {

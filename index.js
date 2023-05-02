@@ -59,6 +59,10 @@ const {
   askWikipedia
 } = require("./capabilities/wikipedia.js");
 
+const GithubCoach = require("./capabilities/github.js");
+
+
+
 /*
 🌐 Our trusty browsing companion! The 'chrome_gpt_browser' module,
 giving us fetching and parsing superpowers for URLs.
@@ -152,21 +156,6 @@ async function onMessageCreate(message) {
       );
       const prompt = removeMentionFromMessage(message.content, "@coachartie");
 
-      // generateResponse(prompt, message.author.username).then(
-      //   async ({ response }) => {
-      //     clearInterval(typingInterval);
-      //     splitAndSendMessage(response, message);
-
-      //     const rememberMessage = await generateAndStoreRememberCompletion(
-      //       prompt,
-      //       response,
-      //       message.author.username
-      //     );
-      //     storeUserMessage(message.author.username, message.content);
-      //     storeUserMemory(message.author.username, rememberMessage);
-      //   }
-      // );
-
       const chainMessageStart = [
         {
           role: "user",
@@ -179,7 +168,41 @@ async function onMessageCreate(message) {
       // stop typing
       clearInterval(typingInterval);
       // split and send the response
-      return splitAndSendMessage(robotResponse, message);
+      splitAndSendMessage(robotResponse, message);
+
+      // generate a memory from the exchange
+      const rememberCompletion = await openai.createChatCompletion({
+        model: "gpt-3.5-turbo",
+        temperature: 0.75,
+        max_tokens: 320,
+        messages: [
+          {
+            role: "system",
+            content: PROMPT_REMEMBER_INTRO,
+          },
+          {
+            role: "system",
+            content: PROMPT_REMEMBER(message.author.username),
+          },
+          {
+            role: "user",
+            content: prompt,
+          },
+          {
+            role: "assistant",
+            content: response,
+          },
+        ],
+      });
+
+      const rememberMessage =
+        rememberCompletion.data.choices[0].message.content;      
+
+      // Save the memory to the database
+      storeUserMemory(message.author.username, rememberMessage);
+
+      // Save the message to the database
+      storeUserMessage(message.author.username, message.content);
     }
   } catch (error) {
     console.log(error);
@@ -454,9 +477,76 @@ async function callCapabilityMethod(capabilitySlug, methodName, args) {
       const result = await askWikipedia(question);
       return result;
     }
+  } else if (capabilitySlug === 'github') {
+    if (methodName === 'createRepo') {
+      const repoName = args;
+      const result = await GithubCoach.createRepo(repoName);
+      return result;
+    } else if (methodName === 'listRepos') {
+      const result = await GithubCoach.listRepos();
+      return result;
+    } else if (methodName === 'listBranches') {
+      const repoName = args;
+      const result = await GithubCoach.listBranches(repoName);
+      return result;
+    } else if (methodName === 'createFile') {
+      const repoName = args;
+      const result = await GithubCoach.createFile(repoName);
+      return result;
+    } else if (methodName === 'editFile') {
+      const arguments = args.split(',');
+      const repoName = arguments[0];
+      const filePath = arguments[1];
+      const content = arguments[2];
+      const commitMessage = arguments[3];
+      const result = await GithubCoach.editFile(repoName, filePath, content, commitMessage);
+      return result;
+    } else if (methodName === 'deleteFile') {
+      const arguments = args.split(',');
+      const repoName = arguments[0];
+      const filePath = arguments[1];
+      const commitMessage = arguments[2];
+      const result = await GithubCoach.deleteFile(repoName, filePath, commitMessage);
+      return result;
+    } else if (methodName === 'createBranch') {
+      const arguments = args.split(',');
+      const repoName = arguments[0];
+      const branchName = arguments[1];
+      const result = await GithubCoach.createBranch(repoName, branchName);
+      return result;
+    } else if (methodName === 'createPullReuqest') {
+      const arguments = args.split(',');
+      const repoName = arguments[0];
+      const title = arguments[1];
+      const headBranch = arguments[2];
+      const baseBranch = arguments[3];
+      const prDescription = arguments[4];
+      const result = await GithubCoach.createPullReuqest(repoName, title, headBranch, baseBranch, prDescription);
+      return result;
+    } else if (methodName === 'readFileContents') {
+      const arguments = args.split(',');
+      const repoName = arguments[0];
+      const filePath = arguments[1];
+      const result = await GithubCoach.readFileContents(repoName, filePath);
+      return result;
+    }
+  } else if (capabilitySlug === 'chance') {
+    if (methodName === 'choose') {
+      const arguments = args.split(',');
+      const result = chance.pickone(arguments);
+      return result;
+    } else if (methodName === 'floating') {
+      const arguments = args.split(',');
+      const result = chance.floating({ min: arguments[0], max: arguments[1] });
+      return result;
+    } else if (methodName === 'integer') {
+      const arguments = args.split(',');
+      const result = chance.integer({ min: arguments[0], max: arguments[1] });
+      return result;
+    } 
   }
 
-  return "Error: Capability method not found";
+  return `Error: the capability method ${methodName} was not found for ${capabilitySlug} - maybe try a different method?`;
 }
 
 // 📝 processMessageChain: a function for processing message chains
