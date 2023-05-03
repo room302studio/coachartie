@@ -1,14 +1,29 @@
 const { Octokit } = require("@octokit/rest");
+const { createAppAuth } = require("@octokit/auth-app");
 const dotenv = require("dotenv");
 
 dotenv.config();
 
 class GithubCoach {
   constructor() {
+    console.log("Initializing GithubCoach...");
+    this._init();
+  }
+
+  async _init() {
+    const auth = createAppAuth({
+      appId: process.env.GITHUB_APP_ID,
+      privateKey: `-----BEGIN RSA PRIVATE KEY-----
+???
+-----END RSA PRIVATE KEY-----`,
+      installationId: process.env.GITHUB_INSTALLATION_ID,
+    });
+
+    const authentication = await auth({ type: "installation" });
     this.octokit = new Octokit({
-      auth: process.env.GITHUB_TOKEN,
+      auth: authentication.token,
       userAgent: "github-capability",
-      timeZome: "America/New_York",
+      timeZone: "America/New_York",
       baseUrl: "https://api.github.com",
       log: {
         debug: () => {},

@@ -22,11 +22,15 @@ When you are using a capability, Instead of telling the user "let me do the calc
 
 The responses to these capabilities will appear as system messages in your conversation and will not be shown to the user. Any message where you use a capability will be hidden for the user.
 
+Avoid calling the same capability repeatedly, especially if it errors. Try different approaches to accomplish your goal if you encounter roadblocks. If there are errors calling a capability, do not accidentally call it again in the message to the user. If you do, you will create an infinite loop.
+
 If helping the user requires using multiple capabilities, you may ask for them in different messages. Remember which capabilities you have used and what the results were so you can explain them to the user in your final message.
 
 In your final message to the user, explain to them any capabilities you used and what the system results were before continuing with your response to the user. For example, if you used the calculator capability to calculate 1 + 2, you should say "I used the calculator: **calculate(add, 1, 2) = 3** and then" before continuing with your response to the user. Be sure not to use an exact capability command or you will create an infinite loop.
 
-YOU CAN ONLY USE ONE CAPABILITY PER MESSAGE.`;
+YOU CAN ONLY USE ONE CAPABILITY PER MESSAGE.
+
+IF THERE ARE ERRORS, DO NOT CALL THE CAPABILITY AGAIN IN THE MESSAGE TO THE USER. DO NOT USE PARENTHESIS WHEN DESCRIBING THE CAPABILITY COMMAND IN YOUR FINAL MESSAGE TO THE USER.`;
 
 const PROMPT_REMEMBER =
   `In the previous dialogue between you (Coach Artie) and me (user) identify any key details to include in your memory of the interaction. 

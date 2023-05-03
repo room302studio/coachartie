@@ -507,8 +507,14 @@ async function callCapabilityMethod(capabilitySlug, methodName, args) {
       const result = await github.listBranches(repoName);
       return result;
     } else if (methodName === 'createFile') {
-      const repoName = args;
-      const result = await github.createFile(repoName);
+      // const repoName = args;
+      // async createFile(repositoryName, filePath, content, commitMessage) {
+      const arguments = args.split(',');
+      const repoName = arguments[0];
+      const filePath = arguments[1];
+      const content = arguments[2];
+      const commitMessage = arguments[3];
+      const result = await github.createFile(repoName, filePath, content, commitMessage);
       return result;
     } else if (methodName === 'editFile') {
       const arguments = args.split(',');
@@ -640,23 +646,23 @@ async function processMessageChain(message, messages, username) {
       capArgs
     );
     } catch (e) {
-      console.log("Error calling capability method: ", e);
-      capabilityResponse = "Error calling capability method: " + e;
+      console.log("Error: ", e);
+      capabilityResponse = "Error: " + e;
     }
 
     try{
     message.channel.send(
-      `🔭 Capability ${capSlug}:${capMethod}(${capArgs}) responded with: 
+      `🔭 **Capability ${capSlug}:${capMethod} ${capArgs}**
 
 \`\`\`
-${JSON.stringify(capabilityResponse).slice(0, 500)}...
+${JSON.stringify(capabilityResponse).slice(0, 900)}...
 \`\`\``
     );
     } catch (e) {
       console.log("Error sending message: ", e);
     }
 
-    const trimmedCapabilityResponse = JSON.stringify(capabilityResponse).slice(0, 4096)
+    const trimmedCapabilityResponse = JSON.stringify(capabilityResponse).slice(0, 5120)
 
     const systemMessage = {
       role: "system",
