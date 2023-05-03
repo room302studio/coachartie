@@ -649,14 +649,14 @@ async function processMessageChain(message, messages, username) {
       `🔭 Capability ${capSlug}:${capMethod}(${capArgs}) responded with: 
 
 \`\`\`
-${capabilityResponse.slice(0, 500)}...
+${JSON.stringify(capabilityResponse).slice(0, 500)}...
 \`\`\``
     );
     } catch (e) {
       console.log("Error sending message: ", e);
     }
 
-    const trimmedCapabilityResponse = capabilityResponse.slice(0, 4096)
+    const trimmedCapabilityResponse = JSON.stringify(capabilityResponse).slice(0, 4096)
 
     const systemMessage = {
       role: "system",
