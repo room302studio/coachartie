@@ -519,9 +519,9 @@ async function processMessageChain(message, messages, username) {
       "Token limit reached, adding system message to the chain reminding the bot to wrap it up."
     );
     messages.push({
-      role: "system",
+      role: "user",
       content:
-        "You are reaching the token limit. In the next response, you may not use a capability but must use all of this information to respond to the user.",
+        "You are reaching the token limit. In the next response, you may not use a capability but must use all of this information to summarize a response.",
     });
     // return messages;
   }
