@@ -197,18 +197,6 @@ function removeMentionFromMessage(message, mention) {
   return message.replace(mention, "").trim();
 }
 
-// 💬 generateResponse: a masterful weaver of AI-generated replies
-// async function generateResponse(prompt, username) {
-//   try {
-//     const response = await handleMessage(prompt, username);
-//     return { response };
-//   } catch (error) {
-//     console.error("Error generating response:", error);
-//     // return "Sorry, I could not generate a response... there was an error.";
-//     return { response: ERROR_MSG };
-//   }
-// }
-
 // 📤 splitAndSendMessage: a reliable mailman for handling lengthy messages
 function splitAndSendMessage(message, messageObject) {
   if (!message) return messageObject.channel.send(ERROR_MSG);
@@ -235,6 +223,7 @@ async function generateAndStoreRememberCompletion(message, prompt, response, use
   const rememberCompletion = await openai.createChatCompletion({
     model: "gpt-3.5-turbo",
     temperature: 0.82,
+    presence_penalty: -0.05,
     max_tokens: 600,
     messages: [
       {
@@ -245,17 +234,20 @@ async function generateAndStoreRememberCompletion(message, prompt, response, use
       //   role: "system",
       //   content: PROMPT_REMEMBER,
       // },
+      // {
+      //   role: "user",
+      //   content: '<User>: '+prompt,
+      // },
+      // {
+      //   role: "assistant",
+      //   content: '<Coach Artie>: '+response,
+      // },
       {
         role: "user",
-        content: '<User>: '+prompt,
-      },
-      {
-        role: "assistant",
-        content: '<Coach Artie>: '+response,
-      },
-      {
-        role: "user",
-        content: PROMPT_REMEMBER,
+        content: `${PROMPT_REMEMBER}
+
+<User>: ${prompt}
+<Coach Artie>: ${response}`,
       },
     ],
   });
@@ -268,8 +260,6 @@ async function generateAndStoreRememberCompletion(message, prompt, response, use
 
 async function assembleMessagePreamble(username) {
   const messages = [];
-
-  
 
     // add the current date and time as a system message
   messages.push({
@@ -301,8 +291,10 @@ async function assembleMessagePreamble(username) {
 
   messages.push(capabilityMessage);
 
+  const userMemoryCount = chance.integer({ min: 2, max: 8 });
+
   // get user memories
-  const userMemories = await getUserMemory(username);
+  const userMemories = await getUserMemory(username, userMemoryCount);
 
   // turn user memories into chatbot messages
   userMemories.forEach((memory) => {
@@ -317,91 +309,19 @@ async function assembleMessagePreamble(username) {
 
   // turn previous user messages into chatbot messages
   userMessages.forEach((message) => {
+    // messages.push({
+    //   role: "system",
+    //   content: `previously this user said: <${message.user_id}>: ${message.value}`,
+    // });
     messages.push({
-      role: "system",
-      content: `previously this user said: <${message.user_id}>: ${message.value}`,
-    });
+      role: "user",
+      content: `${message.value}`,
+    })
   });
 
   return messages
 
 }
-
-// 📨 handleMessage: the brain center for processing user messages
-// async function handleMessage(userMessage, username) {
-//   let messages = [];
-
-//   const msg = replaceRobotIdWithName(userMessage);
-
-//   // add premable to messages
-//   messages = await assembleMessagePreamble(username);
-
-//   const memories = await assembleMemory(username, getRandomInt(3, 20));
-
-//   const messageHistory = await getUserMessageHistory(username);
-
-//   // add the messagehistory to the memories
-//   messageHistory.forEach((message) => {
-//     memories.push(
-//       `previously this user said: <${message.user_id}>: ${message.value}`
-//     );
-//   });
-
-//   // turn memories into chatbot messages for completion
-//   memories.forEach((memory) => {
-//     console.log("memory -->", memory);
-//     messages.push({
-//       role: "system",
-//       content: `You remember ${memory}`,
-//     });
-//   });
-
-//   messages.push({
-//     role: "user",
-//     content: msg,
-//   });
-
-//   // use chance to make a temperature between 0.7 and 0.99
-//   const temperature = chance.floating({ min: 0.7, max: 0.99 });
-
-//   // use chance to pick max_tokens between 500 and 1200
-//   const maxTokens = chance.integer({ min: 500, max: 1200 });
-
-//   // console.log the messages for debugging
-//   messages.forEach((message) => {
-//     const roleEmoji = (message) => {
-//       if (message.role === "system") {
-//         return "🔦";
-//       } else if (message.role === "user") {
-//         return "👤";
-//       } else if (message.role === "assistant") {
-//         return "🤖";
-//       }
-//     };
-
-//     console.log(`${roleEmoji(message)} <${message.role}>: ${message.content}`);
-//   });
-
-//   const chatCompletion = await openai.createChatCompletion({
-//     model: "gpt-4",
-//     temperature,
-//     max_tokens: maxTokens,
-//     messages: messages,
-//   });
-
-//   // do a beautiful log of the chatbot's response
-//   console.log(
-//     `🤖 <Coach Artie>: ${chatCompletion.data.choices[0].message.content}`
-//   );
-
-//   // return chatCompletion.data.choices[0].message.content;
-//   return [
-//     {
-//       role: "assistant",
-//       content: chatCompletion.data.choices[0].message.content,
-//     },
-//   ];
-// }
 
 // 📦 logGuildsAndChannels: a handy helper for listing servers and channels
 function logGuildsAndChannels() {
@@ -603,7 +523,7 @@ async function processMessageChain(message, messages, username) {
       content:
         "You are reaching the token limit. In the next response, you may not use a capability but must use all of this information to respond to the user.",
     });
-    return messages;
+    // return messages;
   }
 
   // NEW:
@@ -650,19 +570,22 @@ async function processMessageChain(message, messages, username) {
       capabilityResponse = "Error: " + e;
     }
 
-    try{
-    message.channel.send(
-      `🔭 **Capability ${capSlug}:${capMethod} ${capArgs}**
+    // const trimmedCapabilityResponse = JSON.stringify(capabilityResponse).slice(0, 5120)
 
-\`\`\`
-${JSON.stringify(capabilityResponse).slice(0, 900)}...
-\`\`\``
-    );
-    } catch (e) {
-      console.log("Error sending message: ", e);
+    // refactor to use the countMessageTokens function and a while to trim down the response until it fits under the token limit of 8000
+    while (countMessageTokens(trimmedCapabilityResponse) > 6144) {
+      console.log("Response is too long, trimming it down.");
+      trimmedCapabilityResponse = trimmedCapabilityResponse.slice(
+        0,
+        trimmedCapabilityResponse.length - 100
+      );
     }
 
-    const trimmedCapabilityResponse = JSON.stringify(capabilityResponse).slice(0, 5120)
+    try{
+      splitAndSendMessage(message.channel, trimmedCapabilityResponse);
+      } catch (e) {
+        console.log("Error sending message: ", e);
+      }
 
     const systemMessage = {
       role: "system",
@@ -683,15 +606,17 @@ ${JSON.stringify(capabilityResponse).slice(0, 900)}...
 
   // use chance to make a random temperature between 0.5 and 0.99
   const temperature = chance.floating({ min: 0.5, max: 0.99 });
-
   const presence_penalty = chance.floating({ min: 0.2, max: 0.66 });
+
+  console.log("🌡️", temperature);
+  console.log("👻", presence_penalty);
 
   // Call the OpenAI API to get the AI response based on the system message
   const completion = await openai.createChatCompletion({
     model: "gpt-4",
     temperature,
     presence_penalty,
-    max_tokens: 1000,
+    max_tokens: 900,
     messages: messages,
   });
   

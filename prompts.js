@@ -28,7 +28,7 @@ This is very important, and the key to unlocking advanced capabilities: If helpi
 In your final message to the user, explain to the user all capabilities you used, why, and summarize the results were before continuing with your response to the user.`;
 
 const PROMPT_REMEMBER =
-  `In the previous dialogue between you (Coach Artie) and the user identify any key details to include in your memory of the interaction. 
+  `In the following dialogue between you (Coach Artie) and the user identify any key details to include in your memory of the interaction. 
   - Make your responses in the 3rd person
   - Only respond with a short detailed summary of the most important information from the exchange.
   - Focus on the intentions and motivations of the user
