@@ -572,6 +572,8 @@ async function processMessageChain(message, messages, username) {
 
     // const trimmedCapabilityResponse = JSON.stringify(capabilityResponse).slice(0, 5120)
 
+    let trimmedCapabilityResponse = JSON.stringify(capabilityResponse);
+
     // refactor to use the countMessageTokens function and a while to trim down the response until it fits under the token limit of 8000
     while (countMessageTokens(trimmedCapabilityResponse) > 6144) {
       console.log("Response is too long, trimming it down.");
