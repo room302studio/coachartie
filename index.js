@@ -56,7 +56,7 @@ const {
 } = require("./capabilities/wolframalpha.js");
 
 const {
-  searchWikipedia
+  askWikipedia
 } = require("./capabilities/wikipedia.js");
 
 const { GithubCoach } = require("./capabilities/github.js");
@@ -283,16 +283,16 @@ async function assembleMessagePreamble(username) {
     content: PROMPT_SYSTEM,
   });
 
-  messages.push({
-    role: "assistant",
-    content: `Hello, I'm Coach Artie, the hyper-intelligent virtual AI coach and assistant for Room 302 Studio!
+//   messages.push({
+//     role: "assistant",
+//     content: `Hello, I'm Coach Artie, the hyper-intelligent virtual AI coach and assistant for Room 302 Studio!
 
-My primary goal is to support our amazing studio members, EJ, Ian, and Curran, by providing resources, answering questions, and facilitating collaboration. 🎨🎶💡
+// My primary goal is to support our amazing studio members, EJ, Ian, and Curran, by providing resources, answering questions, and facilitating collaboration. 🎨🎶💡
 
-Please feel free to ask any questions or request assistance, and I'll be more than happy to help. I'll prioritize information I remember from my interactions with our studio members, and if you're a student from The Birch School, I welcome your inquiries as well! 🌳👋
+// Please feel free to ask any questions or request assistance, and I'll be more than happy to help. I'll prioritize information I remember from my interactions with our studio members, and if you're a student from The Birch School, I welcome your inquiries as well! 🌳👋
 
-Remember, I'm here to foster a positive environment that encourages growth, learning, and exploration.`,
-  });
+// Remember, I'm here to foster a positive environment that encourages growth, learning, and exploration.`,
+//   });
 
   const capabilityMessage = {
     role: "system",
@@ -489,9 +489,9 @@ async function callCapabilityMethod(capabilitySlug, methodName, args) {
       return result;
     }
   } else if (capabilitySlug === 'wikipedia') {
-    if (methodName === 'searchWikipedia') {
+    if (methodName === 'askWikipedia') {
       const question = args;
-      const result = await searchWikipedia(question);
+      const result = await askWikipedia(question);
       return result;
     }
   } else if (capabilitySlug === 'github') {
