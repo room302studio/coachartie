@@ -369,6 +369,8 @@ async function callCapabilityMethod(capabilitySlug, methodName, args) {
     `Calling capability method: ${capabilitySlug}.${methodName} with args: ${args}`
   );
 
+  message.channel.send(`🤖 Begin calling capability: ${capabilitySlug}.${methodName}(${args})`);
+
   // now we need to figure out what the capability is
   // const capability = capabilities.find(
   //   (capability) => capability.slug === capabilitySlug
@@ -570,6 +572,9 @@ async function processMessageChain(message, messages, username) {
       capabilityResponse = "Error: " + e;
     }
 
+    // send the capability response to the channel
+    message.channel.send("```" + capabilityResponse + "```");    
+
     // const trimmedCapabilityResponse = JSON.stringify(capabilityResponse).slice(0, 5120)
 
     let trimmedCapabilityResponse = JSON.stringify(capabilityResponse);
@@ -624,6 +629,9 @@ async function processMessageChain(message, messages, username) {
   
 
   const aiResponse = completion.data.choices[0].message;
+
+  // send the aiResponse to the completion to the channel
+  message.channel.send(`🤖 ${aiResponse}`);
 
   messages.push(aiResponse);
 
