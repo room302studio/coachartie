@@ -534,11 +534,11 @@ async function callCapabilityMethod(capabilitySlug, methodName, args) {
       return result;
     } else if (methodName === "floating") {
       const arguments = args.split(",");
-      const result = chance.floating({ min: arguments[0], max: arguments[1] });
+      const result = chance.floating({ min: +arguments[0], max: +arguments[1] });
       return result;
     } else if (methodName === "integer") {
       const arguments = args.split(",");
-      const result = chance.integer({ min: arguments[0], max: arguments[1] });
+      const result = chance.integer({ min: +arguments[0], max: +arguments[1] });
       return result;
     }
   }
