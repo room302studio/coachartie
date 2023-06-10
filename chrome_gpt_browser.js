@@ -146,8 +146,8 @@ async function processChunks(chunks, data, limit = 2) {
 
       const completion = await openai.createChatCompletion({
         model: "gpt-3.5-turbo",
-        max_tokens: 320,
-        temperature: 0.4,
+        max_tokens: 275,
+        temperature: 0.5,
         // presence_penalty: 0.66,
         presence_penalty: -0.1,
         frequency_penalty: 0.1,
@@ -158,10 +158,8 @@ async function processChunks(chunks, data, limit = 2) {
           // },
           {
             role: "user",
-            content: `Can you give me bullet points of facts in the following webpage? Bullet points should be standalone pieces of information (and a URL, if applicable) that are meaningful and easily understood when recalled on their own. If the fact is about a piece of code or an example search query, remember the phrasing exactly. Try not to lose any information. Be as succinct as possible. Bullet points must contain all of the context needed to understand the information. Bullet points may not refer to information contained in previous bullet points. Related facts should all be contained in a single bullet point. Remember any URLs that are relevant to find further information about a particular fact. Always include the URL in the bullet point, as you may look up the URL later. Remember any search queries that are relevant to find further information about a particular fact. Include the search query in the bullet point, as you may look up the query later.
+            content: `Can you give me bullet points of facts in the following webpage? Bullet points should be standalone pieces of information (and a URL, if applicable) that are meaningful and easily understood when recalled on their own. If the fact is about a piece of code or an example search query, remember the phrasing exactly. Try not to lose any information. Be as succinct as possible. Bullet points must contain all of the context needed to understand the information. Bullet points may not refer to information contained in previous bullet points. Related facts should all be contained in a single bullet point. Remember any URLs that are relevant to find further information about a particular fact. Always include the URL in the bullet point, as you may look up the URL later. Remember any search queries that are relevant to find further information about a particular fact. Include the search query in the bullet point, as you may look up the query later. Keep bullet points as short as possible. Have the most important bullet points at the beginning.
 
-            Title: ${data.title}
-            Description: ${data.description}
             ${chunk}      
                               `,
           },
