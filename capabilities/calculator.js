@@ -41,7 +41,14 @@
     return numbers.reduce((a, b) => +a * +b);
   } else if (operation === 'divide') {
     return numbers.reduce((a, b) => +a / +b);
+  } else if (operation === 'pow') {
+    return numbers.reduce((a, b) => Math.pow(+a, +b));
+  } else if (operation === 'sqrt') {
+    return numbers.reduce((a, b) => Math.sqrt(+a));
+  } else if (operation === 'log') {
+    return numbers.reduce((a, b) => Math.log(+a));
   }
+
 }
 
 module.exports = {

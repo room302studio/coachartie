@@ -16,11 +16,14 @@ async function getUserMemory(userId, limit = 5) {
   const { data, error } = await supabase
     .from("storage")
     .select("*")
+    
     // limit to the last 50 memories
     .limit(limit)
     // sort so the most recent memories are first by timestamp
     .order("created_at", { ascending: false })
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    // and the value is not ✨
+    .neq("value", "✨");
 
   if (error) {
     console.error("Error fetching user memory:", error);
@@ -69,7 +72,7 @@ async function getUserMessageHistory(userId, limit = 5) {
     .from("messages")
     .select("*")
     .limit(limit)
-    // sort so we get the most recent messages first
+    // sort so we get the most recent messages last
     .order("created_at", { ascending: false })
     .eq("user_id", userId);
 

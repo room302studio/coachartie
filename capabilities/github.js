@@ -50,6 +50,13 @@ class GithubCoach {
     return response.data;
   }
 
+  async listUserRepos(username) {
+    const response = await this.octokit.repos.listForUser({
+      username: username,
+    });
+    return response.data;
+  }
+
   async createBranch(repositoryName, branchName) {
     // use octokit.rest.git.createRef
     const response = await this.octokit.rest.git.createRef({

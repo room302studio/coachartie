@@ -47,22 +47,14 @@ const {
   storeUserMemory,
 } = require("./capabilities/remember.js");
 
-const {
-  calculate
-} = require("./capabilities/calculator.js");
+const { calculate } = require("./capabilities/calculator.js");
 
-const {
-  askWolframAlpha
-} = require("./capabilities/wolframalpha.js");
+const { askWolframAlpha } = require("./capabilities/wolframalpha.js");
 
-const {
-  askWikipedia
-} = require("./capabilities/wikipedia.js");
+const { askWikipedia } = require("./capabilities/wikipedia.js");
 
-const { GithubCoach } = require("./capabilities/github.js");
-const github = new GithubCoach();
-
-
+// const { GithubCoach } = require("./capabilities/github.js");
+// const github = new GithubCoach();
 
 /*
 🌐 Our trusty browsing companion! The 'chrome_gpt_browser' module,
@@ -70,7 +62,7 @@ giving us fetching and parsing superpowers for URLs.
 */
 const {
   fetchAndSummarizeUrl,
-  fetchAllLinks
+  fetchAllLinks,
 } = require("./chrome_gpt_browser.js");
 
 // 💪 Flexin' on 'em with our list of cool capabilities!
@@ -87,7 +79,7 @@ ${capabilities
       capability.description
     }, methods: ${capability.methods
       ?.map((method) => {
-        return method.name //+ ' Parameters: ' + JSON.stringify(method.parameters)
+        return method.name; //+ ' Parameters: ' + JSON.stringify(method.parameters)
       })
       .join(", ")}`;
   })
@@ -167,7 +159,11 @@ async function onMessageCreate(message) {
         },
       ];
 
-      const response = await processMessageChain(message, chainMessageStart, username);
+      const response = await processMessageChain(
+        message,
+        chainMessageStart,
+        username
+      );
       const robotResponse = response[response.length - 1].content;
       // stop typing
       clearInterval(typingInterval);
@@ -175,15 +171,19 @@ async function onMessageCreate(message) {
       splitAndSendMessage(robotResponse, message);
       console.log(`🤖 Response: ${robotResponse}`);
 
-      const rememberMessage = await generateAndStoreRememberCompletion(message, prompt, robotResponse);
+      const rememberMessage = await generateAndStoreRememberCompletion(
+        message,
+        prompt,
+        robotResponse
+      );
 
       // Save the message to the database
       await storeUserMessage(message.author.username, message.content);
 
       console.log(`🧠 Message saved to database: ${message.content}`);
-      console.log(`🧠 Memory saved to database: ${JSON.stringify(rememberMessage)}`);
-
-
+      console.log(
+        `🧠 Memory saved to database: ${JSON.stringify(rememberMessage)}`
+      );
     }
   } catch (error) {
     console.log(error);
@@ -199,11 +199,27 @@ function removeMentionFromMessage(message, mention) {
 
 // 📤 splitAndSendMessage: a reliable mailman for handling lengthy messages
 function splitAndSendMessage(message, messageObject) {
+  // messageObject is the discord message object
+  // message is the string we want to send
+
+  // make sure the messageObject is not null or undefined
+  if (!messageObject) return message.channel.send(ERROR_MSG);
+
   if (!message) return messageObject.channel.send(ERROR_MSG);
 
   if (message.length < 2000) {
-    messageObject.channel.send(message);
+    try {
+      messageObject.channel.send(message);
+    } catch (e) {
+      console.error(e);
+    }
   } else {
+    // sometimes message.split is not a function
+    // so we check if it is a string first
+    if (typeof message !== "string") {
+      console.log("message is not a string, converting to string");
+      message = message.toString();
+    }
     let responseArray = message.split(" ");
     let responseString = "";
     for (let i = 0; i < responseArray.length; i++) {
@@ -214,12 +230,21 @@ function splitAndSendMessage(message, messageObject) {
         responseString = responseArray[i] + " ";
       }
     }
-    messageObject.channel.send(responseString);
+    try {
+      messageObject.channel.send(responseString);
+    } catch (error) {
+      console.error(error);
+    }
   }
 }
 
 // 🧠 generateAndStoreRememberCompletion: the architect of our bot's memory palace
-async function generateAndStoreRememberCompletion(message, prompt, response, username = '') {
+async function generateAndStoreRememberCompletion(
+  message,
+  prompt,
+  response,
+  username = ""
+) {
   const rememberCompletion = await openai.createChatCompletion({
     model: "gpt-3.5-turbo",
     temperature: 0.82,
@@ -261,7 +286,7 @@ async function generateAndStoreRememberCompletion(message, prompt, response, use
 async function assembleMessagePreamble(username) {
   const messages = [];
 
-    // add the current date and time as a system message
+  // add the current date and time as a system message
   messages.push({
     role: "system",
     content: `Today is ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`,
@@ -273,16 +298,16 @@ async function assembleMessagePreamble(username) {
     content: PROMPT_SYSTEM,
   });
 
-//   messages.push({
-//     role: "assistant",
-//     content: `Hello, I'm Coach Artie, the hyper-intelligent virtual AI coach and assistant for Room 302 Studio!
+  //   messages.push({
+  //     role: "assistant",
+  //     content: `Hello, I'm Coach Artie, the hyper-intelligent virtual AI coach and assistant for Room 302 Studio!
 
-// My primary goal is to support our amazing studio members, EJ, Ian, and Curran, by providing resources, answering questions, and facilitating collaboration. 🎨🎶💡
+  // My primary goal is to support our amazing studio members, EJ, Ian, and Curran, by providing resources, answering questions, and facilitating collaboration. 🎨🎶💡
 
-// Please feel free to ask any questions or request assistance, and I'll be more than happy to help. I'll prioritize information I remember from my interactions with our studio members, and if you're a student from The Birch School, I welcome your inquiries as well! 🌳👋
+  // Please feel free to ask any questions or request assistance, and I'll be more than happy to help. I'll prioritize information I remember from my interactions with our studio members, and if you're a student from The Birch School, I welcome your inquiries as well! 🌳👋
 
-// Remember, I'm here to foster a positive environment that encourages growth, learning, and exploration.`,
-//   });
+  // Remember, I'm here to foster a positive environment that encourages growth, learning, and exploration.`,
+  //   });
 
   const capabilityMessage = {
     role: "system",
@@ -291,7 +316,7 @@ async function assembleMessagePreamble(username) {
 
   messages.push(capabilityMessage);
 
-  const userMemoryCount = chance.integer({ min: 2, max: 8 });
+  const userMemoryCount = chance.integer({ min: 2, max: 9 });
 
   // get user memories
   const userMemories = await getUserMemory(username, userMemoryCount);
@@ -303,9 +328,12 @@ async function assembleMessagePreamble(username) {
       content: `You remember ${memory.value}`,
     });
   });
-  
+
   // get user messages
-  const userMessages = await getUserMessageHistory(username)
+  const userMessages = await getUserMessageHistory(username, 9);
+
+  // reverse the order of the messages
+  userMessages.reverse();
 
   // turn previous user messages into chatbot messages
   userMessages.forEach((message) => {
@@ -316,11 +344,10 @@ async function assembleMessagePreamble(username) {
     messages.push({
       role: "user",
       content: `${message.value}`,
-    })
+    });
   });
 
-  return messages
-
+  return messages;
 }
 
 // 📦 logGuildsAndChannels: a handy helper for listing servers and channels
@@ -382,111 +409,138 @@ async function callCapabilityMethod(capabilitySlug, methodName, args) {
 
   // but if they DO exist, we are in business!
   // let's call the method assuming it has been imported already
-  if(capabilitySlug === 'web') {
-    if (methodName === 'fetchAndSummarizeUrl') {
-      const url = args
+  if (capabilitySlug === "web") {
+    if (methodName === "fetchAndSummarizeUrl") {
+      const url = args;
       const summary = await fetchAndSummarizeUrl(url);
-      return summary;
-    } else if (methodName === 'fetchAllLinks') {
-      const url = args
+      // return summary;
+
+      // write a little pre-amble for Coach Artie about how to interpret the summary
+      const summaryWithPreamble =
+        "The webpage (" +
+        url +
+        ") was analyzed for facts and URLs that could help the user accomplish their goal. What follows is a summary of the most relevant information: \n\n" +
+        summary +
+        "\n\n" +
+        "Determine whether the information on this page is relevant to your goal, or if you might need to use your capabilities to find more information. Summarize what you have done so far, what the current status is, and what the next steps are.";
+      return summaryWithPreamble;
+    } else if (methodName === "fetchAllLinks") {
+      const url = args;
       const links = await fetchAllLinks(url);
       return links;
     }
-  } else if (capabilitySlug === 'calculator') {
-    if (methodName === 'calculate') {
+  } else if (capabilitySlug === "calculator") {
+    if (methodName === "calculate") {
       // const expression = args;
       // split the expression into an array on commas
       // const expressionArray = expression.split(",");
       // const result = calculate(expressionArray[0], expressionArray[1], expressionArray[2]);
       const result = calculate(args);
-      return 'Calculator result: ' + result.toString();
+      return "Calculator result: " + result.toString();
     }
-  } else if (capabilitySlug === 'wolframalpha') {
-    if (methodName === 'askWolframAlpha') {
+  } else if (capabilitySlug === "wolframalpha") {
+    if (methodName === "askWolframAlpha") {
       const question = args;
-      console.log('Asking wolfram alpha', question);
+      console.log("Asking wolfram alpha", question);
       const result = await askWolframAlpha(question);
       return result;
     }
-  } else if (capabilitySlug === 'wikipedia') {
-    if (methodName === 'askWikipedia') {
+  } else if (capabilitySlug === "wikipedia") {
+    if (methodName === "askWikipedia") {
       const question = args;
       const result = await askWikipedia(question);
       return result;
     }
-  } else if (capabilitySlug === 'github') {
-    if (methodName === 'createRepo') {
+  } else if (capabilitySlug === "github") {
+    return null;
+    if (methodName === "createRepo") {
       const repoName = args;
       const result = await github.createRepo(repoName);
       return result;
-    } else if (methodName === 'listRepos') {
+    } else if (methodName === "listRepos") {
       const result = await github.listRepos();
       return result;
-    } else if (methodName === 'listBranches') {
+    } else if (methodName === "listBranches") {
       const repoName = args;
       const result = await github.listBranches(repoName);
       return result;
-    } else if (methodName === 'createFile') {
+    } else if (methodName === "createFile") {
       // const repoName = args;
       // async createFile(repositoryName, filePath, content, commitMessage) {
-      const arguments = args.split(',');
+      const arguments = args.split(",");
       const repoName = arguments[0];
       const filePath = arguments[1];
       const content = arguments[2];
       const commitMessage = arguments[3];
-      const result = await github.createFile(repoName, filePath, content, commitMessage);
+      const result = await github.createFile(
+        repoName,
+        filePath,
+        content,
+        commitMessage
+      );
       return result;
-    } else if (methodName === 'editFile') {
-      const arguments = args.split(',');
+    } else if (methodName === "editFile") {
+      const arguments = args.split(",");
       const repoName = arguments[0];
       const filePath = arguments[1];
       const content = arguments[2];
       const commitMessage = arguments[3];
-      const result = await github.editFile(repoName, filePath, content, commitMessage);
+      const result = await github.editFile(
+        repoName,
+        filePath,
+        content,
+        commitMessage
+      );
       return result;
-    } else if (methodName === 'deleteFile') {
-      const arguments = args.split(',');
+    } else if (methodName === "deleteFile") {
+      const arguments = args.split(",");
       const repoName = arguments[0];
       const filePath = arguments[1];
       const commitMessage = arguments[2];
       const result = await github.deleteFile(repoName, filePath, commitMessage);
       return result;
-    } else if (methodName === 'createBranch') {
-      const arguments = args.split(',');
+    } else if (methodName === "createBranch") {
+      const arguments = args.split(",");
       const repoName = arguments[0];
       const branchName = arguments[1];
       const result = await github.createBranch(repoName, branchName);
       return result;
-    } else if (methodName === 'createPullReuqest') {
-      const arguments = args.split(',');
+    } else if (methodName === "createPullReuqest") {
+      const arguments = args.split(",");
       const repoName = arguments[0];
       const title = arguments[1];
       const headBranch = arguments[2];
       const baseBranch = arguments[3];
       const prDescription = arguments[4];
-      const result = await github.createPullReuqest(repoName, title, headBranch, baseBranch, prDescription);
+      const result = await github.createPullReuqest(
+        repoName,
+        title,
+        headBranch,
+        baseBranch,
+        prDescription
+      );
       return result;
-    } else if (methodName === 'readFileContents') {
-      const arguments = args.split(',');
+    } else if (methodName === "readFileContents") {
+      const arguments = args.split(",");
       const repoName = arguments[0];
       const filePath = arguments[1];
       const result = await github.readFileContents(repoName, filePath);
       return result;
     }
-  } else if (capabilitySlug === 'chance') {
-    if (methodName === 'choose') {
-      const arguments = args.split(',');
+  } else if (capabilitySlug === "chance") {
+    if (methodName === "choose") {
+      const arguments = args.split(",");
       const result = chance.pickone(arguments);
       return result;
-    } else if (methodName === 'floating') {
-      const arguments = args.split(',');
+    } else if (methodName === "floating") {
+      const arguments = args.split(",");
       const result = chance.floating({ min: arguments[0], max: arguments[1] });
       return result;
-    } else if (methodName === 'integer') {
-      const arguments = args.split(',');
+    } else if (methodName === "integer") {
+      const arguments = args.split(",");
       const result = chance.integer({ min: arguments[0], max: arguments[1] });
       return result;
-    } 
+    }
   }
 
   return `Error: the capability method ${methodName} was not found for ${capabilitySlug} - maybe try a different method?`;
@@ -497,10 +551,9 @@ async function processMessageChain(message, messages, username) {
   // console.log("Processing message chain:", messages);
   // console.log("Messages: ", messages.length);
 
-  if(!messages.length) {
+  if (!messages.length) {
     return [];
   }
-
 
   const lastMessage = messages[messages.length - 1];
   // console.log("Last message: \n", lastMessage);
@@ -513,18 +566,6 @@ async function processMessageChain(message, messages, username) {
 
   // add preamble to messages
   messages = [...preamble, ...messages];
-
-  if (currentTokenCount >= apiTokenLimit - 900) {
-    console.log(
-      "Token limit reached, adding system message to the chain reminding the bot to wrap it up."
-    );
-    messages.push({
-      role: "user",
-      content:
-        "You are reaching the token limit. In the next response, you may not use a capability but must use all of this information to summarize a response.",
-    });
-    // return messages;
-  }
 
   // NEW:
   // capability commands look like
@@ -544,7 +585,11 @@ async function processMessageChain(message, messages, username) {
 
   // if (!capabilityMatch) {
   // if there is no capability match and the last message is not from the user
-  if (!capabilityMatch && lastMessage.role !== "user" && lastMessage.role !== "system") {
+  if (
+    !capabilityMatch &&
+    lastMessage.role !== "user" &&
+    lastMessage.role !== "system"
+  ) {
     console.log("No capability found in the last message, breaking the chain.");
     return messages;
   }
@@ -552,26 +597,53 @@ async function processMessageChain(message, messages, username) {
   if (capabilityMatch) {
     const [_, capSlug, capMethod, capArgs] = capabilityMatch;
 
+    if (currentTokenCount >= apiTokenLimit - 900) {
+      console.log(
+        "Token limit reached, adding system message to the chain reminding the bot to wrap it up."
+      );
+      messages.push({
+        role: "system",
+        content:
+          "You are reaching the token limit. In the next response, you may not use a capability but must use all of this information to summarize a response.",
+      });
+      // return messages;
+    }
+
     // tell the channel about the capability being run
-    message.channel.send(
-      `🤖 Running capability ${capSlug}:${capMethod}(${capArgs})`
+    // message.channel.send(
+    //   `🤖 Running capability ${capSlug}:${capMethod}(${capArgs})`
+    // );
+
+    splitAndSendMessage(
+      lastMessage.content,
+      message,
+    )
+
+    // split and send that we are running the capability
+    splitAndSendMessage(
+      `🤖 Running capability ${capSlug}:${capMethod}(${capArgs})`,
+      message
     );
 
     let capabilityResponse;
 
     try {
-    capabilityResponse = await callCapabilityMethod(
-      capSlug,
-      capMethod,
-      capArgs
-    );
+      capabilityResponse = await callCapabilityMethod(
+        capSlug,
+        capMethod,
+        capArgs
+      );
     } catch (e) {
       console.log("Error: ", e);
       capabilityResponse = "Error: " + e;
     }
 
+    console.log("Capability response: ", capabilityResponse);
+
     // send the capability response to the channel
-    message.channel.send("```" + capabilityResponse + "```");    
+    // message.channel.send("```" + capabilityResponse + "```");
+    // split and send the capability response
+    // splitAndSendMessage(capabilityResponse, message);
 
     // const trimmedCapabilityResponse = JSON.stringify(capabilityResponse).slice(0, 5120)
 
@@ -586,21 +658,25 @@ async function processMessageChain(message, messages, username) {
       );
     }
 
-    try{
-      splitAndSendMessage(message.channel, trimmedCapabilityResponse);
-      } catch (e) {
-        console.log("Error sending message: ", e);
-      }
+    try {
+      // splitAndSendMessage(trimmedCapabilityResponse, message);
+    } catch (e) {
+      console.log("Error sending message: ", e);
+    }
 
-    const systemMessage = {
-      role: "system",
-      content: `Capability ${capSlug}:${capMethod}(${capArgs}) responded with: ${trimmedCapabilityResponse}`
-    };
-
-    
-
-    console.log("Adding system message to the chain:", systemMessage);
-    messages.push(systemMessage);
+    // if the capArgs length is under 500, then we can add it to the chain raw
+    if (capArgs.length < 250) {
+      messages.push({
+        role: "system",
+        content: `Capability ${capSlug}:${capMethod}(${capArgs}) responded with: ${trimmedCapabilityResponse}`,
+      })
+    } else {
+      // otherwise we need to truncate it
+      messages.push({
+        role: "system",
+        content: `Capability ${capSlug}:${capMethod} responded with: ${trimmedCapabilityResponse}`,
+      })
+    }
   }
 
   // beautiful console.log for messages
@@ -616,25 +692,41 @@ async function processMessageChain(message, messages, username) {
   console.log("🌡️", temperature);
   console.log("👻", presence_penalty);
 
+  // before we call for completion, we need to calculate the total tokens in the message chain
+  // if the total tokens is over 8000, we need to trim the messages (from the top) until it is under 8000
+  // if the total tokens is under 8000, we can call for completion
+
+  const totalTokens = countMessageTokens(messages);
+  if (totalTokens > 8000) {
+    console.log("Total tokens is over 8000, trimming the message chain.");
+
+    // trim the messages until the total tokens is under 8000
+    while (countMessageTokens(messages) > 8000) {
+      messages.shift();
+    }
+    console.log("Message chain trimmed.");
+  }
+
   // Call the OpenAI API to get the AI response based on the system message
-  const completion = await openai.createChatCompletion({
-    model: "gpt-4",
-    temperature,
-    presence_penalty,
-    max_tokens: 900,
-    messages: messages,
-  });
-  
+  try {
+    const completion = await openai.createChatCompletion({
+      model: "gpt-4",
+      temperature,
+      presence_penalty,
+      max_tokens: 900,
+      messages: messages,
+    });
 
-  const aiResponse = completion.data.choices[0].message;
+    const aiResponse = await completion.data.choices[0].message;
 
-  // send the aiResponse to the completion to the channel
-  message.channel.send(`🤖 AI response to capability: ${aiResponse}`);
+    messages.push(aiResponse);
 
-  messages.push(aiResponse);
-
-  console.log("Continuing the message chain.");
-  return processMessageChain(message, messages);
+    console.log("Continuing the message chain.");
+    return processMessageChain(message, messages);
+  } catch (err) {
+    console.error(err);
+    return messages;
+  }
 }
 
 function countMessageTokens(messageArray = []) {
@@ -646,12 +738,25 @@ function countMessageTokens(messageArray = []) {
   if (messageArray.length === 0) {
     return totalTokens;
   }
-  messageArray.forEach((message) => {
+
+  // for some reason we get messageArray.forEach is not a function
+  // when we try to use the forEach method on messageArray
+  // so we use a for loop instead
+
+  // messageArray.forEach((message) => {
+  //   // encode message.content
+  //   const encodedMessage = encode(JSON.stringify(message));
+  //   totalTokens += encodedMessage.length;
+  // });
+
+  // for loop
+  for (let i = 0; i < messageArray.length; i++) {
+    const message = messageArray[i];
     // encode message.content
     const encodedMessage = encode(JSON.stringify(message));
-    // console.log('Encoded Message: ', encodedMessage)
     totalTokens += encodedMessage.length;
-  });
+  }
+
   return totalTokens;
 }
 

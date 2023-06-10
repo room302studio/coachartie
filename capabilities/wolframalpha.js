@@ -33,7 +33,14 @@ async function askWolframAlpha(question) {
     const response = await axios.get(wolframUrl);
     return response.data;
   } catch (error) {
-    return `Error occurred while contacting Wolfram Alpha. Please try again later. ${error}`;
+    return `Error occurred while contacting Wolfram Alpha. 501 errors are commonly caused by input that is misspelled, poorly formatted or otherwise unintelligible... try rephrasing the query or breaking it down into multiple queries so that Wolfram Alpha can better understand it. Example queries: 
+      - What is the population of New York City?
+      - Sunrise tomorrow
+      - How many cups in 4 liters?
+      - 42% of 79 years
+      - average velocity, 2 miles over 20 minutes
+    
+    Error: ${error}`;
   }
 }
 

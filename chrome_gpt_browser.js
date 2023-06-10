@@ -16,6 +16,8 @@ const configuration = new Configuration({
 });
 const openai = new OpenAIApi(configuration);
 
+
+
 // This file will serve as a module used by the main discord bot in index.js
 
 // The purpose of this file is to enable basic web browser access for the robot: given a URL, access it, parse it as JSON, and return the page contents to the main bot.
@@ -24,6 +26,14 @@ const openai = new OpenAIApi(configuration);
 // const allowedTextEls = 'p, h1, h2, h3, h4, h5, h6, a, span, div, td, th, tr, table, blockquote, pre, code, em, strong, i, b, u, s, sub, sup, small, big, q, cite, main, nav';
 
 const allowedTextEls = "p, h1, h2, h3, h4, h5, h6, a, td, th, tr, pre";
+
+
+// quick promise sleep function
+function sleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
 
 async function fetchAndParseURL(url) {
   const browser = await puppeteer.launch();
@@ -58,12 +68,20 @@ async function fetchAndParseURL(url) {
           );
         }
 
+        function trimHref(href){
+          // given a string like https://nytimes.com/article/12345, return /article/12345
+          const url = new URL(href);
+          return url.pathname;
+        }
+
         // if it is a link, grab the URL out too
         if (element.tagName === "A") {
           return (
-            element.textContent.replace(/<[^>]*>?/gm, "") +
+            element.textContent.replace(/<[^>]*>?/gm, "") 
+            +
             " (" +
-            element.href +
+            // element.href +
+            trimHref(element.href) +
             ") "
           );
         }
@@ -106,18 +124,23 @@ async function fetchAllLinks(url) {
   // return the links as a newline delimited list prepared for GPT-3
   return links.map((link) => {
     return link.text + " (" + link.href + ") ";
+    // return link.text
   });
 }
 
 
 
 
-async function processChunks(chunks, data, pageUnderstanderPrompt, limit = 2) {
+async function processChunks(chunks, data, limit = 2) {
   const results = [];
   const chunkLength = chunks.length;
 
   for (let i = 0; i < chunkLength; i += limit) {
     const chunkPromises = chunks.slice(i, i + limit).map(async (chunk, index) => {
+
+      // sleep 2s so we don't anger the OpenAI gods
+      await sleep(2000);
+
       console.log(`📝  Sending chunk ${i + index + 1} of ${chunkLength}...`);
       console.log("📝  Chunk text:", chunk);
 
@@ -129,17 +152,17 @@ async function processChunks(chunks, data, pageUnderstanderPrompt, limit = 2) {
         presence_penalty: -0.1,
         frequency_penalty: 0.1,
         messages: [
-          {
-            role: "assistant",
-            content: pageUnderstanderPrompt,
-          },
+          // {
+          //   role: "assistant",
+          //   content: pageUnderstanderPrompt,
+          // },
           {
             role: "user",
-            content: `Can you give me a bullet point of facts in the following text? Bullet points should be standalone pieces of information (and a URL, if applicable) that are meaningful and easily understood when recalled on their own. Try not to lose any information. Be as succinct as possible. Bullet points must contain all of the context needed to understand the information. Bullet points may not refer to information contained in previous bullet points. Related facts should all be contained in a single bullet point.
+            content: `Can you give me bullet points of facts in the following webpage? Bullet points should be standalone pieces of information (and a URL, if applicable) that are meaningful and easily understood when recalled on their own. If the fact is about a piece of code or an example search query, remember the phrasing exactly. Try not to lose any information. Be as succinct as possible. Bullet points must contain all of the context needed to understand the information. Bullet points may not refer to information contained in previous bullet points. Related facts should all be contained in a single bullet point. Remember any URLs that are relevant to find further information about a particular fact. Always include the URL in the bullet point, as you may look up the URL later. Remember any search queries that are relevant to find further information about a particular fact. Include the search query in the bullet point, as you may look up the query later.
 
-Title: ${data.title}
-Description: ${data.description}
-${chunk}          
+            Title: ${data.title}
+            Description: ${data.description}
+            ${chunk}      
                               `,
           },
         ],
@@ -158,7 +181,7 @@ ${chunk}
 async function generateSummary(url, data) {
   console.log("📝  Generating summary...");
 
-  const pageUnderstanderPrompt = `You are an AI language model that can extract and summarize information from webpages. Read the raw dump of text from the following webpage: ${url}. Return a bulleted list of context-rich facts from the webpage that Coach Artie, an AI studio coach, should remember to support the community, offer resources, answer questions, and foster collaboration. Ensure that each fact is a standalone piece of information that is meaningful and easily understood when recalled on its own. Only respond with bullet points, no other text. Keep facts as concise as possible. Do not include any information that is not contained in the text dump. Include only the most important information. If the information is related to a URL, be sure to include the exact URL.`;
+  // const pageUnderstanderPrompt = `You are an AI language model that can extract and summarize information from webpages. Read the raw dump of text and links from the following webpage: ${url}. Return a bulleted list of context-rich facts from the webpage that Coach Artie, an AI studio coach, should remember to support the community, offer resources, answer questions, and foster collaboration. Ensure that each fact is a standalone piece of information that is meaningful and easily understood when recalled on its own. Only respond with bullet points, no other text. Keep facts as concise as possible. Do not include any information that is not contained in the text dump. Include only the most important information that will help the user accomplish their goal. If the information is related to a URL, be sure to include the exact URL. Do not include any standard information the website might contain, like copyright, about pages, etc.`;
 
   // if data.text is longer than 4096 characters, split it into chunks of 4096 characters and send each chunk as a separate message and then combine the responses
 
@@ -204,8 +227,7 @@ async function generateSummary(url, data) {
   try {
     const chunkResponses = await processChunks(
       chunks,
-      data,
-      pageUnderstanderPrompt
+      data
     );
 
     factList = chunkResponses.join('\n');
@@ -332,7 +354,8 @@ if (require.main === module) {
 } else {
   // if this is being imported as a module, export the functions
   module.exports = {
-    fetchAndSummarizeUrl
+    fetchAndSummarizeUrl,
+    fetchAllLinks
   };
 }
 
