@@ -39,6 +39,55 @@ module.exports = {
             },
           ],
         },
+        /* addDraftIssueToProject(projectId, issueTitle, issueBody) */
+        {
+          name: 'addDraftIssueToProject',
+          description: 'Add a draft issue to a project.',
+          returns: 'object',
+          parameters: [
+            {
+              name: 'projectId',
+              type: 'string',
+              description: 'The ID of the project to add the issue to.',
+            },
+            {
+              name: 'issueTitle',
+              type: 'string',
+              description: 'The title of the issue.',
+            },
+            {
+              name: 'issueBody',
+              type: 'string',
+              description: 'The body of the issue.',
+            },
+          ],
+        },
+        /* listUserProjects(username) */
+        {
+          name: 'listUserProjects',
+          description: 'List all projects for a github user.',
+          returns: 'array',
+          parameters: [
+            {
+              name: 'username',
+              type: 'string',
+              description: 'The github username of the user to list projects for.',
+            },
+          ],
+        },
+        /* async listProjectColumnsAndCards(projectId) */
+        {
+          name: 'listProjectColumnsAndCards',
+          description: 'List all columns and cards for a github project based on its ID.',
+          returns: 'array',
+          parameters: [
+            {
+              name: 'projectId',
+              type: 'string',
+              description: 'The ID of the project to list columns and cards for.',
+            },
+          ],
+        },
         {
           name: 'cloneRepo',
           description: 'Clone an existing repository.',

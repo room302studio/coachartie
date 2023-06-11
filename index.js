@@ -483,6 +483,29 @@ async function callCapabilityMethod(capabilitySlug, methodName, args) {
         contentString
       );
       return result;
+    } else if (methodName === "addDraftIssueToProject") {
+      const arguments = args.split(",");
+      const projectId = arguments[0];
+      const issueTitle = arguments[1];
+      const issueBody = arguments[2];
+      const result = await github.addDraftIssueToProject(
+        projectId,
+        issueTitle,
+        issueBody
+      );
+      return result;
+    } else if (methodName === "getProjectIdFromUrl"){
+      const url = args;
+      const result = await github.getProjectIdFromUrl(url);
+      return result;      
+    } else if (methodName === "listUserProjects") {
+      const userName = args;
+      const result = await github.listUserProjects(userName);
+      return result;
+    } else if (methodName === "listProjectColumnsAndCards") {
+      const projectId = args;
+      const result = await github.listProjectColumnsAndCards(projectId);
+      return result;
     } else if (methodName === "listUserRepos") {
       const userName = args;
       const result = await github.listUserRepos(userName);
@@ -717,7 +740,7 @@ async function processMessageChain(message, messages, username) {
 
   // use chance to make a random temperature between 0.5 and 0.99
   // const temperature = chance.floating({ min: 0.5, max: 0.99 });
-  const temperature = chance.floating({ min: 0.5, max: 1.5 });
+  const temperature = chance.floating({ min: 0.4, max: 1.25 });
 
   const presence_penalty = chance.floating({ min: 0.2, max: 0.66 });
 

@@ -16,6 +16,7 @@ When using a capability, follow these guidelines:
    - "calculator:calculate(add, 1, 2)" would return 3
    - "wolframalpha:askWolframAlpha(What is the capital of France?)" would return Paris
    - "wolframalpha:askWolframAlpha(How many miles are in a kilometer?)" 
+   - github:addDraftIssueToProject(PVT_kwHOB-L_oc4ARZ1c,Integrate Google Drive,Prepare Google Drive integration for enhanced file management) would add a draft issue to the Studio Kanban board
 
 2. To use a capability effectively, respond with only the capability command and no additional text. Any text sent after the capability command will be ignored and WILL NOT BE SENT TO THE USER. You may only use one capability per message.
 

@@ -1,4 +1,5 @@
 const { Octokit } = require("@octokit/rest");
+const { graphql } = require("@octokit/graphql");
 const { createAppAuth } = require("@octokit/auth-app");
 const dotenv = require("dotenv");
 
@@ -12,64 +13,32 @@ class GithubCoach {
 
   async _init() {
     try {
-//     const auth = createAppAuth({
-//       appId: process.env.GITHUB_APP_ID,
-//       installationId: '37089548',
-//       privateKey: `-----BEGIN RSA PRIVATE KEY-----
-//       MIIEpAIBAAKCAQEAwiH2c0b2MwnvxxRrSM6qd77iRiGz5o3E8nDm1ZHh+ImhNR0v
-//       Ea8bRGhGs6rbfXuFXozSJVTnS+/ZM0PxEKxyRrhOH8xhBgq07imAMLAtRU5bCB7O
-//       LSongRp3Q+YbT495p3gX8YtXuS5+xlDYE/oqfWplQEZp3Iv0AGL/BcAbiMGNKo53
-//       uYp6TDWWWEX/McC+bGvxogN3YWiqTM5FBvXaNyijp6VUm81+RBpCrWi9ZF3Zqs+S
-//       pUR2ue23aYFi+DfDTEmUR7XLHGTUvOlPCfTpYpzUEVfp8bIMvFECQI8LbDCi0qDP
-//       Wwz62gkYP0/ZWWci2ZeoeaaAPrOCWpH8CaCKRwIDAQABAoIBABsMNlUrXuQPj1vS
-//       aXw0ZyXV75rL2U/XEsigmFjLQYuqSU6oKUWyev8V9DvWI0yhaBybTDAtWyiGW2G8
-//       JpsnG6jkxuXBSQdZeInyOE0QTs5oM2C3Qgyi4ewn7tQD/GwiVlXR8qwRuQAxDTK+
-//       Usy9vyvIJiFFbjxvN2jSYiu/71YnOxM2XH+dj9NKDSZUw+zvGia3sTBPEhY9+8Rq
-//       ROt6FyaELIT9CT7mfDQQv2mMHMXUWKlW804xr0GWv1HQWhhlQneE81aQyj3/ksTP
-//       z+LzS2ScE4aRrdk9jD3Dbh2grMzp5dJGNCByCPkxmzEfHrJcnKfubSUUmGyMMF/A
-//       wpFn1XECgYEA80gEL3Jn6bOs+TTMAXuBQfwzyGrVF7z7vfp7nW9/KS76JZOBGgUl
-//       j6iXUhamvA3/VyVvRdI5RIMP4zV0kg02GkcUhU/w74n4NIAuN04sLTAMvCk1gs4J
-//       reg0EIO8ZOEcSpG3fsioxbAAPotc00d6JGog9fEHapnRbVEco+HfDp8CgYEAzEgo
-//       5GKNigocxg+Z46WCbz0AV9426eF8mF6aDcqS2blHODUf7serzFTjpt9/WpQocSWy
-//       7uYGTiGAsdfR1IODqy9yRA3i1X53tPH/ZdJK0HFEXQa+jb9jeLm2R02NarJ6oPmd
-//       Pag6K1+C/ndan4cNklcKq9Gbe1Pz+LjLRE0Ia1kCgYEAqwR3HLt53MlX0R+SQYCG
-//       jtIxvLOM9ND+zr/kYfndFCBX7E5StO3lR6WmKiiOMShN1P8Vx6lOZKEVbA1J0tnC
-//       rJpHDKfzoRAGETICSxKC74kVirgVS8x29W+EGg/hQbEVaD4jFdcM/VsJ8O2a5VMb
-//       w7lvTjSPmBplJEmern27hdUCgYALAmiRxm3yXpEma3jTt/vLmvIFykgTWr+oRpDu
-//       5Vf8u+uGr/ZEnCY6IOkT+T+X1hxH3MxD68mzNEMHUqZQWbYi56+00zrCXsp8yf4F
-//       ssutaC1TBiYG5aWqv/d+6EMS2QOa4VkEFajs5Xzd0fjkWBb3KBG/KNDEWMXxRaRO
-//       zggCIQKBgQCmjNk3ef0SHJ5dXcyFrk0d066o9CAkbto6ehs3wUEcjmQUj3+Rl+LG
-//       fyJeA551i7qjSKHmBnDY2fVVIP9AchGw3N5h5KhXo03R92sI+BaehC5uB25roPE2
-//       TFndVIfQ8xLluGi1+WOUc3ynvsspjSdAM4ox1t+B7ox0laHR8A6Emw==
-// -----END RSA PRIVATE KEY-----
-// `,
-//       auth: process.env.GITHUB_PERSONAL_ACCESS_TOKEN
-//       // installationId: process.env.GITHUB_INSTALLATION_ID,
-//     });
+      this.octokit = new Octokit({
+        // auth: authentication.token,
+        auth: process.env.GITHUB_PERSONAL_ACCESS_TOKEN,
+        userAgent: "github-capability",
+        timeZone: "America/New_York",
+        baseUrl: "https://api.github.com",
+        log: {
+          debug: () => { },
+          info: () => { },
+          warn: console.warn,
+          error: console.error,
+        },
+        userAgent: "Coach-Artie/1.0.0"
+      });
 
-    // const authentication = await auth({ type: "installation" });
-    this.octokit = new Octokit({
-      // auth: authentication.token,
-      auth: process.env.GITHUB_PERSONAL_ACCESS_TOKEN,
-      userAgent: "github-capability",
-      timeZone: "America/New_York",
-      baseUrl: "https://api.github.com",
-      log: {
-        debug: () => {},
-        info: () => {},
-        warn: console.warn,
-        error: console.error,
-      },
-    });
+      this.graphqlWithAuth = graphql.defaults({
+        headers: {
+          authorization: `token ${process.env.GITHUB_PERSONAL_ACCESS_TOKEN}`,
+        },
+      });
 
+    }
+    catch (error) {
+      console.log(error);
+    }
   }
-  catch (error) {
-    console.log(error);
-  }
-
-  }
-
-  
 
   async createRepo(repositoryName) {
     const response = await this.octokit.repos.createForAuthenticatedUser({
@@ -93,6 +62,147 @@ class GithubCoach {
       per_page: 100,
     });
     return response.data.map((repo) => `${repo.name} - ${repo.description}`);
+  }
+
+  async getProjectIdFromUrl(url) {
+    const [, , , username, , , projectId] = url.split("/");
+    const { data: projects } = await this.octokit.projects.listForUser({ username });
+    console.log("PROJECTS", projects);
+    const project = projects.find(project => project.html_url === url);
+    console.log("PROJECT", project);
+    return project ? project.id : null;
+  }
+
+  async listUserProjects(username) {
+    // const { data: projects } = await this.octokit.projects.listForUser({ username });
+    // return projects.map(project => project.name);
+    // so this uses the rest API which only works for old projects :(
+    // new projects have to be accessed with the graphql API
+    // joy!
+    const data = await this.graphqlWithAuth(`query {
+      user(login: "${username}") {
+        projectsV2(first: 20) {
+          nodes {
+            id
+            title
+          }
+        }
+      }
+    }`)
+
+    console.log('🔴', data);
+    console.log('🟢', data.user)
+
+    if(!data.user.projectsV2.nodes) {
+      return 'no projects found for this user';
+    }
+
+    console.log('🟡', data.user.projectsV2.nodes)
+    
+    return JSON.stringify(data.user.projectsV2.nodes)
+  }
+
+
+  async listProjectColumnsAndCards(projectId) {
+    // need to use projectsV2 and graphql for this
+    // https://docs.github.com/en/graphql/reference/objects#projectcolumn
+    // https://docs.github.com/en/graphql/reference/objects#projectcard
+    // https://docs.github.com/en/graphql/reference/objects#projectcarditem
+    // https://docs.github.com/en/graphql/reference/objects#projectcardstate
+    const data = await this.graphqlWithAuth(`query {
+      node(id: "${projectId}") {
+        ... on ProjectV2 {
+          items(first: 20) {
+            nodes{
+              id
+              fieldValues(first: 8) {
+                nodes{                
+                  ... on ProjectV2ItemFieldTextValue {
+                    text
+                    field {
+                      ... on ProjectV2FieldCommon {
+                        name
+                      }
+                    }
+                  }
+                  ... on ProjectV2ItemFieldDateValue {
+                    date
+                    field {
+                      ... on ProjectV2FieldCommon {
+                        name
+                      }
+                    }
+                  }
+                  ... on ProjectV2ItemFieldSingleSelectValue {
+                    name
+                    field {
+                      ... on ProjectV2FieldCommon {
+                        name
+                      }
+                    }
+                  }
+                }              
+              }
+              content{              
+                ... on DraftIssue {
+                  title
+                  body
+                }
+                ...on Issue {
+                  title
+                  assignees(first: 10) {
+                    nodes{
+                      login
+                    }
+                  }
+                }
+                ...on PullRequest {
+                  title
+                  assignees(first: 10) {
+                    nodes{
+                      login
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }`)
+
+    console.log('🔴', data);
+    console.log('🟢', data.node.items.nodes)
+
+    if(!data.node.items.nodes) {
+      return 'no columns found for this project';
+    }
+
+    return JSON.stringify(data.node.items.nodes)
+
+  }
+
+  async addDraftIssueToProject(projectId, issueTitle, issueBody) {
+    /*
+   gh api graphql -f query='
+  mutation {
+    addProjectV2DraftIssue(input: {projectId: "PROJECT_ID" title: "TITLE" body: "BODY"}) {
+      projectItem {
+        id
+      }
+    }
+  }'
+
+  */
+    const data = await this.graphqlWithAuth(`mutation {
+      addProjectV2DraftIssue(input: {projectId: "${projectId}" title: "${issueTitle}" body: "${issueBody}"}) {
+        projectItem {
+          id
+        }
+      }
+    }`)
+
+    return JSON.stringify(data)
   }
 
   async createBranch(repositoryFullName, branchName) {
@@ -121,8 +231,8 @@ class GithubCoach {
       ref: `refs/heads/${branchName}`,
       sha: baseSHA,
     });
-    return response.data;    
-  
+    return response.data;
+
   }
 
   async listBranches(repositoryName) {
@@ -147,7 +257,7 @@ class GithubCoach {
   async createGist(fileName, description, contentString) {
     // content string may contain newlines and we need to convert them to \n
     // contentString = contentString.replace(/\n/g, "\\n");
-    
+
     console.log('Making gist from string: \n', contentString);
 
     const response = await this.octokit.gists.create({
@@ -206,7 +316,7 @@ class GithubCoach {
     });
     return response.data;
   }
-  
+
 }
 
 module.exports = {
