@@ -11,7 +11,7 @@ const { fstat } = require("fs");
 dotenv.config();
 
 const configuration = new Configuration({
-    organization: process.env.OPENAI_API_ORGANIZATION,
+  organization: process.env.OPENAI_API_ORGANIZATION,
   apiKey: process.env.OPENAI_API_KEY,
 });
 const openai = new OpenAIApi(configuration);
@@ -68,20 +68,24 @@ async function fetchAndParseURL(url) {
           );
         }
 
-        function trimHref(href){
+        function trimHref(href) {
           // given a string like https://nytimes.com/article/12345, return /article/12345
-          const url = new URL(href);
-          return url.pathname;
+          try {
+            const url = new URL(href);
+            return url.pathname;
+          } catch (e) {
+            return href;
+          }
         }
 
         // if it is a link, grab the URL out too
         if (element.tagName === "A") {
           return (
-            element.textContent.replace(/<[^>]*>?/gm, "") 
+            element.textContent.replace(/<[^>]*>?/gm, "")
             +
             " (" +
-            // element.href +
-            trimHref(element.href) +
+            element.href +
+            // trimHref(element.href) +
             ") "
           );
         }
@@ -123,7 +127,16 @@ async function fetchAllLinks(url) {
 
   // return the links as a newline delimited list prepared for GPT-3
   return links.map((link) => {
-    return link.text + " (" + link.href + ") ";
+    const linkUrl = new URL(link.href);
+    // clear all query params EXCEPT for q=, which is a search query
+    linkUrl.search = linkUrl.search
+      .split("&")
+      .filter((param) => param.startsWith("q="))
+      .join("&");
+
+    return link.text + " (" + linkUrl.href + ") ";
+
+    // return link.text + " (" + link.href + ") ";
     // return link.text
   });
 }

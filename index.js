@@ -53,8 +53,8 @@ const { askWolframAlpha } = require("./capabilities/wolframalpha.js");
 
 const { askWikipedia } = require("./capabilities/wikipedia.js");
 
-// const { GithubCoach } = require("./capabilities/github.js");
-// const github = new GithubCoach();
+const { GithubCoach } = require("./capabilities/github.js");
+const github = new GithubCoach();
 
 /*
 🌐 Our trusty browsing companion! The 'chrome_gpt_browser' module,
@@ -452,13 +452,40 @@ async function callCapabilityMethod(capabilitySlug, methodName, args) {
       return result;
     }
   } else if (capabilitySlug === "github") {
-    return null;
     if (methodName === "createRepo") {
       const repoName = args;
       const result = await github.createRepo(repoName);
       return result;
     } else if (methodName === "listRepos") {
       const result = await github.listRepos();
+      return result;
+    } else if (methodName === "createGist") {
+      // const arguments = args.split(",");
+      // const fileName = arguments[0];
+      // const description = arguments[1];
+      // const contentString = arguments[2];
+
+      // it is actually a little bit more complicated than this
+      // the contentString may contain commas, so we need to split on the first comma, the second comma, and then the rest of the string is the content
+
+      const firstCommaIndex = args.indexOf(",");
+      const secondCommaIndex = args.indexOf(",", firstCommaIndex + 1);
+      const fileName = args.substring(0, firstCommaIndex);
+      const description = args.substring(
+        firstCommaIndex + 1,
+        secondCommaIndex
+      );
+      const contentString = args.substring(secondCommaIndex + 1);
+
+      const result = await github.createGist(
+        fileName,
+        description,
+        contentString
+      );
+      return result;
+    } else if (methodName === "listUserRepos") {
+      const userName = args;
+      const result = await github.listUserRepos(userName);
       return result;
     } else if (methodName === "listBranches") {
       const repoName = args;
@@ -578,7 +605,8 @@ async function processMessageChain(message, messages, username) {
   // or
   // web:readWebPage(https://example.com)
 
-  const capabilityRegex = /(\w+):(\w+)\((.*)\)/;
+  // const capabilityRegex = /(\w+):(\w+)\((.*)\)/; // does not capture newlines in the third argument
+  const capabilityRegex = /(\w+):(\w+)\(([^]*?)\)/; // captures newlines in the third argument
   const capabilityMatch = lastMessage.content.match(capabilityRegex);
 
   console.log("Capability match: ", capabilityMatch);
@@ -647,16 +675,18 @@ async function processMessageChain(message, messages, username) {
 
     // const trimmedCapabilityResponse = JSON.stringify(capabilityResponse).slice(0, 5120)
 
-    let trimmedCapabilityResponse = JSON.stringify(capabilityResponse);
+    // let trimmedCapabilityResponse = JSON.stringify(capabilityResponse);
 
     // refactor to use the countMessageTokens function and a while to trim down the response until it fits under the token limit of 8000
-    while (countMessageTokens(trimmedCapabilityResponse) > 6144) {
+    while (countMessageTokens(capabilityResponse) > 6144) {
       console.log("Response is too long, trimming it down.");
-      trimmedCapabilityResponse = trimmedCapabilityResponse.slice(
+      capabilityResponse = capabilityResponse.slice(
         0,
-        trimmedCapabilityResponse.length - 100
+        capabilityResponse.length - 100
       );
     }
+
+    const trimmedCapabilityResponse = capabilityResponse;
 
     try {
       // splitAndSendMessage(trimmedCapabilityResponse, message);
@@ -686,7 +716,9 @@ async function processMessageChain(message, messages, username) {
   });
 
   // use chance to make a random temperature between 0.5 and 0.99
-  const temperature = chance.floating({ min: 0.5, max: 0.99 });
+  // const temperature = chance.floating({ min: 0.5, max: 0.99 });
+  const temperature = chance.floating({ min: 0.5, max: 1.5 });
+
   const presence_penalty = chance.floating({ min: 0.2, max: 0.66 });
 
   console.log("🌡️", temperature);

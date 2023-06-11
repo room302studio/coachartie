@@ -52,6 +52,27 @@ module.exports = {
           ],
         },
         {
+          name: 'createGist',
+          description: 'Create a new gist.',
+          parameters: [
+            {
+              name: 'fileName',
+              type: 'string',
+              description: 'The name of the new gist.',
+            },
+            {
+              name: 'description',
+              type: 'string',
+              description: 'The description of the new gist.',
+            },
+            {
+              name: 'contentString',
+              type: 'string',
+              description: 'The content of the new gist.',
+            },
+          ],
+        },
+        {
           name: 'listRepos',
           description: 'List all repositories for the authenticated user.',
           returns: 'array',
