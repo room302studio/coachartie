@@ -25,7 +25,7 @@ const openai = new OpenAIApi(configuration);
 // Get the text from all text-like elements
 // const allowedTextEls = 'p, h1, h2, h3, h4, h5, h6, a, span, div, td, th, tr, table, blockquote, pre, code, em, strong, i, b, u, s, sub, sup, small, big, q, cite, main, nav';
 
-const allowedTextEls = "p, h1, h2, h3, h4, h5, h6, a, td, th, tr, pre";
+const allowedTextEls = "p, h1, h2, h3, h4, h5, h6, a, td, th, tr, pre, code, blockquote";
 
 
 // quick promise sleep function
@@ -158,8 +158,8 @@ async function processChunks(chunks, data, limit = 2) {
       console.log("📝  Chunk text:", chunk);
 
       const completion = await openai.createChatCompletion({
-        model: "gpt-3.5-turbo",
-        max_tokens: 275,
+        model: "gpt-3.5-turbo-16k",
+        max_tokens: 1024,
         temperature: 0.5,
         // presence_penalty: 0.66,
         presence_penalty: -0.1,
@@ -171,7 +171,7 @@ async function processChunks(chunks, data, limit = 2) {
           // },
           {
             role: "user",
-            content: `Can you give me bullet points of facts in the following webpage? Bullet points should be standalone pieces of information (and a URL, if applicable) that are meaningful and easily understood when recalled on their own. If the fact is about a piece of code or an example search query, remember the phrasing exactly. Try not to lose any information. Be as succinct as possible. Bullet points must contain all of the context needed to understand the information. Bullet points may not refer to information contained in previous bullet points. Related facts should all be contained in a single bullet point. Remember any URLs that are relevant to find further information about a particular fact. Always include the URL in the bullet point, as you may look up the URL later. Remember any search queries that are relevant to find further information about a particular fact. Include the search query in the bullet point, as you may look up the query later. Keep bullet points as short as possible. Have the most important bullet points at the beginning.
+            content: `Can you give me bullet points of facts in the following webpage? Bullet points should be standalone pieces of information (and a URL, if applicable) that are meaningful and easily understood when recalled on their own. If the fact is about a piece of code or an example search query, remember the phrasing exactly. Try not to lose any information. Be as succinct as possible. Bullet points must contain all of the context needed to understand the information. Bullet points may not refer to information contained in previous bullet points. Related facts should all be contained in a single bullet point. Remember any URLs that are relevant to find further information about a particular fact. Always include the URL in the bullet point, as you may look up the URL later. Remember any search queries that are relevant to find further information about a particular fact. Include the search query in the bullet point, as you may look up the query later. Keep bullet points as short as possible. Have the most important bullet points at the beginning. Provide as few bullet points as possible.
 
             ${chunk}      
                               `,
@@ -208,7 +208,7 @@ async function generateSummary(url, data) {
   text = text.replace(/ +(?= )/g, "")
 
   // const chunkAmount = 7000
-  const chunkAmount = 4096;
+  const chunkAmount = 12288;
 
   // split the text into chunks of 4096 characters using slice
   let chunks = [];
@@ -231,7 +231,7 @@ async function generateSummary(url, data) {
   // }
 
   // trim to 26 chunks max
-  chunks = chunks.slice(0, 26);
+  // chunks = chunks.slice(0, 26);
 
 
   let factList = "";
