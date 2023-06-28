@@ -691,15 +691,6 @@ async function processMessageChain(message, messages, username) {
 
     console.log("Capability response: ", capabilityResponse);
 
-    // send the capability response to the channel
-    // message.channel.send("```" + capabilityResponse + "```");
-    // split and send the capability response
-    // splitAndSendMessage(capabilityResponse, message);
-
-    // const trimmedCapabilityResponse = JSON.stringify(capabilityResponse).slice(0, 5120)
-
-    // let trimmedCapabilityResponse = JSON.stringify(capabilityResponse);
-
     // refactor to use the countMessageTokens function and a while to trim down the response until it fits under the token limit of 8000
     while (countMessageTokens(capabilityResponse) > 6144) {
       console.log("Response is too long, trimming it down.");
