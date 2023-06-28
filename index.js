@@ -1,13 +1,22 @@
-/*
-🚀 Welcome to the Cyberpunk Future of Discord Bots! 🤖
-In this realm, we import the necessary modules, packages, 
-and wire up our bot's brain to bring it to life. Let's go!
-*/
-
-// 📜 prompts: our guidebook of conversational cues
+const { Client, GatewayIntentBits, Events } = require("discord.js");
+const dotenv = require("dotenv")
+const { Configuration, OpenAIApi } = require("openai");
+const { Chance } = require("chance");
+const {
+  assembleMemory,
+  getUserMessageHistory,
+  getUserMemory,
+  storeUserMessage,
+  storeUserMemory,
+} = require("./capabilities/remember.js");
+const { calculate } = require("./capabilities/calculator.js");
+const { askWolframAlpha } = require("./capabilities/wolframalpha.js");
+const { askWikipedia } = require("./capabilities/wikipedia.js");
+const { GithubCoach } = require("./capabilities/github.js");
+const { fetchAndSummarizeUrl, fetchAllLinks } = require("./chrome_gpt_browser.js");
+const { encode, decode } = require("@nem035/gpt-3-encoder");
+const capabilities = require("./capabilities/_manifest.js").capabilities;
 const prompts = require("./prompts");
-
-// 🚦 Constants Corner: prepping our prompts and error message
 const {
   PROMPT_SYSTEM,
   PROMPT_REMEMBER,
@@ -17,87 +26,25 @@ const {
   PROMPT_TWEET_REQUEST,
   CAPABILITY_PROMPT_INTRO,
 } = prompts;
-const ERROR_MSG = `I am so sorry, there was some sort of problem. Feel free to ask me again, or try again later.`;
 
-// 🧩 Importing essential building blocks from the Discord package
-const { Client, GatewayIntentBits, Events } = require("discord.js");
-
-// 🌿 dotenv: a lifeline for using environment variables
-const dotenv = require("dotenv");
-
-// 📚 GPT-3 token-encoder: our linguistic enigma machine
-const { encode, decode } = require("@nem035/gpt-3-encoder");
-
-// ⚡ OpenAI API: connecting to the almighty AI powerhouse
-const { Configuration, OpenAIApi } = require("openai");
-
-// ❓ Chance: a randomizer to keep our bot from being boring
-const { Chance } = require("chance");
-const chance = new Chance();
-
-/*
-💾 Memory Lane: the 'remember' capability for our bot.
-The ability to store and retrieve memories and message history.
-*/
-const {
-  assembleMemory,
-  getUserMessageHistory,
-  getUserMemory,
-  storeUserMessage,
-  storeUserMemory,
-} = require("./capabilities/remember.js");
-
-const { calculate } = require("./capabilities/calculator.js");
-
-const { askWolframAlpha } = require("./capabilities/wolframalpha.js");
-
-const { askWikipedia } = require("./capabilities/wikipedia.js");
-
-const { GithubCoach } = require("./capabilities/github.js");
-const github = new GithubCoach();
-
-/*
-🌐 Our trusty browsing companion! The 'chrome_gpt_browser' module,
-giving us fetching and parsing superpowers for URLs.
-*/
-const {
-  fetchAndSummarizeUrl,
-  fetchAllLinks,
-} = require("./chrome_gpt_browser.js");
-
-// 💪 Flexin' on 'em with our list of cool capabilities!
-const capabilities = require("./capabilities/_manifest.js").capabilities;
-
-// capability prompt
-// to tell the robot all the capabilities it has and what they do
 const capabilityPrompt = `${CAPABILITY_PROMPT_INTRO}
-
 These are all of your capabilities:
 ${capabilities
-  .map((capability) => {
-    return `* ${capability.slug}: ${
-      capability.description
-    }, methods: ${capability.methods
-      ?.map((method) => {
-        return method.name; //+ ' Parameters: ' + JSON.stringify(method.parameters)
-      })
-      .join(", ")}`;
-  })
-  .join("\n")}
-`;
+    .map(
+      (capability) =>
+        `* ${capability.slug}: ${capability.description}, methods: ${capability.methods
+          ?.map((method) => method.name)
+          .join(", ")}`
+    )
+    .join("\n")}`;
 
-// 🍃 Breathe some life into our dotenv configuration
 dotenv.config();
 const configuration = new Configuration({
   apiKey: process.env.OPENAI_API_KEY,
   organization: process.env.OPENAI_API_ORGANIZATION,
 });
 const openai = new OpenAIApi(configuration);
-
-/*
-🤖 Assemble! The Discord client creation begins here.
-We plug in our intents for listening to the digital whispers of the servers.
-*/
+const chance = new Chance();
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -108,114 +55,81 @@ const client = new Client({
 });
 client.login(process.env.DISCORD_BOT_TOKEN);
 
-// 🎉 Event handlers: a lineup of our bot's finest functions
-client.once(Events.ClientReady, onClientReady);
-client.on(Events.InteractionCreate, onInteractionCreate);
-client.on("debug", onDebug);
-client.on("error", onError);
-client.on("messageCreate", onMessageCreate);
+// Define event handlers
+const eventHandlers = {
+  [Events.ClientReady]: onClientReady,
+  [Events.InteractionCreate]: onInteractionCreate,
+  [Events.Debug]: onDebug,
+  [Events.Error]: onError,
+  [Events.MessageCreate]: onMessageCreate,
+};
 
-// 🌈 onClientReady: our bot's grand entrance to the stage
-function onClientReady(c) {
-  console.log(`⭐️ Ready! Logged in as ${c.user.username}`);
+Object.keys(eventHandlers).forEach((event) => {
+  client.on(event, eventHandlers[event]);
+});
+
+function onClientReady(client) {
+  console.log(`⭐️ Ready! Logged in as ${client.user.username}`);
   logGuildsAndChannels();
-  // scheduleRandomMessage();
 }
 
-// 🎭 onInteractionCreate: a silent observer of interactions
 function onInteractionCreate(interaction) {
   // Log every interaction we see (uncomment the line below if needed)
   // console.log(interaction);
 }
 
-// 🔍 onDebug: our bot's little magnifying glass for problem-solving
 function onDebug(info) {
   // console.log(`Debug info: ${info}`);
 }
 
-// ⚠️ onError: a sentinel standing guard against pesky errors
 function onError(error) {
   console.error(`Client error: ${error}`);
 }
 
-// 💌 onMessageCreate: where the magic of conversation begins
 async function onMessageCreate(message) {
   try {
     const botMentioned = message.mentions.has(client.user);
-
     const username = message.author.username;
 
     if (!message.author.bot && botMentioned) {
-      const typingInterval = setInterval(
-        () => message.channel.sendTyping(),
-        5000
-      );
-      const prompt = removeMentionFromMessage(message.content, "@coachartie");
+      const typingInterval = setInterval(() => message.channel.sendTyping(), 5000);
+      const prompt = removeMentionFromMessage(message.content, `<@!${client.user.id}>`);
+      const chainMessageStart = [{ role: "user", content: prompt }];
 
-      const chainMessageStart = [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ];
-
-      const response = await processMessageChain(
-        message,
-        chainMessageStart,
-        username
-      );
+      const response = await processMessageChain(message, chainMessageStart, username);
       const robotResponse = response[response.length - 1].content;
-      // stop typing
       clearInterval(typingInterval);
-      // split and send the response
       splitAndSendMessage(robotResponse, message);
       console.log(`🤖 Response: ${robotResponse}`);
+      const rememberMessage = await generateAndStoreRememberCompletion(message, prompt, robotResponse);
 
-      const rememberMessage = await generateAndStoreRememberCompletion(
-        message,
-        prompt,
-        robotResponse
-      );
-
-      // Save the message to the database
       await storeUserMessage(message.author.username, message.content);
-
       console.log(`🧠 Message saved to database: ${message.content}`);
-      console.log(
-        `🧠 Memory saved to database: ${JSON.stringify(rememberMessage)}`
-      );
+      console.log(`🧠 Memory saved to database: ${JSON.stringify(rememberMessage)}`);
     }
   } catch (error) {
     console.log(error);
   }
 }
 
-// 🎬 Utility functions: the unsung heroes of our code
-
-// 🔪 removeMentionFromMessage: slice out the mention from the message
 function removeMentionFromMessage(message, mention) {
   return message.replace(mention, "").trim();
 }
 
-// 📤 splitAndSendMessage: a reliable mailman for handling lengthy messages
 function splitAndSendMessage(message, messageObject) {
-  // messageObject is the discord message object
-  // message is the string we want to send
-
-  // make sure the messageObject is not null or undefined
   if (!messageObject) return message.channel.send(ERROR_MSG);
-
   if (!message) return messageObject.channel.send(ERROR_MSG);
 
   if (message.length < 2000) {
     try {
-      messageObject.channel.send(message);
+      messageObject.channel.send({
+        content: message,
+        allowedMentions: { parse: [] },
+      });
     } catch (e) {
       console.error(e);
     }
   } else {
-    // sometimes message.split is not a function
-    // so we check if it is a string first
     if (typeof message !== "string") {
       console.log("message is not a string, converting to string");
       message = message.toString();
@@ -238,41 +152,17 @@ function splitAndSendMessage(message, messageObject) {
   }
 }
 
-// 🧠 generateAndStoreRememberCompletion: the architect of our bot's memory palace
-async function generateAndStoreRememberCompletion(
-  message,
-  prompt,
-  response,
-  username = ""
-) {
+async function generateAndStoreRememberCompletion(message, prompt, response, username = "") {
   const rememberCompletion = await openai.createChatCompletion({
     model: "gpt-3.5-turbo",
     temperature: 0.82,
     presence_penalty: -0.05,
     max_tokens: 600,
     messages: [
-      {
-        role: "system",
-        content: PROMPT_REMEMBER_INTRO,
-      },
-      // {
-      //   role: "system",
-      //   content: PROMPT_REMEMBER,
-      // },
-      // {
-      //   role: "user",
-      //   content: '<User>: '+prompt,
-      // },
-      // {
-      //   role: "assistant",
-      //   content: '<Coach Artie>: '+response,
-      // },
+      { role: "system", content: PROMPT_REMEMBER_INTRO },
       {
         role: "user",
-        content: `${PROMPT_REMEMBER}
-
-<User>: ${prompt}
-<Coach Artie>: ${response}`,
+        content: `${PROMPT_REMEMBER}\n\n<User>: ${prompt}\n<Coach Artie>: ${response}`,
       },
     ],
   });
@@ -350,253 +240,45 @@ async function assembleMessagePreamble(username) {
   return messages;
 }
 
-// 📦 logGuildsAndChannels: a handy helper for listing servers and channels
 function logGuildsAndChannels() {
   console.log("\n🌐 Connected servers and channels:");
   client.guilds.cache.forEach((guild) => {
     console.log(` - ${guild.name}`);
-    // guild.channels.cache.forEach((channel) => {
-    //   console.log(`\t#${channel.name} (${channel.id}, type: ${channel.type})`);
-    // });
   });
 }
 
-// ⏰ scheduleRandomMessage: a ticking time bomb of random messages
-function scheduleRandomMessage() {
-  const interval = getRandomInt(60000 * 20, 60000 * 60);
-  setTimeout(() => {
-    sendRandomMessageInRandomChannel();
-    scheduleRandomMessage();
-  }, interval);
-}
-
-// 🗃️ getRandomInt: a random number generator powered by chance.js
-function getRandomInt(min, max) {
-  return chance.integer({ min, max });
-}
-
-// 🤖 replaceRobotIdWithName: given a string, replace the robot id with the robot name
-function replaceRobotIdWithName(string) {
-  // console.log("Replacing robot id with name");
-  const coachArtieId = client.user.id;
-  // console.log("coachArtieId", coachArtieId);
-  const coachArtieName = client.user.username;
-  // console.log("coachArtieName", coachArtieName);
-
-  // console.log("Before replace", string);
-  const replaced = string.replace(`<@!${coachArtieId}>`, coachArtieName);
-  // console.log("After replace", replaced);
-  return replaced;
-}
-
-// 📝 callCapabilityMethod: a function for calling capability methods
-async function callCapabilityMethod(capabilitySlug, methodName, args) {
-  console.log("✨✨✨✨✨✨✨✨✨");
-  console.log(
-    `Calling capability method: ${capabilitySlug}.${methodName} with args: ${args}`
-  );
-
-  // now we need to figure out what the capability is
-  // const capability = capabilities.find(
-  //   (capability) => capability.slug === capabilitySlug
-  // );
-  // // if those don't exist, we should throw an error
-  // if (!capability) {
-  //   const error = `Capability not found for ${capabilitySlug}`;
-  //   console.error(error);
-  //   return `Error: ${error}`;
-  // }
-
-  // but if they DO exist, we are in business!
-  // let's call the method assuming it has been imported already
-  if (capabilitySlug === "web") {
-    if (methodName === "fetchAndSummarizeUrl") {
-      const url = args;
-      const summary = await fetchAndSummarizeUrl(url);
-      // return summary;
-
-      // write a little pre-amble for Coach Artie about how to interpret the summary
-      const summaryWithPreamble =
-        "The webpage (" +
-        url +
-        ") was analyzed for facts and URLs that could help the user accomplish their goal. What follows is a summary of the most relevant information: \n\n" +
-        summary +
-        "\n\n" +
-        "Determine whether the information on this page is relevant to your goal, or if you might need to use your capabilities to find more information. Summarize what you have done so far, what the current status is, and what the next steps are.";
-      return summaryWithPreamble;
-    } else if (methodName === "fetchAllLinks") {
-      const url = args;
-      const links = await fetchAllLinks(url);
-      return links;
-    }
-  } else if (capabilitySlug === "calculator") {
-    if (methodName === "calculate") {
-      // const expression = args;
-      // split the expression into an array on commas
-      // const expressionArray = expression.split(",");
-      // const result = calculate(expressionArray[0], expressionArray[1], expressionArray[2]);
-      const result = calculate(args);
-      return "Calculator result: " + result.toString();
-    }
-  } else if (capabilitySlug === "wolframalpha") {
-    if (methodName === "askWolframAlpha") {
-      const question = args;
-      console.log("Asking wolfram alpha", question);
-      const result = await askWolframAlpha(question);
-      return result;
-    }
-  } else if (capabilitySlug === "wikipedia") {
-    if (methodName === "askWikipedia") {
-      const question = args;
-      const result = await askWikipedia(question);
-      return result;
-    }
-  } else if (capabilitySlug === "github") {
-    if (methodName === "createRepo") {
-      const repoName = args;
-      const result = await github.createRepo(repoName);
-      return result;
-    } else if (methodName === "listRepos") {
-      const result = await github.listRepos();
-      return result;
-    } else if (methodName === "createGist") {
-      // const arguments = args.split(",");
-      // const fileName = arguments[0];
-      // const description = arguments[1];
-      // const contentString = arguments[2];
-
-      // it is actually a little bit more complicated than this
-      // the contentString may contain commas, so we need to split on the first comma, the second comma, and then the rest of the string is the content
-
-      const firstCommaIndex = args.indexOf(",");
-      const secondCommaIndex = args.indexOf(",", firstCommaIndex + 1);
-      const fileName = args.substring(0, firstCommaIndex);
-      const description = args.substring(
-        firstCommaIndex + 1,
-        secondCommaIndex
-      );
-      const contentString = args.substring(secondCommaIndex + 1);
-
-      const result = await github.createGist(
-        fileName,
-        description,
-        contentString
-      );
-      return result;
-    } else if (methodName === "addDraftIssueToProject") {
-      const arguments = args.split(",");
-      const projectId = arguments[0];
-      const issueTitle = arguments[1];
-      const issueBody = arguments[2];
-      const result = await github.addDraftIssueToProject(
-        projectId,
-        issueTitle,
-        issueBody
-      );
-      return result;
-    } else if (methodName === "getProjectIdFromUrl"){
-      const url = args;
-      const result = await github.getProjectIdFromUrl(url);
-      return result;      
-    } else if (methodName === "listUserProjects") {
-      const userName = args;
-      const result = await github.listUserProjects(userName);
-      return result;
-    } else if (methodName === "listProjectColumnsAndCards") {
-      const projectId = args;
-      const result = await github.listProjectColumnsAndCards(projectId);
-      return result;
-    } else if (methodName === "listUserRepos") {
-      const userName = args;
-      const result = await github.listUserRepos(userName);
-      return result;
-    } else if (methodName === "listBranches") {
-      const repoName = args;
-      const result = await github.listBranches(repoName);
-      return result;
-    } else if (methodName === "createFile") {
-      // const repoName = args;
-      // async createFile(repositoryName, filePath, content, commitMessage) {
-      const arguments = args.split(",");
-      const repoName = arguments[0];
-      const filePath = arguments[1];
-      const content = arguments[2];
-      const commitMessage = arguments[3];
-      const result = await github.createFile(
-        repoName,
-        filePath,
-        content,
-        commitMessage
-      );
-      return result;
-    } else if (methodName === "editFile") {
-      const arguments = args.split(",");
-      const repoName = arguments[0];
-      const filePath = arguments[1];
-      const content = arguments[2];
-      const commitMessage = arguments[3];
-      const result = await github.editFile(
-        repoName,
-        filePath,
-        content,
-        commitMessage
-      );
-      return result;
-    } else if (methodName === "deleteFile") {
-      const arguments = args.split(",");
-      const repoName = arguments[0];
-      const filePath = arguments[1];
-      const commitMessage = arguments[2];
-      const result = await github.deleteFile(repoName, filePath, commitMessage);
-      return result;
-    } else if (methodName === "createBranch") {
-      const arguments = args.split(",");
-      const repoName = arguments[0];
-      const branchName = arguments[1];
-      const result = await github.createBranch(repoName, branchName);
-      return result;
-    } else if (methodName === "createPullReuqest") {
-      const arguments = args.split(",");
-      const repoName = arguments[0];
-      const title = arguments[1];
-      const headBranch = arguments[2];
-      const baseBranch = arguments[3];
-      const prDescription = arguments[4];
-      const result = await github.createPullReuqest(
-        repoName,
-        title,
-        headBranch,
-        baseBranch,
-        prDescription
-      );
-      return result;
-    } else if (methodName === "readFileContents") {
-      const arguments = args.split(",");
-      const repoName = arguments[0];
-      const filePath = arguments[1];
-      const result = await github.readFileContents(repoName, filePath);
-      return result;
-    }
-  } else if (capabilitySlug === "chance") {
-    if (methodName === "choose") {
-      const arguments = args.split(",");
-      const result = chance.pickone(arguments);
-      return result;
-    } else if (methodName === "floating") {
-      const arguments = args.split(",");
-      const result = chance.floating({ min: +arguments[0], max: +arguments[1] });
-      return result;
-    } else if (methodName === "integer") {
-      const arguments = args.split(",");
-      const result = chance.integer({ min: +arguments[0], max: +arguments[1] });
-      return result;
-    }
+function countMessageTokens(messageArray = []) {
+  let totalTokens = 0;
+  // console.log("Message Array: ", messageArray);
+  if (!messageArray) {
+    return totalTokens;
+  }
+  if (messageArray.length === 0) {
+    return totalTokens;
   }
 
-  return `Error: the capability method ${methodName} was not found for ${capabilitySlug} - maybe try a different method?`;
+  // for some reason we get messageArray.forEach is not a function
+  // when we try to use the forEach method on messageArray
+  // so we use a for loop instead
+
+  // messageArray.forEach((message) => {
+  //   // encode message.content
+  //   const encodedMessage = encode(JSON.stringify(message));
+  //   totalTokens += encodedMessage.length;
+  // });
+
+  // for loop
+  for (let i = 0; i < messageArray.length; i++) {
+    const message = messageArray[i];
+    // encode message.content
+    const encodedMessage = encode(JSON.stringify(message));
+    totalTokens += encodedMessage.length;
+  }
+
+  return totalTokens;
 }
 
-// 📝 processMessageChain: a function for processing message chains
+
 async function processMessageChain(message, messages, username) {
   // console.log("Processing message chain:", messages);
   // console.log("Messages: ", messages.length);
@@ -647,6 +329,7 @@ async function processMessageChain(message, messages, username) {
 
   if (capabilityMatch) {
     const [_, capSlug, capMethod, capArgs] = capabilityMatch;
+    // const capArgs = capabilityMatch[3].split(",").map(arg => arg.trim());
 
     if (currentTokenCount >= apiTokenLimit - 900) {
       console.log(
@@ -784,43 +467,74 @@ async function processMessageChain(message, messages, username) {
   }
 }
 
-function countMessageTokens(messageArray = []) {
-  let totalTokens = 0;
-  // console.log("Message Array: ", messageArray);
-  if (!messageArray) {
-    return totalTokens;
+async function callCapabilityMethod(capabilitySlug, methodName, args) {
+  const capabilities = {
+    web: {
+      fetchAndSummarizeUrl: async (url) => {
+        const summary = await fetchAndSummarizeUrl(url);
+        const summaryWithPreamble = getSummaryWithPreamble(url, summary);
+        return summaryWithPreamble;
+      },
+      fetchAllLinks: async (url) => {
+        return await fetchAllLinks(url);
+      }
+    },
+    calculator: {
+      calculate: (expression) => {
+        const result = calculate(expression);
+        return "Calculator result: " + result.toString();
+      }
+    },
+    wolframalpha: {
+      askWolframAlpha: async (question) => {
+        console.log("Asking Wolfram Alpha:", question);
+        return await askWolframAlpha(question);
+      }
+    },
+    wikipedia: {
+      askWikipedia: async (question) => {
+        return await askWikipedia(question);
+      }
+    },
+    github: {
+      createRepo: async (repoName) => {
+        return await github.createRepo(repoName);
+      },
+      listRepos: async () => {
+        return await github.listRepos();
+      },
+      createGist: async (fileName, description, contentString) => {
+        return await github.createGist(fileName, description, contentString);
+      },
+      // ... add other GitHub methods here
+    },
+    chance: {
+      choose: (options) => {
+        return chance.pickone(options);
+      },
+      floating: (min, max) => {
+        return chance.floating({ min: +min, max: +max });
+      },
+      integer: (min, max) => {
+        return chance.integer({ min: +min, max: +max });
+      }
+    }
+  };
+
+  if (capabilitySlug in capabilities && methodName in capabilities[capabilitySlug]) {
+    const method = capabilities[capabilitySlug][methodName];
+    return await method(...args);
   }
-  if (messageArray.length === 0) {
-    return totalTokens;
-  }
 
-  // for some reason we get messageArray.forEach is not a function
-  // when we try to use the forEach method on messageArray
-  // so we use a for loop instead
-
-  // messageArray.forEach((message) => {
-  //   // encode message.content
-  //   const encodedMessage = encode(JSON.stringify(message));
-  //   totalTokens += encodedMessage.length;
-  // });
-
-  // for loop
-  for (let i = 0; i < messageArray.length; i++) {
-    const message = messageArray[i];
-    // encode message.content
-    const encodedMessage = encode(JSON.stringify(message));
-    totalTokens += encodedMessage.length;
-  }
-
-  return totalTokens;
+  return `Error: the capability method ${methodName} was not found for ${capabilitySlug}. Please try a different method.`;
 }
 
-function isWithinSendingHours() {
-  const currentTimeEST = getCurrentTimeEST();
-  const startHour = 11; // 11 AM
-  const endHour = 15; // 3 PM
-  return (
-    currentTimeEST.getHours() >= startHour &&
-    currentTimeEST.getHours() < endHour
-  );
+// Helper function to generate the summary with preamble
+function getSummaryWithPreamble(url, summary) {
+  const preamble = `The webpage (${url}) was analyzed for facts and URLs that could help the user accomplish their goal. What follows is a summary of the most relevant information:\n\n`;
+  const postamble = `\n\nDetermine whether the information on this page is relevant to your goal, or if you might need to use your capabilities to find more information. Summarize what you have done so far, what the current status is, and what the next steps are.`;
+  return preamble + summary + postamble;
 }
+
+// Start the bot
+client.login(process.env.DISCORD_BOT_TOKEN);
