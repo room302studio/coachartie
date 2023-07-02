@@ -153,11 +153,7 @@ async function onMessageCreate(message) {
     const username = message.author.username;
 
     // we can also detect if the channel we are receiving the message from has a 🤖 - and if so, we will respond to it
-    const channelName = message.channel.name;
-    const channelNameLower = channelName.toLowerCase();
-    const channelNameHasBot = channelNameLower.includes("🤖");
-
-
+    const channelNameHasBot = message.channel.name.includes("🤖");
 
     if (!message.author.bot && (botMentioned || channelNameHasBot)) {
       const typingInterval = setInterval(
