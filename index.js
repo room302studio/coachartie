@@ -42,6 +42,7 @@ The ability to store and retrieve memories and message history.
 const {
   assembleMemory,
   getUserMessageHistory,
+  getAllMemories,
   getUserMemory,
   storeUserMessage,
   storeUserMemory,
@@ -52,6 +53,8 @@ const { calculate } = require("./capabilities/calculator.js");
 const { askWolframAlpha } = require("./capabilities/wolframalpha.js");
 
 const { askWikipedia } = require("./capabilities/wikipedia.js");
+
+const { listFiles, readFile, appendString } = require("./capabilities/google-drive.js");
 
 const { GithubCoach } = require("./capabilities/github.js");
 const github = new GithubCoach();
@@ -70,20 +73,25 @@ const capabilities = require("./capabilities/_manifest.js").capabilities;
 
 // capability prompt
 // to tell the robot all the capabilities it has and what they do
-const capabilityPrompt = `${CAPABILITY_PROMPT_INTRO}
+// Prepare information in capabilities array
+const prepareCapabilities = capabilities.map((capability) => {
+
+  // Map each method inside a capability
+  const methods = capability.methods?.map((method) => {
+    return `\n ${method.name}: ${method.description} call like: ${capability.slug}:${method.name}(${method.parameters.map(d => d.name).join(',')})`;
+  });
+
+  // Return the capability information with its methods
+  return `\n## ${capability.slug}: ${capability.description} 
+${methods}`;
+});
+
+// Combine everything to build the prompt message
+const capabilityPrompt = `
+${CAPABILITY_PROMPT_INTRO}
 
 These are all of your capabilities:
-${capabilities
-  .map((capability) => {
-    return `* ${capability.slug}: ${
-      capability.description
-    }, methods: ${capability.methods
-      ?.map((method) => {
-        return method.name; //+ ' Parameters: ' + JSON.stringify(method.parameters)
-      })
-      .join(", ")}`;
-  })
-  .join("\n")}
+${prepareCapabilities.join("\n")}
 `;
 
 // 🍃 Breathe some life into our dotenv configuration
@@ -247,26 +255,13 @@ async function generateAndStoreRememberCompletion(
 ) {
   const rememberCompletion = await openai.createChatCompletion({
     model: "gpt-3.5-turbo",
-    temperature: 0.82,
-    presence_penalty: -0.05,
+    temperature: 0.75,
     max_tokens: 600,
     messages: [
       {
-        role: "system",
+        role: "user",
         content: PROMPT_REMEMBER_INTRO,
       },
-      // {
-      //   role: "system",
-      //   content: PROMPT_REMEMBER,
-      // },
-      // {
-      //   role: "user",
-      //   content: '<User>: '+prompt,
-      // },
-      // {
-      //   role: "assistant",
-      //   content: '<Coach Artie>: '+response,
-      // },
       {
         role: "user",
         content: `${PROMPT_REMEMBER}
@@ -278,6 +273,13 @@ async function generateAndStoreRememberCompletion(
   });
 
   const rememberText = rememberCompletion.data.choices[0].message.content;
+
+  // count the message tokens in the remember text
+  // const rememberTextTokens = countMessageTokens(rememberText);
+  // console.log(`🧠 Remember text tokens: ${rememberTextTokens}`);
+
+  // if the remember text is ✨ AKA empty, we don't wanna store it
+  if (rememberText === "✨") return;
   await storeUserMemory(message.author.username, rememberText);
 
   return rememberText;
@@ -292,58 +294,55 @@ async function assembleMessagePreamble(username) {
     content: `Today is ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`,
   });
 
+  // pick a random hexagram from the i ching to guide this interaction
+  const hexagramPrompt = `Let this hexagram from the I Ching guide this interaction: ${getHexagram()}`;
+
+  if (chance.bool({ likelihood: 50 })) {
+    messages.push({
+      role: "system",
+      content: hexagramPrompt,
+    });
+  }
+
   // add all the system prompts to the messsage
   messages.push({
     role: "user",
     content: PROMPT_SYSTEM,
   });
 
-  //   messages.push({
-  //     role: "assistant",
-  //     content: `Hello, I'm Coach Artie, the hyper-intelligent virtual AI coach and assistant for Room 302 Studio!
-
-  // My primary goal is to support our amazing studio members, EJ, Ian, and Curran, by providing resources, answering questions, and facilitating collaboration. 🎨🎶💡
-
-  // Please feel free to ask any questions or request assistance, and I'll be more than happy to help. I'll prioritize information I remember from my interactions with our studio members, and if you're a student from The Birch School, I welcome your inquiries as well! 🌳👋
-
-  // Remember, I'm here to foster a positive environment that encourages growth, learning, and exploration.`,
-  //   });
-
-  const capabilityMessage = {
+  messages.push({
     role: "system",
     content: capabilityPrompt,
-  };
+  });
 
-  messages.push(capabilityMessage);
-
-  const userMemoryCount = chance.integer({ min: 2, max: 9 });
+  const userMemoryCount = chance.integer({ min: 2, max: 12 });
 
   // get user memories
   const userMemories = await getUserMemory(username, userMemoryCount);
 
+  const memories = userMemories
+
   // turn user memories into chatbot messages
-  userMemories.forEach((memory) => {
+  memories.forEach((memory) => {
     messages.push({
       role: "system",
-      content: `You remember ${memory.value}`,
+      content: `You remember: ${memory.value} // ${memory.created_at}`,
     });
   });
 
+  const userMessageCount = chance.integer({ min: 4, max: 16 });
+
   // get user messages
-  const userMessages = await getUserMessageHistory(username, 9);
+  const userMessages = await getUserMessageHistory(username, userMessageCount);
 
   // reverse the order of the messages
   userMessages.reverse();
 
   // turn previous user messages into chatbot messages
   userMessages.forEach((message) => {
-    // messages.push({
-    //   role: "system",
-    //   content: `previously this user said: <${message.user_id}>: ${message.value}`,
-    // });
     messages.push({
       role: "user",
-      content: `${message.value}`,
+      content: `${replaceRobotIdWithName(message.value)}`,
     });
   });
 
@@ -391,21 +390,9 @@ function replaceRobotIdWithName(string) {
 
 // 📝 callCapabilityMethod: a function for calling capability methods
 async function callCapabilityMethod(capabilitySlug, methodName, args) {
-  console.log("✨✨✨✨✨✨✨✨✨");
   console.log(
     `Calling capability method: ${capabilitySlug}.${methodName} with args: ${args}`
   );
-
-  // now we need to figure out what the capability is
-  // const capability = capabilities.find(
-  //   (capability) => capability.slug === capabilitySlug
-  // );
-  // // if those don't exist, we should throw an error
-  // if (!capability) {
-  //   const error = `Capability not found for ${capabilitySlug}`;
-  //   console.error(error);
-  //   return `Error: ${error}`;
-  // }
 
   // but if they DO exist, we are in business!
   // let's call the method assuming it has been imported already
@@ -413,16 +400,9 @@ async function callCapabilityMethod(capabilitySlug, methodName, args) {
     if (methodName === "fetchAndSummarizeUrl") {
       const url = args;
       const summary = await fetchAndSummarizeUrl(url);
-      // return summary;
 
-      // write a little pre-amble for Coach Artie about how to interpret the summary
-      const summaryWithPreamble =
-        "The webpage (" +
-        url +
-        ") was analyzed for facts and URLs that could help the user accomplish their goal. What follows is a summary of the most relevant information: \n\n" +
-        summary +
-        "\n\n" +
-        "Determine whether the information on this page is relevant to your goal, or if you might need to use your capabilities to find more information. Summarize what you have done so far, what the current status is, and what the next steps are.";
+      const summaryWithPreamble = `The webpage (${url}) was analyzed for facts and URLs that could help the user accomplish their goal. What follows is a summary of the most relevant information: \n\n${summary}\n\nDetermine whether the information on this page is relevant to your goal, or if you might need to use your capabilities to find more information. Summarize what you have done so far, what the current status is, and what the next steps are.`;
+
       return summaryWithPreamble;
     } else if (methodName === "fetchAllLinks") {
       const url = args;
@@ -431,12 +411,19 @@ async function callCapabilityMethod(capabilitySlug, methodName, args) {
     }
   } else if (capabilitySlug === "calculator") {
     if (methodName === "calculate") {
-      // const expression = args;
-      // split the expression into an array on commas
-      // const expressionArray = expression.split(",");
-      // const result = calculate(expressionArray[0], expressionArray[1], expressionArray[2]);
       const result = calculate(args);
       return "Calculator result: " + result.toString();
+    }
+  } else if (capabilitySlug === "googledrive") {
+    if (methodName === "listFiles") {
+      return await listFiles();
+    } else if (methodName === 'readFile') {
+      const fileId = args;
+      return await readFile(fileId);
+    } else if (methodName === 'appendString') {
+      const fileId = args.split(",")[0];
+      const string = args.split(",")[1];
+      return await appendString(fileId, string);
     }
   } else if (capabilitySlug === "wolframalpha") {
     if (methodName === "askWolframAlpha") {
@@ -451,6 +438,20 @@ async function callCapabilityMethod(capabilitySlug, methodName, args) {
       const result = await askWikipedia(question);
       return result;
     }
+  }  else if (capabilitySlug === "chance") {
+    if (methodName === "choose") {
+      const arguments = args.split(",");
+      const result = chance.pickone(arguments);
+      return result;
+    } else if (methodName === "floating") {
+      const arguments = args.split(",");
+      const result = chance.floating({ min: +arguments[0], max: +arguments[1] });
+      return result;
+    } else if (methodName === "integer") {
+      const arguments = args.split(",");
+      const result = chance.integer({ min: +arguments[0], max: +arguments[1] });
+      return result;
+    } 
   } else if (capabilitySlug === "github") {
     if (methodName === "createRepo") {
       const repoName = args;
@@ -460,14 +461,6 @@ async function callCapabilityMethod(capabilitySlug, methodName, args) {
       const result = await github.listRepos();
       return result;
     } else if (methodName === "createGist") {
-      // const arguments = args.split(",");
-      // const fileName = arguments[0];
-      // const description = arguments[1];
-      // const contentString = arguments[2];
-
-      // it is actually a little bit more complicated than this
-      // the contentString may contain commas, so we need to split on the first comma, the second comma, and then the rest of the string is the content
-
       const firstCommaIndex = args.indexOf(",");
       const secondCommaIndex = args.indexOf(",", firstCommaIndex + 1);
       const fileName = args.substring(0, firstCommaIndex);
@@ -494,10 +487,10 @@ async function callCapabilityMethod(capabilitySlug, methodName, args) {
         issueBody
       );
       return result;
-    } else if (methodName === "getProjectIdFromUrl"){
+    } else if (methodName === "getProjectIdFromUrl") {
       const url = args;
       const result = await github.getProjectIdFromUrl(url);
-      return result;      
+      return result;
     } else if (methodName === "listUserProjects") {
       const userName = args;
       const result = await github.listUserProjects(userName);
@@ -577,20 +570,6 @@ async function callCapabilityMethod(capabilitySlug, methodName, args) {
       const result = await github.readFileContents(repoName, filePath);
       return result;
     }
-  } else if (capabilitySlug === "chance") {
-    if (methodName === "choose") {
-      const arguments = args.split(",");
-      const result = chance.pickone(arguments);
-      return result;
-    } else if (methodName === "floating") {
-      const arguments = args.split(",");
-      const result = chance.floating({ min: +arguments[0], max: +arguments[1] });
-      return result;
-    } else if (methodName === "integer") {
-      const arguments = args.split(",");
-      const result = chance.integer({ min: +arguments[0], max: +arguments[1] });
-      return result;
-    }
   }
 
   return `Error: the capability method ${methodName} was not found for ${capabilitySlug} - maybe try a different method?`;
@@ -653,17 +632,12 @@ async function processMessageChain(message, messages, username) {
         "Token limit reached, adding system message to the chain reminding the bot to wrap it up."
       );
       messages.push({
-        role: "system",
+        role: "user",
         content:
-          "You are reaching the token limit. In the next response, you may not use a capability but must use all of this information to summarize a response.",
+          "It looks like you are reaching the token limit. In the next response, please do not use a capability. Use all of this information to summarize a response.",
       });
       // return messages;
     }
-
-    // tell the channel about the capability being run
-    // message.channel.send(
-    //   `🤖 Running capability ${capSlug}:${capMethod}(${capArgs})`
-    // );
 
     splitAndSendMessage(
       lastMessage.content,
@@ -671,10 +645,10 @@ async function processMessageChain(message, messages, username) {
     )
 
     // split and send that we are running the capability
-    splitAndSendMessage(
-      `🤖 Running capability ${capSlug}:${capMethod}(${capArgs})`,
-      message
-    );
+    // splitAndSendMessage(
+    //   `🤖 Running capability ${capSlug}:${capMethod}(${capArgs})`,
+    //   message
+    // );
 
     let capabilityResponse;
 
@@ -686,7 +660,7 @@ async function processMessageChain(message, messages, username) {
       );
     } catch (e) {
       console.log("Error: ", e);
-      capabilityResponse = "Error: " + e;
+      capabilityResponse = "Capability error: " + e;
     }
 
     console.log("Capability response: ", capabilityResponse);
@@ -701,12 +675,27 @@ async function processMessageChain(message, messages, username) {
     // let trimmedCapabilityResponse = JSON.stringify(capabilityResponse);
 
     // refactor to use the countMessageTokens function and a while to trim down the response until it fits under the token limit of 8000
-    while (countMessageTokens(capabilityResponse) > 6144) {
-      console.log("Response is too long, trimming it down.");
-      capabilityResponse = capabilityResponse.slice(
-        0,
-        capabilityResponse.length - 100
+    function countTokens(str) {
+      const encodedMessage = encode(str.toString());
+      const tokenCount = encodedMessage.length;
+      return tokenCount;
+    }
+
+    while (countTokens(capabilityResponse) > 5120) {
+      console.log(`Response is too long ${countTokens(capabilityResponse)}, trimming it down.`);
+
+      // choose a random 10% of lines to remove
+      const lines = capabilityResponse.split("\n");
+      const lineCount = lines.length;
+      const linesToRemove = Math.floor(lineCount * 0.1);
+      console.log(`Removing ${linesToRemove} lines from the response.`);
+      const randomLines = chance.pickset(lines, linesToRemove);
+      const trimmedLines = lines.filter((line) => {
+        return !randomLines.includes(line);
+      }
       );
+      capabilityResponse = trimmedLines.join("\n");
+
     }
 
     const trimmedCapabilityResponse = capabilityResponse;
@@ -717,19 +706,10 @@ async function processMessageChain(message, messages, username) {
       console.log("Error sending message: ", e);
     }
 
-    // if the capArgs length is under 500, then we can add it to the chain raw
-    if (capArgs.length < 250) {
-      messages.push({
-        role: "system",
-        content: `Capability ${capSlug}:${capMethod}(${capArgs}) responded with: ${trimmedCapabilityResponse}`,
-      })
-    } else {
-      // otherwise we need to truncate it
-      messages.push({
-        role: "system",
-        content: `Capability ${capSlug}:${capMethod} responded with: ${trimmedCapabilityResponse}`,
-      })
-    }
+    messages.push({
+      role: "system",
+      content: `Capability ${capSlug}:${capMethod} responded with: ${trimmedCapabilityResponse}`,
+    })
   }
 
   // beautiful console.log for messages
@@ -766,9 +746,10 @@ async function processMessageChain(message, messages, username) {
   try {
     const completion = await openai.createChatCompletion({
       model: "gpt-4",
+      // model: "gpt-3.5-turbo-16k",
       temperature,
       presence_penalty,
-      max_tokens: 900,
+      max_tokens: 820,
       messages: messages,
     });
 
@@ -823,4 +804,76 @@ function isWithinSendingHours() {
     currentTimeEST.getHours() >= startHour &&
     currentTimeEST.getHours() < endHour
   );
+}
+
+function getHexagram() {
+  const hexagramNumber = chance.integer({ min: 1, max: 64 });
+  const hexNameMap = {
+    1: "The Creative",
+    2: "The Receptive",
+    3: "Difficulty at the Beginning",
+    4: "Youthful Folly",
+    5: "Waiting",
+    6: "Conflict",
+    7: "The Army",
+    8: "Holding Together",
+    9: "The Taming Power of the Small",
+    10: "Treading",
+    11: "Peace",
+    12: "Standstill",
+    13: "Fellowship with Men",
+    14: "Possession in Great Measure",
+    15: "Modesty",
+    16: "Enthusiasm",
+    17: "Following",
+    18: "Work on What Has Been Spoiled",
+    19: "Approach",
+    20: "Contemplation",
+    21: "Biting Through",
+    22: "Grace",
+    23: "Splitting Apart",
+    24: "Return",
+    25: "Innocence",
+    26: "The Taming Power of the Great",
+    27: "The Corners of the Mouth",
+    28: "Preponderance of the Great",
+    29: "The Abysmal",
+    30: "The Clinging",
+    31: "Influence",
+    32: "Duration",
+    33: "Retreat",
+    34: "The Power of the Great",
+    35: "Progress",
+    36: "Darkening of the Light",
+    37: "The Family",
+    38: "Opposition",
+    39: "Obstruction",
+    40: "Deliverance",
+    41: "Decrease",
+    42: "Increase",
+    43: "Breakthrough",
+    44: "Coming to Meet",
+    45: "Gathering Together",
+    46: "Pushing Upward",
+    47: "Oppression",
+    48: "The Well",
+    49: "Revolution",
+    50: "The Cauldron",
+    51: "The Arousing (Shock, Thunder)",
+    52: "Keeping Still (Mountain)",
+    53: "Development (Gradual Progress)",
+    54: "The Marrying Maiden",
+    55: "Abundance (Fullness)",
+    56: "The Wanderer",
+    57: "The Gentle (Wind)",
+    58: "The Joyous (Lake)",
+    59: "Dispersion (Dissolution)",
+    60: "Limitation",
+    61: "Inner Truth",
+    62: "Preponderance of the Small",
+    63: "After Completion",
+    64: "Before Completion",
+  };
+
+  return `${hexagramNumber}. ${hexNameMap[hexagramNumber]}`;
 }
