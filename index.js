@@ -150,10 +150,16 @@ function onError(error) {
 async function onMessageCreate(message) {
   try {
     const botMentioned = message.mentions.has(client.user);
-
     const username = message.author.username;
 
-    if (!message.author.bot && botMentioned) {
+    // we can also detect if the channel we are receiving the message from has a 🤖 - and if so, we will respond to it
+    const channelName = message.channel.name;
+    const channelNameLower = channelName.toLowerCase();
+    const channelNameHasBot = channelNameLower.includes("🤖");
+
+
+
+    if (!message.author.bot && (botMentioned || channelNameHasBot)) {
       const typingInterval = setInterval(
         () => message.channel.sendTyping(),
         5000
