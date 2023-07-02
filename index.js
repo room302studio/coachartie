@@ -724,10 +724,11 @@ async function processMessageChain(message, messages, username) {
   // const temperature = chance.floating({ min: 0.5, max: 0.99 });
   const temperature = chance.floating({ min: 0.4, max: 1.25 });
 
-  const presence_penalty = chance.floating({ min: 0.2, max: 0.66 });
+  const frequency_penalty = chance.floating({ min: 0, max: 0.33 });
+  
 
   console.log("🌡️", temperature);
-  console.log("👻", presence_penalty);
+  console.log("👻", frequency_penalty);
 
   // before we call for completion, we need to calculate the total tokens in the message chain
   // if the total tokens is over 8000, we need to trim the messages (from the top) until it is under 8000
@@ -750,7 +751,7 @@ async function processMessageChain(message, messages, username) {
       model: "gpt-4",
       // model: "gpt-3.5-turbo-16k",
       temperature,
-      presence_penalty,
+      frequency_penalty,
       max_tokens: 820,
       messages: messages,
     });
