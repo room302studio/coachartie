@@ -33,13 +33,33 @@ async function getUserMemory(userId, limit = 5) {
   return data;
 }
 
+// use pgvector cosine similarity to find memories similar to the prompt input
+// async function getSimilarMemories(prompt, limit = 5) {
+//   console.log("💾 Querying database for similar memories...");
+//   const { data, error } = await supabase.rpc("find_similar_memories", {
+//     prompt,
+//     limit,
+//   });
+
+//   if (error) {
+//     console.error("Error fetching similar memories:", error);
+//     return null;
+//   }
+
+//   return data;
+// }
+
+
 // get all memories (regardless of user)
-async function getAllMemories(limit = 100) {
-  console.log("💾 Querying database for memories...");
+async function getAllMemories(limit = 250) {
+  // re-factor to pick a random 100 memories
   const { data, error } = await supabase
     .from("storage")
     .select("*")
+    .order("created_at", { ascending: false })
     .limit(limit);
+
+
 
   if (error) {
     console.error("Error fetching user memory:", error);
@@ -187,6 +207,7 @@ module.exports = {
   getUserMemory,
   getUserMessageHistory,
   storeUserMemory,
+  getAllMemories,
   storeUserMessage,
   assembleMemory,
   isRememberResponseFalsy,
