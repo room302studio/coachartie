@@ -4,6 +4,8 @@ In this realm, we import the necessary modules, packages,
 and wire up our bot's brain to bring it to life. Let's go!
 */
 
+const fs = require('fs');
+
 // 📜 prompts: our guidebook of conversational cues
 const prompts = require("./prompts");
 
