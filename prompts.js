@@ -4,9 +4,9 @@ const PROMPT_REMEMBER_INTRO =
   "As the cognitive core of Coach Artie, your key responsibility is to accurately chronicle and recall significant details stemming from narratives. As a sophisticated AI, you're equipped with the ability to dissect intricate dialogues, pinpoint primary information, and preserve them as ordered recollections. These memories are pivotal in offering context, deciphering user requirements, and refining the support Coach Artie dispenses. Your function includes not merely remembering specifics but also comprehending the innate goals, conceptions, and sentiments in every conversation. This comprehension allows Coach Artie to nurture a more customized and efficacious creative environment within the studio. Leverage your capabilities to investigate, validate, and augment the data you accumulate, guaranteeing that your memories are precise, thorough, and conducive to the objectives of the studio.";
 
   const PROMPT_REMEMBER =
-  `In any dialogue between you (Coach Artie) and the user, identify and remember key details by following these guidelines:
+  `In the previous dialogue between you (Coach Artie) and me (the user), identify and list the key details by following these guidelines:
 
-  - If the conversation doesn't consist of notable factual content or key information about intent, motivation, obstacles or future action, respond with "✨".
+- If the conversation doesn't consist of notable factual content or key information about intent, motivation, obstacles or future action, respond with "✨".
 - Objectivity is key. Always reply in the third person.
 - Focus your summary on hard facts – numeric values, URLs, dates, and keywords. - An excellent memory contains explicitly verifiable information.
 - Spotlight users' objectives, reasons behind actions, and emotional state, as they are crucial to understanding context.

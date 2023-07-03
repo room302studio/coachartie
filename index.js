@@ -275,16 +275,28 @@ async function generateAndStoreRememberCompletion(
     messages: [
       ...memoryMessages,
       {
-        role: "user",
+        role: "system",
         content: PROMPT_REMEMBER_INTRO,
       },
       {
         role: "user",
-        content: `${PROMPT_REMEMBER}
-
-<User>: ${prompt}
-<Coach Artie>: ${response}`,
+        content: `${prompt}`
       },
+      {
+        role: "assistant",
+        content: `${response}`
+      },
+      {
+        role: "user",
+        content: `${PROMPT_REMEMBER}`
+      },
+//       {
+//         role: "user",
+//         content: `${PROMPT_REMEMBER}
+
+// <User>: ${prompt}
+// <Coach Artie>: ${response}`,
+//       },
     ],
   });
 
