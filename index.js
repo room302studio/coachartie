@@ -14,9 +14,6 @@ const {
   PROMPT_SYSTEM,
   PROMPT_REMEMBER,
   PROMPT_REMEMBER_INTRO,
-  PROMPT_CONVO_EVALUATE_FOR_TWEET,
-  PROMPT_CONVO_EVALUATE_INSTRUCTIONS,
-  PROMPT_TWEET_REQUEST,
   CAPABILITY_PROMPT_INTRO,
 } = prompts;
 const ERROR_MSG = `I am so sorry, there was some sort of problem. Feel free to ask me again, or try again later.`;
