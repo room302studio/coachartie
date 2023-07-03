@@ -190,6 +190,30 @@ async function onMessageCreate(message) {
       // Save the message to the database
       await storeUserMessage(message.author.username, message.content);
 
+      // build a JSON object with detailed logs about everything that happened
+      const log = {
+        user: message.author.username,
+        message: message.content,
+        response: robotResponse,
+        remember: rememberMessage,
+      };
+
+      // log the JSON object to the console with pretty formatting
+      console.log(JSON.stringify(log, null, 2));
+
+      // append the log to the artie.log file as a single line
+      fs.appendFile(
+        "artie.log",
+        `\n${JSON.stringify(log)}`,
+        { flag: "a+" },
+        (err) => {
+          if (err) throw err;
+          console.log("📝 Log saved to artie.log");
+        }
+      );
+
+
+
       console.log(`🧠 Message saved to database: ${message.content}`);
       console.log(
         `🧠 Memory saved to database: ${JSON.stringify(rememberMessage)}`
