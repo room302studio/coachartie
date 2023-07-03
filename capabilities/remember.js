@@ -20,7 +20,7 @@ async function getUserMemory(userId, limit = 5) {
     // limit to the last 50 memories
     .limit(limit)
     // sort so the most recent memories are first by timestamp
-    .order("created_at", { ascending: true })
+    .order("created_at", { ascending: false })
     .eq("user_id", userId)
     // and the value is not ✨
     .neq("value", "✨");

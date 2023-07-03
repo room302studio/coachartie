@@ -255,11 +255,25 @@ async function generateAndStoreRememberCompletion(
   response,
   username = ""
 ) {
+  const userMemoryCount = chance.integer({ min: 2, max: 48 });
+  const memoryMessages = [];
+  // get user memories
+  const userMemories = await getUserMemory(username, userMemoryCount);
+
+  // turn user memories into chatbot messages
+  userMemories.forEach((memory) => {
+    memoryMessages.push({
+      role: "system",
+      content: `You remember from a previous interaction: ${memory.value} // ${memory.created_at}`,
+    });
+  });
+
   const rememberCompletion = await openai.createChatCompletion({
-    model: "gpt-3.5-turbo",
+    model: "gpt-3.5-turbo-16k",
     temperature: 0.75,
     max_tokens: 600,
     messages: [
+      ...memoryMessages,
       {
         role: "user",
         content: PROMPT_REMEMBER_INTRO,
