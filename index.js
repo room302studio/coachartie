@@ -264,7 +264,7 @@ async function generateAndStoreRememberCompletion(
   userMemories.forEach((memory) => {
     memoryMessages.push({
       role: "system",
-      content: `You remember from a previous interaction: ${memory.value} // ${memory.created_at}`,
+      content: `You remember from a previous interaction at ${memory.created_at}: ${memory.value}  `,
     });
   });
 
@@ -354,7 +354,7 @@ async function assembleMessagePreamble(username) {
   memories.forEach((memory) => {
     messages.push({
       role: "system",
-      content: `You remember: ${memory.value} // ${memory.created_at}`,
+      content: `You remember from a previous interaction on ${memory.created_at}: ${memory.value}`,
     });
   });
 
