@@ -307,7 +307,7 @@ async function generateAndStoreRememberCompletion(
   // console.log(`🧠 Remember text tokens: ${rememberTextTokens}`);
 
   // if the remember text is ✨ AKA empty, we don't wanna store it
-  if (rememberText === "✨") return;
+  if (rememberText === "✨") return rememberText;
   await storeUserMemory(message.author.username, rememberText);
 
   return rememberText;
