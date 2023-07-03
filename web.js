@@ -4,6 +4,10 @@ const app = express();
 const fs = require('fs');
 const path = require('path');
 
+// 🌿 dotenv: a lifeline for using environment variables
+const dotenv = require("dotenv");
+dotenv.config();
+
 const port = process.env.PORT || 8080;
 
 app.get('/', (req, res) => {
