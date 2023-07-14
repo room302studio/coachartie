@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "license": "MIT",
+  "scripts":{
+    "start": "node index.js"
+  },
   "dependencies": {
     "@discordjs/voice": "^0.16.0",
     "@google-cloud/speech": "^5.5.0",
