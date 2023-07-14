@@ -4,7 +4,7 @@ In this realm, we import the necessary modules, packages,
 and wire up our bot's brain to bring it to life. Let's go!
 */
 
-const fs = require('fs');
+const fs = require("fs");
 
 // 📜 prompts: our guidebook of conversational cues
 const prompts = require("./prompts");
@@ -53,7 +53,11 @@ const { askWolframAlpha } = require("./capabilities/wolframalpha.js");
 
 const { askWikipedia } = require("./capabilities/wikipedia.js");
 
-const { listFiles, readFile, appendString } = require("./capabilities/google-drive.js");
+const {
+  listFiles,
+  readFile,
+  appendString,
+} = require("./capabilities/google-drive.js");
 
 const { GithubCoach } = require("./capabilities/github.js");
 const github = new GithubCoach();
@@ -74,10 +78,11 @@ const capabilities = require("./capabilities/_manifest.js").capabilities;
 // to tell the robot all the capabilities it has and what they do
 // Prepare information in capabilities array
 const prepareCapabilities = capabilities.map((capability) => {
-
   // Map each method inside a capability
   const methods = capability.methods?.map((method) => {
-    return `\n ${method.name}: ${method.description} call like: ${capability.slug}:${method.name}(${method.parameters.map(d => d.name).join(',')})`;
+    return `\n ${method.name}: ${method.description} call like: ${
+      capability.slug
+    }:${method.name}(${method.parameters.map((d) => d.name).join(",")})`;
   });
 
   // Return the capability information with its methods
@@ -211,8 +216,6 @@ async function onMessageCreate(message) {
         }
       );
 
-
-
       console.log(`🧠 Message saved to database: ${message.content}`);
       console.log(
         `🧠 Memory saved to database: ${JSON.stringify(rememberMessage)}`
@@ -303,23 +306,23 @@ async function generateAndStoreRememberCompletion(
       },
       {
         role: "user",
-        content: `${prompt}`
+        content: `${prompt}`,
       },
       {
         role: "assistant",
-        content: `${response}`
+        content: `${response}`,
       },
       {
         role: "user",
-        content: `${PROMPT_REMEMBER}`
+        content: `${PROMPT_REMEMBER}`,
       },
-//       {
-//         role: "user",
-//         content: `${PROMPT_REMEMBER}
+      //       {
+      //         role: "user",
+      //         content: `${PROMPT_REMEMBER}
 
-// <User>: ${prompt}
-// <Coach Artie>: ${response}`,
-//       },
+      // <User>: ${prompt}
+      // <Coach Artie>: ${response}`,
+      //       },
     ],
   });
 
@@ -371,7 +374,7 @@ async function assembleMessagePreamble(username) {
   // get user memories
   const userMemories = await getUserMemory(username, userMemoryCount);
 
-  const memories = userMemories
+  const memories = userMemories;
 
   // turn user memories into chatbot messages
   memories.forEach((memory) => {
@@ -468,10 +471,10 @@ async function callCapabilityMethod(capabilitySlug, methodName, args) {
   } else if (capabilitySlug === "googledrive") {
     if (methodName === "listFiles") {
       return await listFiles();
-    } else if (methodName === 'readFile') {
+    } else if (methodName === "readFile") {
       const fileId = args;
       return await readFile(fileId);
-    } else if (methodName === 'appendString') {
+    } else if (methodName === "appendString") {
       const fileId = args.split(",")[0];
       const string = args.split(",")[1];
       return await appendString(fileId, string);
@@ -489,20 +492,23 @@ async function callCapabilityMethod(capabilitySlug, methodName, args) {
       const result = await askWikipedia(question);
       return result;
     }
-  }  else if (capabilitySlug === "chance") {
+  } else if (capabilitySlug === "chance") {
     if (methodName === "choose") {
       const arguments = args.split(",");
       const result = chance.pickone(arguments);
       return result;
     } else if (methodName === "floating") {
       const arguments = args.split(",");
-      const result = chance.floating({ min: +arguments[0], max: +arguments[1] });
+      const result = chance.floating({
+        min: +arguments[0],
+        max: +arguments[1],
+      });
       return result;
     } else if (methodName === "integer") {
       const arguments = args.split(",");
       const result = chance.integer({ min: +arguments[0], max: +arguments[1] });
       return result;
-    } 
+    }
   } else if (capabilitySlug === "github") {
     if (methodName === "createRepo") {
       const repoName = args;
@@ -515,10 +521,7 @@ async function callCapabilityMethod(capabilitySlug, methodName, args) {
       const firstCommaIndex = args.indexOf(",");
       const secondCommaIndex = args.indexOf(",", firstCommaIndex + 1);
       const fileName = args.substring(0, firstCommaIndex);
-      const description = args.substring(
-        firstCommaIndex + 1,
-        secondCommaIndex
-      );
+      const description = args.substring(firstCommaIndex + 1, secondCommaIndex);
       const contentString = args.substring(secondCommaIndex + 1);
 
       const result = await github.createGist(
@@ -690,10 +693,7 @@ async function processMessageChain(message, messages, username) {
       // return messages;
     }
 
-    splitAndSendMessage(
-      lastMessage.content,
-      message,
-    )
+    splitAndSendMessage(lastMessage.content, message);
 
     // split and send that we are running the capability
     // splitAndSendMessage(
@@ -724,7 +724,11 @@ async function processMessageChain(message, messages, username) {
     }
 
     while (countTokens(capabilityResponse) > 5120) {
-      console.log(`Response is too long ${countTokens(capabilityResponse)}, trimming it down.`);
+      console.log(
+        `Response is too long ${countTokens(
+          capabilityResponse
+        )}, trimming it down.`
+      );
 
       // choose a random 10% of lines to remove
       const lines = capabilityResponse.split("\n");
@@ -734,10 +738,8 @@ async function processMessageChain(message, messages, username) {
       const randomLines = chance.pickset(lines, linesToRemove);
       const trimmedLines = lines.filter((line) => {
         return !randomLines.includes(line);
-      }
-      );
+      });
       capabilityResponse = trimmedLines.join("\n");
-
     }
 
     const trimmedCapabilityResponse = capabilityResponse;
@@ -751,7 +753,7 @@ async function processMessageChain(message, messages, username) {
     messages.push({
       role: "system",
       content: `Capability ${capSlug}:${capMethod} responded with: ${trimmedCapabilityResponse}`,
-    })
+    });
   }
 
   // beautiful console.log for messages
