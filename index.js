@@ -122,6 +122,152 @@ client.on("debug", onDebug);
 client.on("error", onError);
 client.on("messageCreate", onMessageCreate);
 
+const blessed = require('blessed');
+
+// Create a screen object.
+let screen = blessed.screen();
+
+// Create first log box
+let log1 = blessed.box({
+  top: '10%',
+  left: 'left',
+  width: '50%',
+  height: '90%',
+  content: '',
+  tags: true,
+  border: {
+    type: 'line'
+  },
+  style: {
+    fg: 'white',
+    bg: 'black',
+    border: {
+      fg: '#f0f0f0'
+    }
+  },
+  scrollable: true,
+  alwaysScroll: true,
+  scrollbar: {
+    ch: ' ',
+    inverse: true
+  }
+});
+
+// Create second log box
+let log2 = blessed.box({
+  top: '10%',
+  left: '50%',
+  width: '50%',
+  height: '40%',
+  content: '',
+  tags: true,
+  // border: {
+  //   type: 'line'
+  // },
+  style: {
+    fg: 'red',
+    bg: 'black',
+    // border: {
+    //   fg: '#f0f0f0'
+    // }
+  },
+  scrollable: true,
+  alwaysScroll: true,
+  scrollbar: {
+    ch: ' ',
+    inverse: true
+  }
+});
+
+// create a third log box in the lower right
+let log3 = blessed.box({
+  top: '50%',
+  left: '50%',
+  width: '50%',
+  height: '50%',
+  content: '',
+  tags: true,
+  // border: {
+  //   type: 'line'
+  // },
+  style: {
+    fg: 'blue',
+    bg: 'black',
+    // border: {
+    //   fg: '#f0f0f0'
+    // }
+  },
+  scrollable: true,
+  alwaysScroll: true,
+  scrollbar: {
+    ch: ' ',
+    inverse: true
+  }
+});
+
+// make a fourth box that takes up the top 10% of the screen
+let log4 = blessed.box({
+  top: 'top',
+  left: 'left',
+  width: '100%',
+  height: '10%',
+  content: '',
+  tags: true,
+  style: {
+    fg: 'black',
+    bg: 'white',
+  },
+});
+
+// Append our boxes to the screen.
+screen.append(log1);
+screen.append(log2);
+screen.append(log3);
+screen.append(log4);
+
+// Focus on first log box
+log1.focus();
+
+// Render the screen.
+screen.render();
+
+// steal console.log and send it to log1
+const oldLog = console.log;
+
+console.log = function (...args) {
+  // oldLog(...args);
+  log1.insertBottom(args.join(' '));
+  // scroll to bottom
+  log1.setScrollPerc(100);
+  screen.render();
+};
+
+function consolelog2(...args) {
+  log2.insertBottom(args.join(' '));
+  // scroll to bottom
+  log2.setScrollPerc(100);
+  screen.render();
+}
+
+// set console.error to log2
+console.error = consolelog2;
+
+function consolelog3(...args) {
+  // log3.insertBottom(args.join(' '));
+  // // scroll to bottom
+  // log3.setScrollPerc(100);
+
+  // actually, reset the log3 box and fill with the new content
+  log3.setContent(args.join(' '));
+
+  screen.render();
+}
+
+consolelog4 = function (...args) {
+  log4.setContent(args.join(' '));
+  screen.render();
+}
+
 // 🌈 onClientReady: our bot's grand entrance to the stage
 function onClientReady(c) {
   console.log(`⭐️ Ready! Logged in as ${c.user.username}`);
@@ -160,6 +306,7 @@ async function onMessageCreate(message) {
         5000
       );
       const prompt = removeMentionFromMessage(message.content, "@coachartie");
+      consolelog4(`👩‍🎓 Prompt: ${prompt}`);
 
       const chainMessageStart = [
         {
@@ -178,7 +325,8 @@ async function onMessageCreate(message) {
       clearInterval(typingInterval);
       // split and send the response
       splitAndSendMessage(robotResponse, message);
-      console.log(`🤖 Response: ${robotResponse}`);
+      //console.log(`🤖 Response: ${robotResponse}`);
+      // consolelog2(`🤖 Response: ${robotResponse}`);
 
       const rememberMessage = await generateAndStoreRememberCompletion(
         message,
@@ -198,7 +346,8 @@ async function onMessageCreate(message) {
       };
 
       // log the JSON object to the console with pretty formatting
-      console.log(JSON.stringify(log, null, 2));
+      // console.log(JSON.stringify(log, null, 2));
+      console.log(log.remember);
 
       // append the log to the artie.log file as a single line
       fs.appendFile(
@@ -213,13 +362,18 @@ async function onMessageCreate(message) {
 
 
 
+      // console.log(`🧠 Message saved to database: ${message.content}`);
       console.log(`🧠 Message saved to database: ${message.content}`);
+      // console.log(
+      //   `🧠 Memory saved to database: ${JSON.stringify(rememberMessage)}`
+      // );
       console.log(
         `🧠 Memory saved to database: ${JSON.stringify(rememberMessage)}`
       );
     }
   } catch (error) {
-    console.log(error);
+    // console.log(error);
+    consolelog2(error);
   }
 }
 
@@ -279,6 +433,8 @@ async function generateAndStoreRememberCompletion(
   username = ""
 ) {
   const userMemoryCount = chance.integer({ min: 2, max: 48 });
+  console.log(`🧠 Generating ${userMemoryCount} memories for ${username}`);
+
   const memoryMessages = [];
   // get user memories
   const userMemories = await getUserMemory(username, userMemoryCount);
@@ -336,6 +492,8 @@ async function generateAndStoreRememberCompletion(
   return rememberText;
 }
 
+// this is where the action happens
+
 async function assembleMessagePreamble(username) {
   const messages = [];
 
@@ -349,6 +507,7 @@ async function assembleMessagePreamble(username) {
   const hexagramPrompt = `Let this hexagram from the I Ching guide this interaction: ${getHexagram()}`;
 
   if (chance.bool({ likelihood: 50 })) {
+    console.log(`🔮 Adding hexagram prompt to message ${hexagramPrompt}`);
     messages.push({
       role: "system",
       content: hexagramPrompt,
@@ -366,6 +525,24 @@ async function assembleMessagePreamble(username) {
     content: capabilityPrompt,
   });
 
+  const userMessageCount = chance.integer({ min: 4, max: 16 });
+
+  console.log(`🧠 Retrieving ${userMessageCount} previous messages for ${username}`);
+
+  // get user messages
+  const userMessages = await getUserMessageHistory(username, userMessageCount);
+
+  // reverse the order of the messages
+  userMessages.reverse();
+
+  // turn previous user messages into chatbot messages
+  userMessages.forEach((message) => {
+    messages.push({
+      role: "user",
+      content: `${replaceRobotIdWithName(message.value)}`,
+    });
+  });
+
   const userMemoryCount = chance.integer({ min: 2, max: 12 });
 
   // get user memories
@@ -381,21 +558,7 @@ async function assembleMessagePreamble(username) {
     });
   });
 
-  const userMessageCount = chance.integer({ min: 4, max: 16 });
-
-  // get user messages
-  const userMessages = await getUserMessageHistory(username, userMessageCount);
-
-  // reverse the order of the messages
-  userMessages.reverse();
-
-  // turn previous user messages into chatbot messages
-  userMessages.forEach((message) => {
-    messages.push({
-      role: "user",
-      content: `${replaceRobotIdWithName(message.value)}`,
-    });
-  });
+  
 
   return messages;
 }
@@ -710,11 +873,12 @@ async function processMessageChain(message, messages, username) {
         capArgs
       );
     } catch (e) {
-      console.log("Error: ", e);
+      // console.log("Error: ", e);
+      consolelog2(e);
       capabilityResponse = "Capability error: " + e;
     }
 
-    console.log("Capability response: ", capabilityResponse);
+    consolelog3("Capability response: ", capabilityResponse);
 
     // refactor to use the countMessageTokens function and a while to trim down the response until it fits under the token limit of 8000
     function countTokens(str) {
@@ -779,7 +943,29 @@ async function processMessageChain(message, messages, username) {
 
     // trim the messages until the total tokens is under 8000
     while (countMessageTokens(messages) > 8000) {
-      messages.shift();
+      // pick a random message to consider trimming
+      const messageToRemove = chance.pickone(messages);
+
+      // trim down the message.content to 1/2 of the original length
+      const trimmedMessageContent = messageToRemove.content.slice(
+        0,
+        messageToRemove.content.length / 2
+      );
+
+      // replace the message with the trimmed version
+      messageToRemove.content = trimmedMessageContent;
+
+      // if the message is now empty, remove it from the messages array
+      if (messageToRemove.content.length === 0) {
+        messages = messages.filter((message) => {
+          return message !== messageToRemove;
+        });
+      }
+
+      // if the messages array is now empty, break out of the loop
+      if (messages.length === 0) {
+        break;
+      }
     }
     console.log("Message chain trimmed.");
   }

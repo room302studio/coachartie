@@ -31,6 +31,42 @@ const openai = new OpenAIApi(configuration);
 
 const allowedTextEls = "p, h1, h2, h3, h4, h5, h6, a, td, th, tr, pre, code, blockquote";
 
+function cleanUrlForPuppeteer(dirtyUrl) {
+  // if the url starts and ends with ' then remove them
+  if (dirtyUrl.startsWith("'") && dirtyUrl.endsWith("'")) {
+    dirtyUrl = dirtyUrl.slice(1, -1)
+  }
+
+  // if it starts with ' remove it 
+  if (dirtyUrl.startsWith("'")) {
+    dirtyUrl = dirtyUrl.slice(1)
+  }
+
+  // if it ends with ' remove it
+  if (dirtyUrl.endsWith("'")) {
+    dirtyUrl = dirtyUrl.slice(0, -1)
+  }
+
+  // if the url starts and ends with " then remove them
+  if (dirtyUrl.startsWith('"') && dirtyUrl.endsWith('"')) {
+    dirtyUrl = dirtyUrl.slice(1, -1)
+  }
+
+  // if it starts with " remove it
+  if (dirtyUrl.startsWith('"')) {
+    dirtyUrl = dirtyUrl.slice(1)
+  }
+
+  // if it ends with " remove it
+  if (dirtyUrl.endsWith('"')) {
+    dirtyUrl = dirtyUrl.slice(0, -1)
+  }
+
+  // return the clean url
+  return dirtyUrl
+}
+
+
 
 // quick promise sleep function
 function sleep(ms) {
@@ -42,6 +78,7 @@ function sleep(ms) {
 async function fetchAndParseURL(url) {
   const browser = await puppeteer.launch();
   const page = await browser.newPage();
+  await page.setUserAgent(randomUserAgent());
   await page.goto(url);
 
   console.log("🕸️  Navigating to " + url);
@@ -108,12 +145,35 @@ async function fetchAllLinks(url) {
   // navigate to a page and fetch all of the anchor tags
   const browser = await puppeteer.launch();
   const page = await browser.newPage();
-  await page.goto(url);
+  await page.setUserAgent(randomUserAgent());
 
-  console.log("🕸️  Navigating to " + url);
+  // clean the URL
+  const cleanUrl = cleanUrlForPuppeteer(url);
+
+  // if the url and cleanedUrl are different, log it
+  if (url !== cleanUrl) {
+    console.log("🧹  Cleaned URL to " + cleanUrl);
+  }
+
+  await page.goto(cleanUrl);
+
+  console.log("🕸️  Navigating to " + cleanUrl);
+
+  // check if the base cleanUrl we are navigating to is google.com
+  const isGoogle = url.includes("google.com");
+
+  if(isGoogle) {
+    await page.waitForSelector("div#search");
+  } else {
+    await page.waitForSelector("body")
+  }
+
 
   // wait for body to load
-  await page.waitForSelector("body");
+  // await page.waitForSelector("body");
+
+  // wait 2 seconds for any JS to run
+  await sleep(2000);  
 
   // get all the links and the link text
   const links = await page.$$eval("a", function (elements) {
@@ -132,6 +192,7 @@ async function fetchAllLinks(url) {
   });
 
   await browser.close();
+
 
   // return the links as a newline delimited list prepared for GPT-3
   const linkList = links.map((link) => {
@@ -167,6 +228,9 @@ async function processChunks(chunks, data, limit = 2) {
   const results = [];
   const chunkLength = chunks.length;
 
+  // remove any empty or blank chunks
+  chunks = chunks.filter((chunk) => chunk.length > 0);
+
   for (let i = 0; i < chunkLength; i += limit) {
     const chunkPromises = chunks.slice(i, i + limit).map(async (chunk, index) => {
 
@@ -181,7 +245,7 @@ async function processChunks(chunks, data, limit = 2) {
         max_tokens: 1024,
         temperature: 0.5,
         // presence_penalty: 0.66,
-        // presence_penalty: -0.1,
+        presence_penalty: -0.1,
         // frequency_penalty: 0.1,
         messages: [
           // {
@@ -225,17 +289,7 @@ async function generateSummary(url, data) {
   text = text.replace(/ +(?= )/g, "")
 
   // const chunkAmount = 7000
-  const chunkAmount = 13952
-
-  // split the text into chunks of 4096 characters using slice
-  // let chunks = [];
-  // let chunkStart = 0;
-  // let chunkEnd = chunkAmount;
-  // while (chunkStart < text.length) {
-  //   chunks.push(text.slice(chunkStart, chunkEnd));
-  //   chunkStart = chunkEnd;
-  //   chunkEnd += chunkAmount;
-  // }
+  const chunkAmount = 12952
 
   // we need to refactor to use countMessageTokens instead of character count, so we split the text into chunks with chunkAmount tokens each
   let chunks = [];
@@ -277,14 +331,33 @@ async function generateSummary(url, data) {
     return error;
   }
 
-  console.log("📝  Generated summary.");
-  console.log("📝  Summary:", factList.split('\n').length);
+  console.log(`📝  Generated ${factList.split('\n').length} fact summary.`);
+  console.log(`📝  Generating summary of: ${factList}`);
 
-  // const fileName = `${url.split("/").pop()}`
-  // fs.writeFileSync(`./summaries/${fileName}_summary.txt`, factList);
+  // use gpt-3.5-turbo-16k for the final summary
+  const summaryCompletion = await openai.createChatCompletion({
+    model: "gpt-3.5-turbo-16k",
+    max_tokens: 2048,
+    temperature: 0.5,
+    // presence_penalty: 0.66,
+    presence_penalty: -0.1,
+    // frequency_penalty: 0.1,
+    messages: [
+      {
+        role: "user",
+        content: `${WEBPAGE_UNDERSTANDER_PROMPT}
 
-  // summarizing does not seem to help much, so just return the fact list
-  return factList
+${factList}
+
+Remember to be as concise as possible and ignore any links or other text that isn't relevant to the main content of the page.`,
+
+      },
+    ],
+  });
+
+  const summary = summaryCompletion.data.choices[0].message.content;
+  return summary
+  // return factList
 }
 
 function main() {
@@ -298,11 +371,12 @@ function main() {
 }
 
 async function fetchAndSummarizeUrl(url) {
-  console.log(`📝  Fetching URL: ${url}`);
-  const data = await fetchAndParseURL(url);
-  console.log(`📝  Fetched URL: ${url}`);
-  const summary = await generateSummary(url, data);
-  console.log(`📝  Generated summary for URL: ${url}`, summary);
+  const cleanedUrl = cleanUrlForPuppeteer(url);
+  console.log(`📝  Fetching URL: ${cleanedUrl}`);
+  const data = await fetchAndParseURL(cleanedUrl);
+  console.log(`📝  Fetched URL: ${cleanedUrl}`);
+  const summary = await generateSummary(cleanedUrl, data);
+  console.log(`📝  Generated summary for URL: ${cleanedUrl}`, summary);
   return summary;
 }
 
@@ -349,3 +423,19 @@ function countMessageTokens(messageArray = []) {
 
   return totalTokens;
 }
+
+function randomUserAgent() {
+  const potentialUserAgents = [
+    `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.159 Safari/537.36`,
+    `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Safari/605.1.15`,
+    `Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.159 Safari/537.36`,
+    `Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:91.0) Gecko/20100101 Firefox/91.0`
+  ]
+
+  const pickedUserAgent = chance.pickone(potentialUserAgents)
+  console.log("📝  Picked User Agent: ", pickedUserAgent)
+
+  // use chance.choose to pick a random user agent
+  return pickedUserAgent
+}
+

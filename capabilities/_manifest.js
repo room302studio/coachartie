@@ -116,224 +116,224 @@ module.exports = {
         },
       ]
     },
-    {
-      slug: 'github',
-      description: 'This capability gives you the ability to interact with GitHub repositories, projects, and gists.',
-      methods: [
-        {
-          name: 'createRepo',
-          description: 'Create a new repository.',
-          parameters: [
-            {
-              name: 'repositoryName',
-              description: 'The name of the new repository.',
-            },
-          ],
-        },
-        /* addDraftIssueToProject(projectId, issueTitle, issueBody) */
-        {
-          name: 'addDraftIssueToProject',
-          description: 'This capability allows you to add a draft issue to a specific project on GitHub. This is useful for keeping track of tasks, ideas, or features that need to be implemented or discussed further.',
-          parameters: [
-            {
-              name: 'projectId',
-              description: 'The ID of the project to add the issue to. The studio Kanban has an ID of PVT_kwHOB-L_oc4ARZ1c',
-            },
-            {
-              name: 'issueTitle',
-              description: 'The title of the issue.',
-            },
-            {
-              name: 'issueBody',
-              description: 'The body of the issue.',
-            },
-          ],
-        },
-        /* listUserProjects(username) */
-        // {
-        //   name: 'listUserProjects',
-        //   description: 'List all projects for a github user.',
-        //   parameters: [
-        //     {
-        //       name: 'username',
-        //       description: 'The github username of the user to list projects for.',
-        //     },
-        //   ],
-        // },
-        /* async listProjectColumnsAndCards(projectId) */
-        {
-          name: 'listProjectColumnsAndCards',
-          description: 'List all columns and cards for a github project based on its ID.',
-          parameters: [
-            {
-              name: 'projectId',
-              description: 'The ID of the project to list columns and cards for.',
-            },
-          ],
-        },
-        {
-          name: 'cloneRepo',
-          description: 'Clone an existing repository.',
-          parameters: [
-            {
-              name: 'repositoryUrl',
-              description: 'The URL of the repository to clone.',
-            },
-          ],
-        },
-        {
-          name: 'createGist',
-          description: 'Create a new gist.',
-          parameters: [
-            {
-              name: 'fileName',
-              description: 'The name of the new gist.',
-            },
-            {
-              name: 'description',
-              description: 'The description of the new gist.',
-            },
-            {
-              name: 'contentString',
-              // description: 'The content of the new gist.',
-            },
-          ],
-        },
-        // {
-        //   name: 'listRepos',
-        //   description: 'List all repositories for the authenticated user.',
-        //   parameters: [],
-        // },
-        // {
-        //   name: 'createBranch',
-        //   description: 'Create a new branch in a repository.',
-        //   parameters: [
-        //     {
-        //       name: 'repositoryName',
-        //       description: 'The name of the repository.',
-        //     },
-        //     {
-        //       name: 'branchName',
-        //       description: 'The name of the new branch.',
-        //     },
-        //   ],
-        // },
-        {
-          name: 'listBranches',
-          description: 'List all branches in a repository.',
-          parameters: [
-            {
-              name: 'repositoryName',
-              description: 'The name of the repo',
-            },
-          ],
-        },
-        {
-          name: 'createFile',
-          description: 'Create a new file in a repository with the specified content and commit message.',
-          parameters: [
-            {
-              name: 'repositoryName',
-            },
-            {
-              name: 'filePath',
-            },
-            {
-              name: 'content',
-            },
-            {
-              name: 'commitMessage',
-            },
-          ],
-        },
-        // {
-        //   name: 'editFile',
-        //   description: 'Edit an existing file in a repository with the specified new content and commit message.',
-        //   parameters: [
-        //     {
-        //       name: 'repositoryName',
-        //     },
-        //     {
-        //       name: 'filePath',
-        //     },
-        //     {
-        //       name: 'newContent',
-        //     },
-        //     {
-        //       name: 'commitMessage',
-        //     },
-        //   ],
-        // },
-        // {
-        //   name: 'createPullRequest',
-        //   description: 'Create a new pull request.',
-        //   parameters: [
-        //     {
-        //       name: 'repositoryName',
-        //     },
-        //     {
-        //       name: 'title',
-        //       description: 'The title of the pull request.',
-        //     },
-        //     {
-        //       name: 'headBranch',
-        //       description: 'The name of the branch containing the changes you want to merge.',
-        //     },
-        //     {
-        //       name: 'baseBranch',
-        //       description: 'The name of the branch you want your changes to be pulled into.',
-        //     },
-        //     {
-        //       name: 'description',
-        //       description: 'PR description',
-        //     },
-        //   ],
-        // },
-        {
-          name: 'readFileContents',
-          description: 'Read the contents of a file in a repository.',
-          parameters: [
-            {
-              name: 'repositoryName',
-            },
-            {
-              name: 'filePath',
-              description: 'The path to the file to read.',
-            },
-          ],
-        },
-      ],
-    },
-    {
-      slug: 'googledrive',
-      description: 'This capability gives you the ability to access the Google Drive of the entire studio and read files.',
-      enabled: false,
-      methods: [
-        {
-          name: 'listFiles',
-          parameters: []
-        },
-        {
-          name: 'readFile',
-          parameters: [
-            {
-              name: 'fileId',
-            }
-          ],
-        },
-        {
-          name: 'appendString',
-          parameters: [
-            {
-              name: 'docId',
-            },
-            {
-              name: 'text',
-            },
-          ],
-        },
-      ]
-    },
+    // {
+    //   slug: 'github',
+    //   description: 'This capability gives you the ability to interact with GitHub repositories, projects, and gists.',
+    //   methods: [
+    //     {
+    //       name: 'createRepo',
+    //       description: 'Create a new repository.',
+    //       parameters: [
+    //         {
+    //           name: 'repositoryName',
+    //           description: 'The name of the new repository.',
+    //         },
+    //       ],
+    //     },
+    //     /* addDraftIssueToProject(projectId, issueTitle, issueBody) */
+    //     {
+    //       name: 'addDraftIssueToProject',
+    //       description: 'This capability allows you to add a draft issue to a specific project on GitHub. This is useful for keeping track of tasks, ideas, or features that need to be implemented or discussed further.',
+    //       parameters: [
+    //         {
+    //           name: 'projectId',
+    //           description: 'The ID of the project to add the issue to. The studio Kanban has an ID of PVT_kwHOB-L_oc4ARZ1c',
+    //         },
+    //         {
+    //           name: 'issueTitle',
+    //           description: 'The title of the issue.',
+    //         },
+    //         {
+    //           name: 'issueBody',
+    //           description: 'The body of the issue.',
+    //         },
+    //       ],
+    //     },
+    //     /* listUserProjects(username) */
+    //     // {
+    //     //   name: 'listUserProjects',
+    //     //   description: 'List all projects for a github user.',
+    //     //   parameters: [
+    //     //     {
+    //     //       name: 'username',
+    //     //       description: 'The github username of the user to list projects for.',
+    //     //     },
+    //     //   ],
+    //     // },
+    //     /* async listProjectColumnsAndCards(projectId) */
+    //     {
+    //       name: 'listProjectColumnsAndCards',
+    //       description: 'List all columns and cards for a github project based on its ID.',
+    //       parameters: [
+    //         {
+    //           name: 'projectId',
+    //           description: 'The ID of the project to list columns and cards for.',
+    //         },
+    //       ],
+    //     },
+    //     {
+    //       name: 'cloneRepo',
+    //       description: 'Clone an existing repository.',
+    //       parameters: [
+    //         {
+    //           name: 'repositoryUrl',
+    //           description: 'The URL of the repository to clone.',
+    //         },
+    //       ],
+    //     },
+    //     {
+    //       name: 'createGist',
+    //       description: 'Create a new gist.',
+    //       parameters: [
+    //         {
+    //           name: 'fileName',
+    //           description: 'The name of the new gist.',
+    //         },
+    //         {
+    //           name: 'description',
+    //           description: 'The description of the new gist.',
+    //         },
+    //         {
+    //           name: 'contentString',
+    //           // description: 'The content of the new gist.',
+    //         },
+    //       ],
+    //     },
+    //     // {
+    //     //   name: 'listRepos',
+    //     //   description: 'List all repositories for the authenticated user.',
+    //     //   parameters: [],
+    //     // },
+    //     // {
+    //     //   name: 'createBranch',
+    //     //   description: 'Create a new branch in a repository.',
+    //     //   parameters: [
+    //     //     {
+    //     //       name: 'repositoryName',
+    //     //       description: 'The name of the repository.',
+    //     //     },
+    //     //     {
+    //     //       name: 'branchName',
+    //     //       description: 'The name of the new branch.',
+    //     //     },
+    //     //   ],
+    //     // },
+    //     {
+    //       name: 'listBranches',
+    //       description: 'List all branches in a repository.',
+    //       parameters: [
+    //         {
+    //           name: 'repositoryName',
+    //           description: 'The name of the repo',
+    //         },
+    //       ],
+    //     },
+    //     {
+    //       name: 'createFile',
+    //       description: 'Create a new file in a repository with the specified content and commit message.',
+    //       parameters: [
+    //         {
+    //           name: 'repositoryName',
+    //         },
+    //         {
+    //           name: 'filePath',
+    //         },
+    //         {
+    //           name: 'content',
+    //         },
+    //         {
+    //           name: 'commitMessage',
+    //         },
+    //       ],
+    //     },
+    //     // {
+    //     //   name: 'editFile',
+    //     //   description: 'Edit an existing file in a repository with the specified new content and commit message.',
+    //     //   parameters: [
+    //     //     {
+    //     //       name: 'repositoryName',
+    //     //     },
+    //     //     {
+    //     //       name: 'filePath',
+    //     //     },
+    //     //     {
+    //     //       name: 'newContent',
+    //     //     },
+    //     //     {
+    //     //       name: 'commitMessage',
+    //     //     },
+    //     //   ],
+    //     // },
+    //     // {
+    //     //   name: 'createPullRequest',
+    //     //   description: 'Create a new pull request.',
+    //     //   parameters: [
+    //     //     {
+    //     //       name: 'repositoryName',
+    //     //     },
+    //     //     {
+    //     //       name: 'title',
+    //     //       description: 'The title of the pull request.',
+    //     //     },
+    //     //     {
+    //     //       name: 'headBranch',
+    //     //       description: 'The name of the branch containing the changes you want to merge.',
+    //     //     },
+    //     //     {
+    //     //       name: 'baseBranch',
+    //     //       description: 'The name of the branch you want your changes to be pulled into.',
+    //     //     },
+    //     //     {
+    //     //       name: 'description',
+    //     //       description: 'PR description',
+    //     //     },
+    //     //   ],
+    //     // },
+    //     {
+    //       name: 'readFileContents',
+    //       description: 'Read the contents of a file in a repository.',
+    //       parameters: [
+    //         {
+    //           name: 'repositoryName',
+    //         },
+    //         {
+    //           name: 'filePath',
+    //           description: 'The path to the file to read.',
+    //         },
+    //       ],
+    //     },
+    //   ],
+    // },
+    // {
+    //   slug: 'googledrive',
+    //   description: 'This capability gives you the ability to access the Google Drive of the entire studio and read files.',
+    //   enabled: false,
+    //   methods: [
+    //     {
+    //       name: 'listFiles',
+    //       parameters: []
+    //     },
+    //     {
+    //       name: 'readFile',
+    //       parameters: [
+    //         {
+    //           name: 'fileId',
+    //         }
+    //       ],
+    //     },
+    //     {
+    //       name: 'appendString',
+    //       parameters: [
+    //         {
+    //           name: 'docId',
+    //         },
+    //         {
+    //           name: 'text',
+    //         },
+    //       ],
+    //     },
+    //   ]
+    // },
     // {
     //   slug: 'agent-generation',
     //   description: 'This capability gives you the ability to generate a new agent, which means write a prompt that gives the agent a goal and a personality. These agents will run until they decide to stop or determine they have achieved their goal. Agent prompts are stored for reuse later.',
