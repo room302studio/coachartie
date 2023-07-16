@@ -1,8 +1,6 @@
 const dotenv = require("dotenv");
 const { TwitterApi } = require("twitter-api-v2");
 
-
-
 dotenv.config();
 // set up the v2 twitter api so we can easily tweet from our account
 // all the creds are in .env
@@ -12,7 +10,6 @@ const twitterClient = new TwitterApi({
   accessToken: process.env.TWITTER_ACCESS_TOKEN,
   accessSecret: process.env.TWITTER_ACCESS_TOKEN_SECRET,
 });
-
 
 // use twitterClient to tweet and return the URL of the tweet
 async function tweet(tweetText) {
@@ -24,7 +21,6 @@ async function tweet(tweetText) {
     return error;
   }
 }
-
 
 // Create a function that we will call randomly
 // It will evaluate the content of an exchange between a user and the robot
@@ -237,8 +233,6 @@ async function evaluateAndTweet(prompt, response, user, message) {
     });
   }
 }
-
-
 
 // Compose a tweet based on an exchange between a user and an assistant
 async function composeTweet(prompt, response, user) {

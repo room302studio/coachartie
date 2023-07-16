@@ -1,8 +1,8 @@
 /* an extraordinarily basic express web interface that provides access to the artie.log file */
-const express = require('express');
+const express = require("express");
 const app = express();
-const fs = require('fs');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
 
 // 🌿 dotenv: a lifeline for using environment variables
 const dotenv = require("dotenv");
@@ -10,13 +10,13 @@ dotenv.config();
 
 const port = process.env.PORT || 8080;
 
-app.get('/', (req, res) => {
+app.get("/", (req, res) => {
   // res.sendFile(path.join(__dirname, 'artie.log'));
   /* add a basic web page skeleton with tachyons and the contents of the log file in a div */
-  fs.readFile(path.join(__dirname, 'artie.log'), 'utf8', (err, data) => {
+  fs.readFile(path.join(__dirname, "artie.log"), "utf8", (err, data) => {
     if (err) {
       console.error(err);
-      res.status(500).send('Something went wrong');
+      res.status(500).send("Something went wrong");
     } else {
       res.send(`
         <html>
@@ -37,9 +37,9 @@ app.get('/', (req, res) => {
         </html>
       `);
     }
-  })
-})
+  });
+});
 
 app.listen(port, () => {
-  console.log(`Example app listening at http://localhost:${port}`)
-})
+  console.log(`Example app listening at http://localhost:${port}`);
+});
