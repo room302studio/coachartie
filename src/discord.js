@@ -282,9 +282,6 @@ async function processMessageChain(message, messages, username) {
     console.log("Message chain trimmed.");
   }
 
-  console.log('messages')
-  console.log(messages)
-
   return generateAiCompletion(messages, {
     temperature,
     presence_penalty
@@ -366,9 +363,6 @@ async function onMessageCreate(message) {
       
       // end typing indicator
       clearInterval(typing);
-
-      // deliver the response to the user!
-      splitAndSendMessage(robotResponse, message);
 
       const rememberMessage = await storeMessageAndRemember(
         message.author.username,

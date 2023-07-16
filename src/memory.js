@@ -57,22 +57,11 @@ async function generateAndStoreRememberCompletion(
       {
         role: "user",
         content: `${PROMPT_REMEMBER}`,
-      },
-      //       {
-      //         role: "user",
-      //         content: `${PROMPT_REMEMBER}
-
-      // <User>: ${prompt}
-      // <Coach Artie>: ${response}`,
-      //       },
+      }
     ],
   });
 
   const rememberText = rememberCompletion.data.choices[0].message.content;
-
-  // count the message tokens in the remember text
-  // const rememberTextTokens = countMessageTokens(rememberText);
-  // console.log(`🧠 Remember text tokens: ${rememberTextTokens}`);
 
   // if the remember text is ✨ AKA empty, we don't wanna store it
   if (rememberText === "✨") return rememberText;
@@ -91,10 +80,10 @@ async function assembleMessagePreamble(username, client) {
     content: `Today is ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`,
   });
 
-  // pick a random hexagram from the i ching to guide this interaction
+  if (chance.bool({ likelihood: 50 })) {
+      // pick a random hexagram from the i ching to guide this interaction
   const hexagramPrompt = `Let this hexagram from the I Ching guide this interaction: ${getHexagram()}`;
 
-  if (chance.bool({ likelihood: 50 })) {
     console.log(`🔮 Adding hexagram prompt to message ${hexagramPrompt}`);
     messages.push({
       role: "system",
@@ -146,8 +135,6 @@ async function assembleMessagePreamble(username, client) {
       content: `You remember from a previous interaction on ${memory.created_at}: ${memory.value}`,
     });
   });
-
-  
 
   return messages;
 }
