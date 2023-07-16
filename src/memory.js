@@ -1,7 +1,11 @@
 // 📜 prompts: our guidebook of conversational cues
 const prompts = require("../prompts");
 const { openai } = require("./openai");
-const{ replaceRobotIdWithName } = require("../helpers.js");
+const { getHexagram, replaceRobotIdWithName } = require("../helpers.js");
+const { getUserMemory, storeUserMemory } = require("../capabilities/remember.js");
+const chance = require('chance').Chance();
+const { CAPABILITY_PROMPT_INTRO } = require("../prompts.js");
+const { getUserMessageHistory } = require("../capabilities/remember.js");
 
 // 🚦 Constants Corner: prepping our prompts and error message
 const {
@@ -72,13 +76,13 @@ async function generateAndStoreRememberCompletion(
 
   // if the remember text is ✨ AKA empty, we don't wanna store it
   if (rememberText === "✨") return rememberText;
-  await storeUserMemory(message.author.username, rememberText);
+  await storeUserMemory(username, rememberText);
 
   return rememberText;
 }
 
 
-async function assembleMessagePreamble(username) {
+async function assembleMessagePreamble(username, client) {
   const messages = [];
 
   // add the current date and time as a system message
@@ -106,7 +110,7 @@ async function assembleMessagePreamble(username) {
 
   messages.push({
     role: "system",
-    content: capabilityPrompt,
+    content: CAPABILITY_PROMPT_INTRO,
   });
 
   const userMessageCount = chance.integer({ min: 4, max: 16 });
@@ -123,7 +127,8 @@ async function assembleMessagePreamble(username) {
   userMessages.forEach((message) => {
     messages.push({
       role: "user",
-      content: `${replaceRobotIdWithName(message.value)}`,
+      // content: `${replaceRobotIdWithName(message.value, client)}`,
+      content: `${message.value}`,
     });
   });
 

@@ -9,7 +9,7 @@ dotenv.config();
 const { encode, decode } = require("@nem035/gpt-3-encoder");
 
 // 🤖 replaceRobotIdWithName: given a string, replace the robot id with the robot name
-function replaceRobotIdWithName(string) {
+function replaceRobotIdWithName(string, client) {
   // TODO: We need to get the client from discord somehow
 
 
@@ -142,4 +142,5 @@ module.exports = {
   countMessageTokens,
   removeMentionFromMessage,
   ERROR_MSG,
+  replaceRobotIdWithName
 };

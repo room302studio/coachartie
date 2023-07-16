@@ -32,8 +32,7 @@ async function handleCapabilityMethod(method, args) {
   }
 }
 
-async function getUserMemory(args) {
-  const [userId, limit = 5] = destructureArgs(args);
+async function getUserMemory(userId, limit = 5) {
 
   console.log("💾 Querying database for memories related to user:", userId);
   const { data, error } = await supabase
@@ -52,8 +51,7 @@ async function getUserMemory(args) {
   return data;
 }
 
-async function getUserMessageHistory(args) {
-  const [userId, limit = 5] = destructureArgs(args);
+async function getUserMessageHistory(userId, limit = 5) {
 
   const { data, error } = await supabase
     .from("messages")

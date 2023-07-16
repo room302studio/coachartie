@@ -4,11 +4,28 @@ const {
   GatewayIntentBits,
   Events,
 } = require("discord.js");
-const {
-  consolelog2,
-  consolelog3,
-  consolelog4,
-} = require("./logging");
+// const {
+//   consolelog2,
+//   consolelog3,
+//   consolelog4,
+// } = require("./logging");
+
+// make empty console logs for now
+const consolelog2 = (message) => {
+  console.log(message);
+};
+
+const consolelog3 = (message) => {
+  console.log(message);
+};
+
+const consolelog4 = (message) => {
+  console.log(message);
+};
+
+
+
+
 const { openai } = require("./openai"); 
 const {
   assembleMessagePreamble,
@@ -102,8 +119,9 @@ function trimResponseByLineCount(response, lineCount) {
   return trimmedLines.join("\n");
 }
 
-function detectBotMentionOrChannel(message, channelName) {
+function detectBotMentionOrChannel(message) {
   const botMentioned = message.mentions.has(client.user);
+  const channelName = message.channel.name;
   const channelNameHasBot = channelName.includes("🤖");
 
   return (!message.author.bot && (botMentioned || channelNameHasBot));
@@ -179,7 +197,7 @@ async function generateAiCompletion (messages, config) {
 
   messages.push(aiResponse);
 
-  return processMessageChain(message, messages);
+  return processMessageChain(aiResponse, messages);
 }
 
 // 📝 processMessageChain: a function for processing message chains
@@ -194,7 +212,7 @@ async function processMessageChain(message, messages, username) {
 
   const apiTokenLimit = 8000;
 
-  const preamble = await assembleMessagePreamble(username);
+  const preamble = await assembleMessagePreamble(username, client);
   messages = [...preamble, ...messages];
 
   const capabilityMatch = lastMessage.content.match(capabilityRegex);
@@ -249,7 +267,7 @@ async function processMessageChain(message, messages, username) {
 
   console.log("📝 Message chain:");
   messages.forEach((msg) => {
-    console.log(` - ${msg.role}: ${msg.content}`);
+    console.log(`- ${msg.role}: ${msg.content}`);
   });
 
   const temperature = chance.floating({ min: 0.4, max: 1.25 });
@@ -263,6 +281,9 @@ async function processMessageChain(message, messages, username) {
     messages = trimMessageChain(messages);
     console.log("Message chain trimmed.");
   }
+
+  console.log('messages')
+  console.log(messages)
 
   return generateAiCompletion(messages, {
     temperature,
@@ -305,7 +326,7 @@ async function storeMessageAndRemember(username, message, robotResponse) {
   await storeUserMessage(username, message);
 
   const rememberMessage = await generateAndStoreRememberCompletion(
-      message.author.username,
+      username,
       message.content,
       robotResponse
   );
@@ -324,6 +345,7 @@ async function onMessageCreate(message) {
     const username = message.author.username;
 
     // Detecting if the bot was mentioned or if the channel name includes a bot
+    // second argument is channel name
     const channelNameHasBot = detectBotMentionOrChannel(message);
 
     if (!message.author.bot && (botMentioned || channelNameHasBot)) {

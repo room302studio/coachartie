@@ -6,4 +6,6 @@ const DiscordBot = require("./src/discord.js");
 const bot = new DiscordBot();
 
 // 🎉 The christening of our bot's journey!
-console.log("💫 The Discord bot is now online and operational!");
+bot.bot.on("ready", () => {
+  console.log("Bot is ready!");
+})
