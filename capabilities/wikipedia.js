@@ -4,7 +4,7 @@ const {
   OpenAIApi
 } = require("openai");
 const dotenv = require("dotenv");
-const { destructureArgs } = require('./helpers');
+const { destructureArgs } = require('../helpers');
 
 dotenv.config();
 
