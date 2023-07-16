@@ -14,18 +14,16 @@ class GithubCoach {
   async _init() {
     try {
       this.octokit = new Octokit({
-        // auth: authentication.token,
         auth: process.env.GITHUB_PERSONAL_ACCESS_TOKEN,
         userAgent: "github-capability",
         timeZone: "America/New_York",
         baseUrl: "https://api.github.com",
         log: {
-          debug: () => { },
-          info: () => { },
+          debug: () => {},
+          info: () => {},
           warn: console.warn,
           error: console.error,
         },
-        userAgent: "Coach-Artie/1.0.0"
       });
 
       this.graphqlWithAuth = graphql.defaults({
@@ -33,10 +31,8 @@ class GithubCoach {
           authorization: `token ${process.env.GITHUB_PERSONAL_ACCESS_TOKEN}`,
         },
       });
-
-    }
-    catch (error) {
-      console.log(error);
+    } catch (error) {
+      console.error(error);
     }
   }
 
@@ -66,101 +62,53 @@ class GithubCoach {
 
   async getProjectIdFromUrl(url) {
     const [, , , username, , , projectId] = url.split("/");
-    const { data: projects } = await this.octokit.projects.listForUser({ username });
-    console.log("PROJECTS", projects);
-    const project = projects.find(project => project.html_url === url);
-    console.log("PROJECT", project);
+    const { data: projects } = await this.octokit.projects.listForUser({
+      username,
+    });
+    const project = projects.find((project) => project.html_url === url);
     return project ? project.id : null;
   }
 
   async listUserProjects(username) {
-    // const { data: projects } = await this.octokit.projects.listForUser({ username });
-    // return projects.map(project => project.name);
-    // so this uses the rest API which only works for old projects :(
-    // new projects have to be accessed with the graphql API
-    // joy!
-    const data = await this.graphqlWithAuth(`query {
-      user(login: "${username}") {
-        projectsV2(first: 20) {
-          nodes {
-            id
-            title
+    const data = await this.graphqlWithAuth(`
+      query {
+        user(login: "${username}") {
+          projects(first: 20) {
+            nodes {
+              name
+            }
           }
         }
       }
-    }`)
+    `);
 
-    console.log('🔴', data);
-    console.log('🟢', data.user)
-
-    if(!data.user.projectsV2.nodes) {
-      return 'no projects found for this user';
+    const projects = data.user.projects.nodes;
+    if (!projects) {
+      return 'No projects found for this user.';
     }
 
-    console.log('🟡', data.user.projectsV2.nodes)
-    
-    return JSON.stringify(data.user.projectsV2.nodes)
+    return projects.map(project => project.name);
   }
 
-
   async listProjectColumnsAndCards(projectId) {
-    // need to use projectsV2 and graphql for this
-    // https://docs.github.com/en/graphql/reference/objects#projectcolumn
-    // https://docs.github.com/en/graphql/reference/objects#projectcard
-    // https://docs.github.com/en/graphql/reference/objects#projectcarditem
-    // https://docs.github.com/en/graphql/reference/objects#projectcardstate
-    const data = await this.graphqlWithAuth(`query {
-      node(id: "${projectId}") {
-        ... on ProjectV2 {
-          items(first: 20) {
-            nodes{
-              id
-              fieldValues(first: 8) {
-                nodes{                
-                  ... on ProjectV2ItemFieldTextValue {
-                    text
-                    field {
-                      ... on ProjectV2FieldCommon {
-                        name
+    const data = await this.graphqlWithAuth(`
+      query {
+        node(id: "${projectId}") {
+          ... on Project {
+            columns(first: 20) {
+              nodes {
+                name
+                cards {
+                  nodes {
+                    content {
+                      __typename
+                      ... on Issue {
+                        title
+                        body
                       }
-                    }
-                  }
-                  ... on ProjectV2ItemFieldDateValue {
-                    date
-                    field {
-                      ... on ProjectV2FieldCommon {
-                        name
+                      ... on PullRequest {
+                        title
                       }
-                    }
-                  }
-                  ... on ProjectV2ItemFieldSingleSelectValue {
-                    name
-                    field {
-                      ... on ProjectV2FieldCommon {
-                        name
-                      }
-                    }
-                  }
-                }              
-              }
-              content{              
-                ... on DraftIssue {
-                  title
-                  body
-                }
-                ...on Issue {
-                  title
-                  assignees(first: 10) {
-                    nodes{
-                      login
-                    }
-                  }
-                }
-                ...on PullRequest {
-                  title
-                  assignees(first: 10) {
-                    nodes{
-                      login
                     }
                   }
                 }
@@ -169,70 +117,60 @@ class GithubCoach {
           }
         }
       }
-    }`)
+    `);
 
-    console.log('🔴', data);
-    console.log('🟢', data.node.items.nodes)
-
-    if(!data.node.items.nodes) {
-      return 'no columns found for this project';
+    const columns = data.node.columns.nodes;
+    if (!columns) {
+      return 'No columns found for this project.';
     }
 
-    return JSON.stringify(data.node.items.nodes)
-
+    return columns.map((column) => {
+      const cards = column.cards.nodes.map((card) => {
+        const content = card.content;
+        if (content.__typename === "Issue") {
+          return `Issue: ${content.title}\n${content.body}`;
+        } else if (content.__typename === "PullRequest") {
+          return `Pull Request: ${content.title}`;
+        } else {
+          return '';
+        }
+      });
+      return `${column.name}:\n${cards.join("\n")}`;
+    });
   }
 
   async addDraftIssueToProject(projectId, issueTitle, issueBody) {
-    /*
-   gh api graphql -f query='
-  mutation {
-    addProjectV2DraftIssue(input: {projectId: "PROJECT_ID" title: "TITLE" body: "BODY"}) {
-      projectItem {
-        id
-      }
-    }
-  }'
-
-  */
-    const data = await this.graphqlWithAuth(`mutation {
-      addProjectV2DraftIssue(input: {projectId: "${projectId}" title: "${issueTitle}" body: "${issueBody}"}) {
-        projectItem {
-          id
+    const data = await this.graphqlWithAuth(`
+      mutation {
+        addProjectCard(input: { projectId: "${projectId}", contentId: "${projectId}", contentType: "Issue", note: "${issueBody}" }) {
+          clientMutationId
         }
       }
-    }`)
+    `);
 
-    return JSON.stringify(data)
+    return data.addProjectCard ? 'Draft issue added to project.' : 'Failed to add draft issue to project.';
   }
 
   async createBranch(repositoryFullName, branchName) {
-    // a repository full name is in the format of owner/repo
     const [owner, repositoryName] = repositoryFullName.split("/");
-
-    console.log('🔴', owner, repositoryName);
-
-    // trim any preceding or trailing whitespace from branchName
     branchName = branchName.trim();
 
-    const baseRefMaster = await this.octokit.git.getRef({
+    const baseRef = await this.octokit.git.getRef({
       owner,
       repo: repositoryName,
       ref: "heads/master",
     });
 
-    const baseRef = baseRefMaster;
-
     const baseSHA = baseRef.data.object.sha;
 
-    // use octokit.rest.git.createRef
     const response = await this.octokit.git.createRef({
       owner,
       repo: repositoryName,
       ref: `refs/heads/${branchName}`,
       sha: baseSHA,
     });
-    return response.data;
 
+    return response.data;
   }
 
   async listBranches(repositoryName) {
@@ -255,15 +193,9 @@ class GithubCoach {
   }
 
   async createGist(fileName, description, contentString) {
-    // content string may contain newlines and we need to convert them to \n
-    // contentString = contentString.replace(/\n/g, "\\n");
-
-    console.log('Making gist from string: \n', contentString);
-
     const response = await this.octokit.gists.create({
       files: {
         [fileName]: {
-          // content: `${contentString}`,
           content: contentString,
         },
       },
@@ -273,7 +205,6 @@ class GithubCoach {
 
     return `Gist created! You can access it at <${response.data.html_url}> - remember not to use markdown in your response.`;
   }
-
 
   async editFile(repositoryName, filePath, newContent, commitMessage) {
     const response = await this.octokit.repos.createOrUpdateFileContents({
@@ -316,9 +247,47 @@ class GithubCoach {
     });
     return response.data;
   }
-
 }
 
 module.exports = {
-  GithubCoach,
+  handleCapabilityMethod: async (method, args) => {
+    const githubCoach = new GithubCoach();
+
+    switch (method) {
+      case 'createRepo':
+        return await githubCoach.createRepo(...args);
+      case 'cloneRepo':
+        return await githubCoach.cloneRepo(...args);
+      case 'listRepos':
+        return await githubCoach.listRepos();
+      case 'listUserRepos':
+        return await githubCoach.listUserRepos(...args);
+      case 'getProjectIdFromUrl':
+        return await githubCoach.getProjectIdFromUrl(...args);
+      case 'listUserProjects':
+        return await githubCoach.listUserProjects(...args);
+      case 'listProjectColumnsAndCards':
+        return await githubCoach.listProjectColumnsAndCards(...args);
+      case 'addDraftIssueToProject':
+        return await githubCoach.addDraftIssueToProject(...args);
+      case 'createBranch':
+        return await githubCoach.createBranch(...args);
+      case 'listBranches':
+        return await githubCoach.listBranches(...args);
+      case 'createFile':
+        return await githubCoach.createFile(...args);
+      case 'createGist':
+        return await githubCoach.createGist(...args);
+      case 'editFile':
+        return await githubCoach.editFile(...args);
+      case 'deleteFile':
+        return await githubCoach.deleteFile(...args);
+      case 'createPullRequest':
+        return await githubCoach.createPullRequest(...args);
+      case 'readFileContents':
+        return await githubCoach.readFileContents(...args);
+      default:
+        throw new Error(`Invalid method: ${method}`);
+    }
+  }
 };

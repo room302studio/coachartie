@@ -1,10 +1,5 @@
-// const { Client, GatewayIntentBits, Events } = require('discord.js');
-// const axios = require('axios');
 const dotenv = require("dotenv");
-const { createClient } = require("@supabase/supabase-js");
 const { Configuration, OpenAIApi } = require("openai");
-// const { TwitterApi } = require('twitter-api-v2')
-// const chance = require('chance').Chance();
 const puppeteer = require("puppeteer");
 const { fstat } = require("fs");
 const { WEBPAGE_UNDERSTANDER_PROMPT } = require("./prompts");
@@ -12,7 +7,6 @@ const { encode, decode } = require("@nem035/gpt-3-encoder");
 const { fs } = require("fs");
 // import chance
 const chance = require('chance').Chance();
-
 
 dotenv.config();
 
@@ -25,9 +19,6 @@ const openai = new OpenAIApi(configuration);
 // This file will serve as a module used by the main discord bot in index.js
 
 // The purpose of this file is to enable basic web browser access for the robot: given a URL, access it, parse it as JSON, and return the page contents to the main bot.
-
-// Get the text from all text-like elements
-// const allowedTextEls = 'p, h1, h2, h3, h4, h5, h6, a, span, div, td, th, tr, table, blockquote, pre, code, em, strong, i, b, u, s, sub, sup, small, big, q, cite, main, nav';
 
 const allowedTextEls = "p, h1, h2, h3, h4, h5, h6, a, td, th, tr, pre, code, blockquote";
 
@@ -210,12 +201,7 @@ async function fetchAllLinks(url) {
       .filter((param) => param.startsWith("q="))
       .join("&");
 
-    // return link.text + " (" + linkUrl.href + ") ";
-
     return `* ${link.text} (${linkUrl.href})`;
-
-    // return link.text + " (" + link.href + ") ";
-    // return link.text
   });
 
   return `# Links on ${url}\n${linkList.join("\n")}`;
@@ -395,25 +381,12 @@ if (require.main === module) {
 
 function countMessageTokens(messageArray = []) {
   let totalTokens = 0;
-  // console.log("Message Array: ", messageArray);
   if (!messageArray) {
     return totalTokens;
   }
   if (messageArray.length === 0) {
     return totalTokens;
   }
-
-  // for some reason we get messageArray.forEach is not a function
-  // when we try to use the forEach method on messageArray
-  // so we use a for loop instead
-
-  // messageArray.forEach((message) => {
-  //   // encode message.content
-  //   const encodedMessage = encode(JSON.stringify(message));
-  //   totalTokens += encodedMessage.length;
-  // });
-
-  // for loop
   for (let i = 0; i < messageArray.length; i++) {
     const message = messageArray[i];
     // encode message.content
