@@ -1,6 +1,6 @@
 const { createClient } = require("@supabase/supabase-js");
 const dotenv = require("dotenv");
-const { destructureArgs } = require('../helpers');
+const { destructureArgs } = require("../helpers");
 
 dotenv.config();
 
@@ -13,19 +13,19 @@ async function handleCapabilityMethod(method, args) {
   const [arg1, arg2] = destructureArgs(args);
 
   switch (method) {
-    case 'getUserMemory':
+    case "getUserMemory":
       return getUserMemory(arg1, arg2);
-    case 'getUserMessageHistory':
+    case "getUserMessageHistory":
       return getUserMessageHistory(arg1, arg2);
-    case 'storeUserMemory':
+    case "storeUserMemory":
       return storeUserMemory(arg1, arg2);
-    case 'getAllMemories':
+    case "getAllMemories":
       return getAllMemories(arg1);
-    case 'storeUserMessage':
+    case "storeUserMessage":
       return storeUserMessage(arg1, arg2);
-    case 'assembleMemory':
+    case "assembleMemory":
       return assembleMemory(arg1, arg2);
-    case 'isRememberResponseFalsy':
+    case "isRememberResponseFalsy":
       return isRememberResponseFalsy(arg1);
     default:
       throw new Error(`Method ${method} not supported by Supabase capability.`);
@@ -33,7 +33,6 @@ async function handleCapabilityMethod(method, args) {
 }
 
 async function getUserMemory(userId, limit = 5) {
-
   console.log("💾 Querying database for memories related to user:", userId);
   const { data, error } = await supabase
     .from("storage")
@@ -52,7 +51,6 @@ async function getUserMemory(userId, limit = 5) {
 }
 
 async function getUserMessageHistory(userId, limit = 5) {
-
   const { data, error } = await supabase
     .from("messages")
     .select("*")
@@ -126,13 +124,9 @@ async function assembleMemory(args) {
 
     const memories = await getUserMemory(user, 5);
 
-    console.log(' assembling memories for user:', memories);
+    console.log(" assembling memories for user:", memories);
 
-    const memory = [
-      ...new Set([
-        ...memories.map(mem => mem.value)
-      ]),
-    ];
+    const memory = [...new Set([...memories.map((mem) => mem.value)])];
 
     return memory;
   } catch (e) {

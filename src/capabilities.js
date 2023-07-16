@@ -1,9 +1,6 @@
 const prompts = require("../prompts");
 
-const {
-  CAPABILITY_PROMPT_INTRO,
-} = prompts;
-
+const { CAPABILITY_PROMPT_INTRO } = prompts;
 
 const capabilityRegex = /(\w+):(\w+)\(([^]*?)\)/; // captures newlines in the  third argument
 

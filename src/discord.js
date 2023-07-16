@@ -1,9 +1,5 @@
 // Our collection of ethereal tech tools and righteous scripts
-const {
-  Client,
-  GatewayIntentBits,
-  Events,
-} = require("discord.js");
+const { Client, GatewayIntentBits, Events } = require("discord.js");
 // const {
 //   consolelog2,
 //   consolelog3,
@@ -11,27 +7,30 @@ const {
 // } = require("./logging");
 
 // make empty console logs for now
-const consolelog2 = (message) => { console.log(message); };
-const consolelog3 = (message) => { console.log(message); };
-const consolelog4 = (message) => { console.log(message); };
+const consolelog2 = (message) => {
+  console.log(message);
+};
+const consolelog3 = (message) => {
+  console.log(message);
+};
+const consolelog4 = (message) => {
+  console.log(message);
+};
 
-const { openai } = require("./openai"); 
+const { openai } = require("./openai");
 const {
   assembleMessagePreamble,
   generateAndStoreRememberCompletion,
-} = require("./memory.js"); 
-const { storeUserMessage } = require("../capabilities/remember"); 
-const {
-  callCapabilityMethod,
-  capabilityRegex,
-} = require("./capabilities.js"); 
-const { scheduleRandomMessage } = require("./scheduling.js"); 
+} = require("./memory.js");
+const { storeUserMessage } = require("../capabilities/remember");
+const { callCapabilityMethod, capabilityRegex } = require("./capabilities.js");
+const { scheduleRandomMessage } = require("./scheduling.js");
 const {
   countTokens,
   countMessageTokens,
   ERROR_MSG,
   removeMentionFromMessage,
-} = require("../helpers.js"); 
+} = require("../helpers.js");
 const chance = require("chance").Chance();
 const fs = require("fs");
 
@@ -51,7 +50,7 @@ function onClientReady(c) {
   });
 }
 
-async function generateAiCompletion (messages, config) {
+async function generateAiCompletion(messages, config) {
   const { temperature, presence_penalty } = config;
   const completion = await openai.createChatCompletion({
     model: "gpt-4",
@@ -84,7 +83,9 @@ async function generateAiCompletion (messages, config) {
  */
 async function processMessageChain(message, messages, username) {
   // if there are no messages, return an empty array
-  if (!messages.length) { return []; }
+  if (!messages.length) {
+    return [];
+  }
 
   // get the last message in the chain
   const lastMessage = messages[messages.length - 1];
@@ -106,7 +107,11 @@ async function processMessageChain(message, messages, username) {
   const capabilityMatch = lastMessage.content.match(capabilityRegex);
 
   // if there is no capability method, and the last message is not a user message, break the chain
-  if (!capabilityMatch && lastMessage.role !== "user" && lastMessage.role !== "system") {
+  if (
+    !capabilityMatch &&
+    lastMessage.role !== "user" &&
+    lastMessage.role !== "system"
+  ) {
     console.log("No capability found in the last message, breaking the chain.");
     return messages;
   }
@@ -118,7 +123,9 @@ async function processMessageChain(message, messages, username) {
 
     // if the token count is about to exceed the limit, add a system message to the chain
     if (currentTokenCount >= apiTokenLimit - 900) {
-      console.log("Token limit reached, adding system message to the chain reminding the bot to wrap it up.");
+      console.log(
+        "Token limit reached, adding system message to the chain reminding the bot to wrap it up."
+      );
       messages.push({
         role: "user",
         content:
@@ -129,7 +136,11 @@ async function processMessageChain(message, messages, username) {
     // call the capability method
     let capabilityResponse;
     try {
-      capabilityResponse = await callCapabilityMethod(capSlug, capMethod, capArgs);
+      capabilityResponse = await callCapabilityMethod(
+        capSlug,
+        capMethod,
+        capArgs
+      );
     } catch (e) {
       consolelog2(e);
       capabilityResponse = "Capability error: " + e;
@@ -139,8 +150,15 @@ async function processMessageChain(message, messages, username) {
 
     // check the token size of the response, and trim it down if it's too long
     while (countTokens(capabilityResponse) > 5120) {
-      console.log(`Response is too long ${countTokens(capabilityResponse)}, trimming it down.`);
-      capabilityResponse = trimResponseByLineCount(capabilityResponse, countTokens(capabilityResponse));
+      console.log(
+        `Response is too long ${countTokens(
+          capabilityResponse
+        )}, trimming it down.`
+      );
+      capabilityResponse = trimResponseByLineCount(
+        capabilityResponse,
+        countTokens(capabilityResponse)
+      );
     }
 
     messages.push({
@@ -168,21 +186,25 @@ async function processMessageChain(message, messages, username) {
 
   return generateAiCompletion(messages, {
     temperature,
-    presence_penalty
+    presence_penalty,
   });
 }
 
-async function processMessageAndSendResponse(message, chainMessageStart, username) {
+async function processMessageAndSendResponse(
+  message,
+  chainMessageStart,
+  username
+) {
   const response = await processMessageChain(
-      message,
-      chainMessageStart,
-      username
+    message,
+    chainMessageStart,
+    username
   );
   const robotResponse = response[response.length - 1].content;
 
   // Split and send the response
   splitAndSendMessage(robotResponse, message);
-  
+
   return robotResponse;
 }
 function logMessageAndResponse(log) {
@@ -192,13 +214,13 @@ function logMessageAndResponse(log) {
 
   // Append the log to the artie.log file as a single line
   fs.appendFile(
-      "artie.log",
-      `\n${JSON.stringify(log)}`,
-      { flag: "a+" },
-      (err) => {
-          if (err) throw err;
-          console.log("📝 Log saved to artie.log");
-      }
+    "artie.log",
+    `\n${JSON.stringify(log)}`,
+    { flag: "a+" },
+    (err) => {
+      if (err) throw err;
+      console.log("📝 Log saved to artie.log");
+    }
   );
 }
 
@@ -207,18 +229,19 @@ async function storeMessageAndRemember(username, message, robotResponse) {
   await storeUserMessage(username, message);
 
   const rememberMessage = await generateAndStoreRememberCompletion(
-      username,
-      message.content,
-      robotResponse
+    username,
+    message.content,
+    robotResponse
   );
 
   // Log and return
   console.log(`🧠 Message saved to database: ${message.content}`);
-  console.log(`🧠 Memory saved to database: ${JSON.stringify(rememberMessage)}`);
+  console.log(
+    `🧠 Memory saved to database: ${JSON.stringify(rememberMessage)}`
+  );
 
   return rememberMessage;
 }
-
 
 // 🌐 Displaying all guilds & channels we're connected to!
 function logGuildsAndChannels() {
@@ -324,17 +347,14 @@ function detectBotMentionOrChannel(message) {
   const channelName = message.channel.name;
   const channelNameHasBot = channelName.includes("🤖");
 
-  return (!message.author.bot && (botMentioned || channelNameHasBot));
+  return !message.author.bot && (botMentioned || channelNameHasBot);
 }
 
 // displayTypingIndicator: Start typing indicator
 function displayTypingIndicator(message) {
   // Start typing indicator
-  message.channel.sendTyping()
-  const typingInterval = setInterval(
-      () => message.channel.sendTyping(),
-      5000
-  );
+  message.channel.sendTyping();
+  const typingInterval = setInterval(() => message.channel.sendTyping(), 5000);
   return typingInterval; // To allow for clearing the interval outside of this function
 }
 
@@ -363,7 +383,7 @@ async function onMessageCreate(message) {
         chainMessageStart,
         username
       );
-      
+
       // end typing indicator
       clearInterval(typing);
 
@@ -402,7 +422,7 @@ class DiscordBot {
     this.bot.on("ready", onClientReady);
     this.bot.on("messageCreate", onMessageCreate);
 
-    // The sentient moment 🙌 
+    // The sentient moment 🙌
     client = this.bot;
   }
 

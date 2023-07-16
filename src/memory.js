@@ -2,17 +2,16 @@
 const prompts = require("../prompts");
 const { openai } = require("./openai");
 const { getHexagram, replaceRobotIdWithName } = require("../helpers.js");
-const { getUserMemory, storeUserMemory } = require("../capabilities/remember.js");
-const chance = require('chance').Chance();
+const {
+  getUserMemory,
+  storeUserMemory,
+} = require("../capabilities/remember.js");
+const chance = require("chance").Chance();
 const { CAPABILITY_PROMPT_INTRO } = require("../prompts.js");
 const { getUserMessageHistory } = require("../capabilities/remember.js");
 
 // 🚦 Constants Corner: prepping our prompts and error message
-const {
-  PROMPT_SYSTEM,
-  PROMPT_REMEMBER,
-  PROMPT_REMEMBER_INTRO,
-} = prompts;
+const { PROMPT_SYSTEM, PROMPT_REMEMBER, PROMPT_REMEMBER_INTRO } = prompts;
 
 // 🧠 generateAndStoreRememberCompletion: the architect of our bot's memory palace
 async function generateAndStoreRememberCompletion(
@@ -57,7 +56,7 @@ async function generateAndStoreRememberCompletion(
       {
         role: "user",
         content: `${PROMPT_REMEMBER}`,
-      }
+      },
     ],
   });
 
@@ -70,7 +69,6 @@ async function generateAndStoreRememberCompletion(
   return rememberText;
 }
 
-
 async function assembleMessagePreamble(username, client) {
   const messages = [];
 
@@ -81,8 +79,8 @@ async function assembleMessagePreamble(username, client) {
   });
 
   if (chance.bool({ likelihood: 50 })) {
-      // pick a random hexagram from the i ching to guide this interaction
-  const hexagramPrompt = `Let this hexagram from the I Ching guide this interaction: ${getHexagram()}`;
+    // pick a random hexagram from the i ching to guide this interaction
+    const hexagramPrompt = `Let this hexagram from the I Ching guide this interaction: ${getHexagram()}`;
 
     console.log(`🔮 Adding hexagram prompt to message ${hexagramPrompt}`);
     messages.push({
@@ -104,7 +102,9 @@ async function assembleMessagePreamble(username, client) {
 
   const userMessageCount = chance.integer({ min: 4, max: 16 });
 
-  console.log(`🧠 Retrieving ${userMessageCount} previous messages for ${username}`);
+  console.log(
+    `🧠 Retrieving ${userMessageCount} previous messages for ${username}`
+  );
 
   // get user messages
   const userMessages = await getUserMessageHistory(username, userMessageCount);

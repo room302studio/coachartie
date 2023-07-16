@@ -8,4 +8,4 @@ const bot = new DiscordBot();
 // 🎉 The christening of our bot's journey!
 bot.bot.on("ready", () => {
   console.log("Bot is ready!");
-})
+});

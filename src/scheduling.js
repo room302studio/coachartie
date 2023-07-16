@@ -7,7 +7,6 @@ function scheduleRandomMessage() {
   }, interval);
 }
 
-
 // 📅 isWithinSendingHours: is it time to send a random message?
 function isWithinSendingHours() {
   const currentTimeEST = getCurrentTimeEST();

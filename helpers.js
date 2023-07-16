@@ -12,7 +12,6 @@ const { encode, decode } = require("@nem035/gpt-3-encoder");
 function replaceRobotIdWithName(string, client) {
   // TODO: We need to get the client from discord somehow
 
-
   // console.log("Replacing robot id with name");
   const coachArtieId = client.user.id;
   // console.log("coachArtieId", coachArtieId);
@@ -142,5 +141,5 @@ module.exports = {
   countMessageTokens,
   removeMentionFromMessage,
   ERROR_MSG,
-  replaceRobotIdWithName
+  replaceRobotIdWithName,
 };

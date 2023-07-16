@@ -1,13 +1,13 @@
-const fs = require('fs');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
 
-const { destructureArgs } = require('./helpers');
+const { destructureArgs } = require("../helpers");
 
 /**
  * Generate the capability manifest based on the JSDoc comments in the capability files.
  */
 function handleCapabilityMethod() {
-  const capabilitiesFolderPath = './capabilities';
+  const capabilitiesFolderPath = "./capabilities";
 
   // Get a list of all files in the capabilities folder
   const capabilityFiles = fs.readdirSync(capabilitiesFolderPath);
@@ -15,7 +15,7 @@ function handleCapabilityMethod() {
   // Parse the JSDoc comments from each capability file and extract the relevant information
   const capabilities = capabilityFiles.map((capabilityFile) => {
     const capabilityPath = path.join(capabilitiesFolderPath, capabilityFile);
-    const capabilityFileContent = fs.readFileSync(capabilityPath, 'utf8');
+    const capabilityFileContent = fs.readFileSync(capabilityPath, "utf8");
     return parseJSDoc(capabilityFileContent);
   });
 
@@ -23,7 +23,10 @@ function handleCapabilityMethod() {
   const manifest = generateManifest(capabilities);
 
   // Write the manifest to a file
-  fs.writeFileSync('manifest.js', `module.exports = ${JSON.stringify(manifest, null, 2)};\n`);
+  fs.writeFileSync(
+    "manifest.js",
+    `module.exports = ${JSON.stringify(manifest, null, 2)};\n`
+  );
 }
 
 /**
@@ -33,19 +36,22 @@ function handleCapabilityMethod() {
  */
 function parseJSDoc(capabilityFileContent) {
   // Split the capability file content into lines
-  const lines = capabilityFileContent.split('\n');
+  const lines = capabilityFileContent.split("\n");
 
   // Find the JSDoc comment block for the capability
   const capabilityComment = findCapabilityComment(lines);
 
   // Extract capability information from the JSDoc comment
-  const { capabilityName, capabilityDescription } = extractCapabilityInfo(capabilityComment);
+  const { capabilityName, capabilityDescription } =
+    extractCapabilityInfo(capabilityComment);
 
   // Find JSDoc comments for each method in the capability
   const methodComments = findMethodComments(lines);
 
   // Extract method information from the JSDoc comments
-  const methods = methodComments.map((methodComment) => extractMethodInfo(methodComment));
+  const methods = methodComments.map((methodComment) =>
+    extractMethodInfo(methodComment)
+  );
 
   return {
     slug: generateSlug(capabilityName),
@@ -74,8 +80,8 @@ function findCapabilityComment(lines) {
 function extractCapabilityInfo(capabilityComment) {
   // Extract capability name and description from the JSDoc comment using regular expressions or string manipulation
   return {
-    capabilityName: 'capabilityName',
-    capabilityDescription: 'capabilityDescription',
+    capabilityName: "capabilityName",
+    capabilityDescription: "capabilityDescription",
   };
 }
 
@@ -97,12 +103,12 @@ function findMethodComments(lines) {
 function extractMethodInfo(methodComment) {
   // Extract method name, description, and parameter information from the JSDoc comment using regular expressions or string manipulation
   return {
-    name: 'methodName',
-    description: 'methodDescription',
+    name: "methodName",
+    description: "methodDescription",
     parameters: [
       {
-        name: 'parameterName',
-        description: 'parameterDescription',
+        name: "parameterName",
+        description: "parameterDescription",
       },
     ],
   };
@@ -115,7 +121,7 @@ function extractMethodInfo(methodComment) {
  */
 function generateSlug(capabilityName) {
   // Generate a slug from the capability name using string manipulation or a slugify library
-  return capabilityName.toLowerCase().replace(/\s+/g, '-');
+  return capabilityName.toLowerCase().replace(/\s+/g, "-");
 }
 
 /**

@@ -1,16 +1,18 @@
-const axios = require('axios');
+const axios = require("axios");
 const dotenv = require("dotenv");
 dotenv.config();
 
-const { destructureArgs } = require('./helpers');
+const { destructureArgs } = require("../helpers");
 
 async function handleCapabilityMethod(method, args) {
   const [arg1] = destructureArgs(args);
 
-  if (method === 'askWolframAlpha') {
+  if (method === "askWolframAlpha") {
     return askWolframAlpha(arg1);
   } else {
-    throw new Error(`Method ${method} not supported by Wolfram Alpha capability.`);
+    throw new Error(
+      `Method ${method} not supported by Wolfram Alpha capability.`
+    );
   }
 }
 

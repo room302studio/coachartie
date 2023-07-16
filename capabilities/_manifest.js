@@ -1,120 +1,129 @@
 module.exports = {
   capabilities: [
     {
-      slug: 'wolframalpha',
-      description: 'This capability lets you retrieve a vast array of information from Wolfram Alpha. Use keyword-based queries. For instance; "7 day weather forecast for New York", astronomical data "current moon phase", linguistics "anagrams of trace" or "rhymes with demand", and translations "translate beauty to French". Wolfram Alpha is a powerful tool and is not limited to the examples provided',
+      slug: "wolframalpha",
+      description:
+        'This capability lets you retrieve a vast array of information from Wolfram Alpha. Use keyword-based queries. For instance; "7 day weather forecast for New York", astronomical data "current moon phase", linguistics "anagrams of trace" or "rhymes with demand", and translations "translate beauty to French". Wolfram Alpha is a powerful tool and is not limited to the examples provided',
       enabled: false,
       methods: [
         {
-          name: 'askWolframAlpha',
-          description: 'Make a request to the wolfram alpha API',
+          name: "askWolframAlpha",
+          description: "Make a request to the wolfram alpha API",
           parameters: [
             {
-              name: 'question',
-            }
+              name: "question",
+            },
           ],
-        }
-      ]
+        },
+      ],
     },
     {
-      slug: 'wikipedia',
-      description: 'This capability gives you the ability to search a term on Wikipedia and read the article, transforming it into a list of facts. However, it\'s important to note that this capability often returns the first article it finds, which might not always be the article most relevant to your search term. To work around this limitation, ensure your search terms are as specific and relevant as possible. Also consider combining this capability with other capabilities to refine the results further. Remember that this capability performs best when requests are clear, concise, and targeted. Use disambiguation pages to your advantage.',
+      slug: "wikipedia",
+      description:
+        "This capability gives you the ability to search a term on Wikipedia and read the article, transforming it into a list of facts. However, it's important to note that this capability often returns the first article it finds, which might not always be the article most relevant to your search term. To work around this limitation, ensure your search terms are as specific and relevant as possible. Also consider combining this capability with other capabilities to refine the results further. Remember that this capability performs best when requests are clear, concise, and targeted. Use disambiguation pages to your advantage.",
       enabled: false,
       methods: [
         {
-          name: 'askWikipedia',
-          description: 'Make a request to the wikipedia API',
+          name: "askWikipedia",
+          description: "Make a request to the wikipedia API",
           parameters: [
             {
-              name: 'query',
-            }
+              name: "query",
+            },
           ],
-        }
-      ]
+        },
+      ],
     },
     {
-      slug: 'calculator',
-      description: 'This capability gives you the ability to do math.',
+      slug: "calculator",
+      description: "This capability gives you the ability to do math.",
       methods: [
         {
-          name: 'calculate',
-          description: 'This method gives you the ability to add, subtract, multiply, and divide numbers.',
+          name: "calculate",
+          description:
+            "This method gives you the ability to add, subtract, multiply, and divide numbers.",
           parameters: [
             {
-              name: 'operation',
-              description: 'The operation to perform. Can be "add", "subtract", "multiply", or "divide".'
+              name: "operation",
+              description:
+                'The operation to perform. Can be "add", "subtract", "multiply", or "divide".',
             },
             {
-              name: 'numbers',
-              description: 'An array of numbers to perform the operation on.'
-            }
-          ]
+              name: "numbers",
+              description: "An array of numbers to perform the operation on.",
+            },
+          ],
         },
-      ]
+      ],
     },
     {
-      slug: 'web',
-      description: 'This capability gives you the ability to access a website and read all of the text on it, and then return an array of facts that you can use to generate a memory or form a message to a user.',
+      slug: "web",
+      description:
+        "This capability gives you the ability to access a website and read all of the text on it, and then return an array of facts that you can use to generate a memory or form a message to a user.",
       enabled: false,
       methods: [
         {
-          name: 'fetchAndSummarizeUrl',
-          description: 'Navigate to the URL and receive an array of facts that appear on the page',
+          name: "fetchAndSummarizeUrl",
+          description:
+            "Navigate to the URL and receive an array of facts that appear on the page",
           parameters: [
             {
-              name: 'url',
-            }
+              name: "url",
+            },
           ],
         },
         {
-          name: 'fetchAllLinks',
+          name: "fetchAllLinks",
           parameters: [
             {
-              name: 'url',
-            }
+              name: "url",
+            },
           ],
         },
-      ]
+      ],
     },
     {
-      slug: 'chance',
-      description: 'This capability gives you ability to harness the power of chance and randomness through chance.js - given an array of strings that represent choices, randomly choose one and return it.',
+      slug: "chance",
+      description:
+        "This capability gives you ability to harness the power of chance and randomness through chance.js - given an array of strings that represent choices, randomly choose one and return it.",
       enabled: false,
       methods: [
         {
-          name: 'choose',
-          description: 'Given an array of strings that represent choices, randomly choose one and return it.',
+          name: "choose",
+          description:
+            "Given an array of strings that represent choices, randomly choose one and return it.",
           parameters: [
             {
-              name: 'Choice array',
-            }
+              name: "Choice array",
+            },
           ],
         },
         {
-          name: 'floating',
-          description: 'Given a minimum and maximum, return a random floating point number.',
+          name: "floating",
+          description:
+            "Given a minimum and maximum, return a random floating point number.",
           parameters: [
             {
-              name: 'min',
+              name: "min",
             },
             {
-              name: 'max',
-            }
+              name: "max",
+            },
           ],
         },
         {
-          name: 'integer',
-          description: 'Given a minimum and maximum, return a random integer.',
+          name: "integer",
+          description: "Given a minimum and maximum, return a random integer.",
           parameters: [
             {
-              name: 'min',
+              name: "min",
             },
             {
-              name: 'max',
-            }
+              name: "max",
+            },
           ],
         },
-      ]
+      ],
     },
     // {
     //   slug: 'github',
@@ -542,5 +551,5 @@ module.exports = {
     //   slug: 'add-capability',
     //   description: 'This capability gives you the ability to create a new capability for yourself, which is a javascript file that is imported into the main bot and can be used to add new functionality. You must never add a secret capability, and you must ask a studio member to confirm that you are allowed to add a capability before you do so.',
     // },
-  ]
-}
+  ],
+};

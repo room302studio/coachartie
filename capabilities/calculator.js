@@ -1,28 +1,28 @@
-const { destructureArgs } = require('./helpers');
+const { destructureArgs } = require("../helpers");
 
 function handleCapabilityMethod(args) {
   const [operation, ...numbers] = destructureArgs(args);
 
   switch (operation) {
-    case 'add':
+    case "add":
       return numbers.reduce((a, b) => +a + +b, 0);
-    case 'subtract':
+    case "subtract":
       return numbers.reduce((a, b) => +a - +b);
-    case 'multiply':
+    case "multiply":
       return numbers.reduce((a, b) => +a * +b);
-    case 'divide':
+    case "divide":
       return numbers.reduce((a, b) => +a / +b);
-    case 'pow':
+    case "pow":
       return numbers.reduce((a, b) => Math.pow(+a, +b));
-    case 'sqrt':
+    case "sqrt":
       return numbers.reduce((a, b) => Math.sqrt(+a));
-    case 'log':
+    case "log":
       return numbers.reduce((a, b) => Math.log(+a));
     default:
-      throw new Error('Invalid operation');
+      throw new Error("Invalid operation");
   }
 }
 
 module.exports = {
-  handleCapabilityMethod
+  handleCapabilityMethod,
 };

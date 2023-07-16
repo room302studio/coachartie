@@ -84,10 +84,10 @@ class GithubCoach {
 
     const projects = data.user.projects.nodes;
     if (!projects) {
-      return 'No projects found for this user.';
+      return "No projects found for this user.";
     }
 
-    return projects.map(project => project.name);
+    return projects.map((project) => project.name);
   }
 
   async listProjectColumnsAndCards(projectId) {
@@ -121,7 +121,7 @@ class GithubCoach {
 
     const columns = data.node.columns.nodes;
     if (!columns) {
-      return 'No columns found for this project.';
+      return "No columns found for this project.";
     }
 
     return columns.map((column) => {
@@ -132,7 +132,7 @@ class GithubCoach {
         } else if (content.__typename === "PullRequest") {
           return `Pull Request: ${content.title}`;
         } else {
-          return '';
+          return "";
         }
       });
       return `${column.name}:\n${cards.join("\n")}`;
@@ -148,7 +148,9 @@ class GithubCoach {
       }
     `);
 
-    return data.addProjectCard ? 'Draft issue added to project.' : 'Failed to add draft issue to project.';
+    return data.addProjectCard
+      ? "Draft issue added to project."
+      : "Failed to add draft issue to project.";
   }
 
   async createBranch(repositoryFullName, branchName) {
@@ -227,7 +229,13 @@ class GithubCoach {
     return response.data;
   }
 
-  async createPullRequest(repositoryName, title, headBranch, baseBranch, description) {
+  async createPullRequest(
+    repositoryName,
+    title,
+    headBranch,
+    baseBranch,
+    description
+  ) {
     const response = await this.octokit.pulls.create({
       owner: process.env.GITHUB_USER,
       repo: repositoryName,
@@ -254,40 +262,40 @@ module.exports = {
     const githubCoach = new GithubCoach();
 
     switch (method) {
-      case 'createRepo':
+      case "createRepo":
         return await githubCoach.createRepo(...args);
-      case 'cloneRepo':
+      case "cloneRepo":
         return await githubCoach.cloneRepo(...args);
-      case 'listRepos':
+      case "listRepos":
         return await githubCoach.listRepos();
-      case 'listUserRepos':
+      case "listUserRepos":
         return await githubCoach.listUserRepos(...args);
-      case 'getProjectIdFromUrl':
+      case "getProjectIdFromUrl":
         return await githubCoach.getProjectIdFromUrl(...args);
-      case 'listUserProjects':
+      case "listUserProjects":
         return await githubCoach.listUserProjects(...args);
-      case 'listProjectColumnsAndCards':
+      case "listProjectColumnsAndCards":
         return await githubCoach.listProjectColumnsAndCards(...args);
-      case 'addDraftIssueToProject':
+      case "addDraftIssueToProject":
         return await githubCoach.addDraftIssueToProject(...args);
-      case 'createBranch':
+      case "createBranch":
         return await githubCoach.createBranch(...args);
-      case 'listBranches':
+      case "listBranches":
         return await githubCoach.listBranches(...args);
-      case 'createFile':
+      case "createFile":
         return await githubCoach.createFile(...args);
-      case 'createGist':
+      case "createGist":
         return await githubCoach.createGist(...args);
-      case 'editFile':
+      case "editFile":
         return await githubCoach.editFile(...args);
-      case 'deleteFile':
+      case "deleteFile":
         return await githubCoach.deleteFile(...args);
-      case 'createPullRequest':
+      case "createPullRequest":
         return await githubCoach.createPullRequest(...args);
-      case 'readFileContents':
+      case "readFileContents":
         return await githubCoach.readFileContents(...args);
       default:
         throw new Error(`Invalid method: ${method}`);
     }
-  }
+  },
 };

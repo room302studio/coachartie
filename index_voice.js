@@ -1,12 +1,17 @@
-const { Client, GatewayIntentBits } = require('discord.js');
-const dotenv = require('dotenv');
-const speech = require('@google-cloud/speech');
-const { Configuration, OpenAIApi } = require('openai');
-const axios = require('axios');
-const FormData = require('form-data');
-const { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus } = require('@discordjs/voice');
-const { VoiceConnectionStatus, entersState } = require('@discordjs/voice');
-const { createWriteStream, pipeline } = require('stream');
+const { Client, GatewayIntentBits } = require("discord.js");
+const dotenv = require("dotenv");
+const speech = require("@google-cloud/speech");
+const { Configuration, OpenAIApi } = require("openai");
+const axios = require("axios");
+const FormData = require("form-data");
+const {
+  joinVoiceChannel,
+  createAudioPlayer,
+  createAudioResource,
+  AudioPlayerStatus,
+} = require("@discordjs/voice");
+const { VoiceConnectionStatus, entersState } = require("@discordjs/voice");
+const { createWriteStream, pipeline } = require("stream");
 
 // Load environment variables
 dotenv.config();
@@ -19,10 +24,7 @@ const speechClient = new speech.SpeechClient();
 
 // Create a Discord client
 const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildVoiceStates,
-  ],
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates],
 });
 
 const configuration = new Configuration({
@@ -32,13 +34,15 @@ const configuration = new Configuration({
 const openai = new OpenAIApi(configuration);
 
 // Authenticate with Google Cloud using service account credentials
-const googleCredentials = require('./coach-artie-3e4ebe0a5be4.json');
+const googleCredentials = require("./coach-artie-3e4ebe0a5be4.json");
 speechClient.auth.fromJSON(googleCredentials);
 
-client.once('ready', async () => {
+client.once("ready", async () => {
   console.log(`Logged in as ${client.user.tag}`);
 
-  const voiceChannel = await client.channels.fetch(process.env.DISCORD_VOICE_CHANNEL_ID);
+  const voiceChannel = await client.channels.fetch(
+    process.env.DISCORD_VOICE_CHANNEL_ID
+  );
   const guild = await client.guilds.fetch(process.env.DISCORD_GUILD_ID);
 
   const connection = joinVoiceChannel({
@@ -49,21 +53,26 @@ client.once('ready', async () => {
   });
 
   connection.on(VoiceConnectionStatus.Ready, () => {
-    console.log('The connection has entered the Ready state - ready to play audio!');
+    console.log(
+      "The connection has entered the Ready state - ready to play audio!"
+    );
   });
 
-  connection.on(VoiceConnectionStatus.Disconnected, async (oldState, newState) => {
-    try {
-      await Promise.race([
-        entersState(connection, VoiceConnectionStatus.Signalling, 5_000),
-        entersState(connection, VoiceConnectionStatus.Connecting, 5_000),
-      ]);
-      // Seems to be reconnecting to a new channel - ignore disconnect
-    } catch (error) {
-      // Seems to be a real disconnect which SHOULDN'T be recovered from
-      connection.destroy();
+  connection.on(
+    VoiceConnectionStatus.Disconnected,
+    async (oldState, newState) => {
+      try {
+        await Promise.race([
+          entersState(connection, VoiceConnectionStatus.Signalling, 5_000),
+          entersState(connection, VoiceConnectionStatus.Connecting, 5_000),
+        ]);
+        // Seems to be reconnecting to a new channel - ignore disconnect
+      } catch (error) {
+        // Seems to be a real disconnect which SHOULDN'T be recovered from
+        connection.destroy();
+      }
     }
-  });
+  );
 
   const player = createAudioPlayer();
   connection.subscribe(player);
@@ -73,15 +82,17 @@ client.once('ready', async () => {
   });
 
   const receiver = connection.receiver;
-  connection.on('stateChange', (oldState, newState) => {
+  connection.on("stateChange", (oldState, newState) => {
     if (newState.status === VoiceConnectionStatus.Ready) {
-      console.log('The connection has entered the Ready state - ready to play audio!');
+      console.log(
+        "The connection has entered the Ready state - ready to play audio!"
+      );
     } else if (newState.status === VoiceConnectionStatus.Disconnected) {
       connection.destroy();
     }
   });
 
-  connection.on('speaking', async (user, speaking) => {
+  connection.on("speaking", async (user, speaking) => {
     if (speaking) {
       console.log(`${user.username} started speaking`);
 
@@ -91,7 +102,7 @@ client.once('ready', async () => {
 
       pipeline(audioStream, fileStream, async (error) => {
         if (error) {
-          console.error('Error saving audio to file: ', error);
+          console.error("Error saving audio to file: ", error);
           return;
         }
 
@@ -112,7 +123,7 @@ client.login(process.env.DISCORD_BOT_TOKEN);
 async function processGpt4Response(text, connection) {
   // Pass the transcription to GPT-4
   const gptResponse = await openai.complete({
-    model: 'gpt-4.0-turbo',
+    model: "gpt-4.0-turbo",
     prompt: text,
     maxTokens: 100,
   });
@@ -120,7 +131,10 @@ async function processGpt4Response(text, connection) {
   const gptResponseText = gptResponse.data.choices[0].text;
 
   // Send GPT-4 response text to Eleven Labs API for audio playback
-  const audioResponse = await sendTextToElevenLabsAPI(gptResponseText, VOICE_ID);
+  const audioResponse = await sendTextToElevenLabsAPI(
+    gptResponseText,
+    VOICE_ID
+  );
 
   // Create audio resource and play the response
   const resource = createAudioResource(audioResponse);
@@ -129,20 +143,23 @@ async function processGpt4Response(text, connection) {
 
 async function sendTextToElevenLabsAPI(text, voiceId) {
   const formData = new FormData();
-  formData.append('text', text);
-  formData.append('model_id', voiceId);
+  formData.append("text", text);
+  formData.append("model_id", voiceId);
 
   // Add voice_settings to the FormData
-  formData.append('voice_settings', JSON.stringify({
-    "stability": 0.58,
-    "similarity_boost": 0.185
-  }));
+  formData.append(
+    "voice_settings",
+    JSON.stringify({
+      stability: 0.58,
+      similarity_boost: 0.185,
+    })
+  );
 
   // Prepare the config object with headers
   const config = {
     headers: {
       ...formData.getHeaders(),
-      'xi-api-key': process.env.ELEVEN_LABS_API_KEY,
+      "xi-api-key": process.env.ELEVEN_LABS_API_KEY,
     },
   };
 
@@ -156,9 +173,9 @@ async function sendTextToElevenLabsAPI(text, voiceId) {
 async function transcribeSpeech(audioFilename) {
   const request = {
     config: {
-      encoding: 'LINEAR16',
+      encoding: "LINEAR16",
       sampleRateHertz: 48000,
-      languageCode: 'en-US',
+      languageCode: "en-US",
     },
     interimResults: true,
     audio: {
@@ -168,7 +185,7 @@ async function transcribeSpeech(audioFilename) {
 
   const [response] = await speechClient.recognize(request);
 
-  let transcription = '';
+  let transcription = "";
 
   for (const result of response.results) {
     transcription += result.alternatives[0].transcript;
