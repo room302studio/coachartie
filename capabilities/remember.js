@@ -1,6 +1,7 @@
 const { createClient } = require("@supabase/supabase-js");
 const dotenv = require("dotenv");
 const { destructureArgs } = require("../helpers");
+const { openai } = require("../src/openai");
 
 dotenv.config();
 
@@ -66,13 +67,32 @@ async function getUserMessageHistory(userId, limit = 5) {
   return data;
 }
 
-async function storeUserMemory(args) {
-  const [userId, value] = destructureArgs(args);
+async function memoryToEmbedding(memory) {
+  // make sure memory is a string
+  if (typeof memory !== "string") {
+    memory = memory.toString();
+  }
+
+  const embeddingResponse = await openai.createEmbedding({
+    model: "text-embedding-ada-002",
+    input: memory,
+  });
+
+  const [{ embedding }] = embeddingResponse.data.data;
+
+  return embedding;
+}
+
+async function storeUserMemory(userId, value) {
+  // TODO: We need to convert the memory into an embedding using the openai embeddings API
+  // and include that in the database entry
+  const embedding = await memoryToEmbedding(value);
 
   const { data, error } = await supabase.from("storage").insert([
     {
       user_id: userId,
       value,
+      embedding,
     },
   ]);
 
