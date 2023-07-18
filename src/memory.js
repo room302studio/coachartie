@@ -5,6 +5,7 @@ const { getHexagram, replaceRobotIdWithName } = require("../helpers.js");
 const {
   getUserMemory,
   storeUserMemory,
+  getRelevantMemories
 } = require("../capabilities/remember.js");
 const chance = require("chance").Chance();
 const { CAPABILITY_PROMPT_INTRO } = require("../prompts.js");
@@ -38,6 +39,7 @@ async function generateAndStoreRememberCompletion(
   const rememberCompletion = await openai.createChatCompletion({
     model: "gpt-3.5-turbo-16k",
     temperature: 0.75,
+
     max_tokens: 600,
     messages: [
       ...memoryMessages,
@@ -54,7 +56,7 @@ async function generateAndStoreRememberCompletion(
         content: `${response}`,
       },
       {
-        role: "user",
+        role: "system",
         content: `${PROMPT_REMEMBER}`,
       },
     ],
@@ -64,12 +66,14 @@ async function generateAndStoreRememberCompletion(
 
   // if the remember text is ✨ AKA empty, we don't wanna store it
   if (rememberText === "✨") return rememberText;
+  // if remember text length is 0 or less, we don't wanna store it
+  if (rememberText.length <= 0) return rememberText;
   await storeUserMemory(username, rememberText);
 
   return rememberText;
 }
 
-async function assembleMessagePreamble(username, client) {
+async function assembleMessagePreamble(username, client, prompt) {
   const messages = [];
 
   // add the current date and time as a system message
@@ -119,22 +123,46 @@ async function assembleMessagePreamble(username, client) {
       // content: `${replaceRobotIdWithName(message.value, client)}`,
       content: `${message.value}`,
     });
+
+    // if this is the last message, return
+    if (message === userMessages[userMessages.length - 1]) return;
+
+    // otherwise add a new message placeholder for the assistant response
+    messages.push({
+      role: "assistant",
+      content: "Response truncated",
+    });
   });
 
   const userMemoryCount = chance.integer({ min: 2, max: 12 });
 
-  // get user memories
-  const userMemories = await getUserMemory(username, userMemoryCount);
+  // // get user memories
+  // const userMemories = await getUserMemory(username, userMemoryCount);
 
-  const memories = userMemories;
+  // const memories = userMemories;
 
-  // turn user memories into chatbot messages
-  memories.forEach((memory) => {
-    messages.push({
-      role: "system",
-      content: `You remember from a previous interaction on ${memory.created_at}: ${memory.value}`,
+  // // turn user memories into chatbot messages
+  // memories.forEach((memory) => {
+  //   messages.push({
+  //     role: "system",
+  //     content: `You remember from a previous interaction on ${memory.created_at}: ${memory.value}`,
+  //   });
+  // });
+
+  // get relevant user memories
+  const relevantUserMemories = await getRelevantMemories(prompt, userMemoryCount);
+
+  if (relevantUserMemories) {
+
+
+    // add all of those memories to the messages
+    relevantUserMemories.forEach((memory) => {
+      messages.push({
+        role: "system",
+        content: `You remember from a previous interaction on ${memory.created_at}: ${memory.value}`,
+      });
     });
-  });
+  }
 
   return messages;
 }

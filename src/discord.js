@@ -62,11 +62,16 @@ async function generateAiCompletion(messages, config) {
   });
 
   const aiResponse = await completion.data.choices[0].message;
+  consolelog4("🤖 AI Response:", aiResponse);
 
   messages.push(aiResponse);
 
-  return processMessageChain(aiResponse, messages);
+  return await processMessageChain(aiResponse, messages);
 }
+
+const TOKEN_LIMIT = 8000;
+const RESPONSE_LIMIT = 5120;
+const WARNING_BUFFER = 900;
 
 /**
  * 📝 processMessageChain: a function for processing message chains
@@ -82,84 +87,40 @@ async function generateAiCompletion(messages, config) {
  * @return {Array} - All processed messages along with AI Completion parameters
  */
 async function processMessageChain(message, messages, username) {
-  // if there are no messages, return an empty array
-  if (!messages.length) {
-    return [];
+  if (!messages.length) return [];
+
+  consolelog2("📝 Processing message chain...");
+
+  // Add preamble to messages
+  messages = await addPreambleToMessages(username, messages, message.content);
+
+  // If the last message contains a capability, process it
+  if (doesMessageContainCapability(messages[messages.length - 1])) {
+    messages = await processCapabilityInLastMessage(messages);
   }
 
-  // get the last message in the chain
+  return await generateAiCompletion(messages, generateAiParameters());
+}
+
+async function processCapabilityInLastMessage(messages) {
   const lastMessage = messages[messages.length - 1];
-  // get the current token count
-  const currentTokenCount = countMessageTokens(messages);
-  console.log("Current token count: ", currentTokenCount);
-
-  // set the token limit
-  const apiTokenLimit = 8000;
-
-  // grab the system intro, memories, and user memories to enhance our response
-  const preamble = await assembleMessagePreamble(username, client);
-
-  // combine the preamble with the messages
-  messages = [...preamble, ...messages];
-
-  // check if the last message contains a capability method
-  // which looks like this: `capability:method(args)`
   const capabilityMatch = lastMessage.content.match(capabilityRegex);
 
-  // if there is no capability method, and the last message is not a user message, break the chain
-  if (
-    !capabilityMatch &&
-    lastMessage.role !== "user" &&
-    lastMessage.role !== "system"
-  ) {
-    console.log("No capability found in the last message, breaking the chain.");
-    return messages;
-  }
+  if (isBreakingMessageChain(capabilityMatch, lastMessage)) return messages;
 
-  // if there is a capability method, call it
   if (capabilityMatch) {
-    // we need to destruct the capabilityMatch array to get the slug, method, and args
     const [_, capSlug, capMethod, capArgs] = capabilityMatch;
+    const currentTokenCount = countMessageTokens(messages);
 
-    // if the token count is about to exceed the limit, add a system message to the chain
-    if (currentTokenCount >= apiTokenLimit - 900) {
-      console.log(
-        "Token limit reached, adding system message to the chain reminding the bot to wrap it up."
-      );
-      messages.push({
-        role: "user",
-        content:
-          "It looks like you are reaching the token limit. In the next response, please do not use a capability. Use all of this information to summarize a response.",
-      });
+    if (currentTokenCount >= TOKEN_LIMIT - WARNING_BUFFER) {
+      messages.push(createTokenLimitWarning());
     }
 
-    // call the capability method
-    let capabilityResponse;
-    try {
-      capabilityResponse = await callCapabilityMethod(
-        capSlug,
-        capMethod,
-        capArgs
-      );
-    } catch (e) {
-      consolelog2(e);
-      capabilityResponse = "Capability error: " + e;
-    }
-
-    consolelog3("Capability response: ", capabilityResponse);
-
-    // check the token size of the response, and trim it down if it's too long
-    while (countTokens(capabilityResponse) > 5120) {
-      console.log(
-        `Response is too long ${countTokens(
-          capabilityResponse
-        )}, trimming it down.`
-      );
-      capabilityResponse = trimResponseByLineCount(
-        capabilityResponse,
-        countTokens(capabilityResponse)
-      );
-    }
+    const capabilityResponse = await getCapabilityResponse(
+      capSlug,
+      capMethod,
+      capArgs
+    );
 
     messages.push({
       role: "system",
@@ -167,27 +128,9 @@ async function processMessageChain(message, messages, username) {
     });
   }
 
-  console.log("📝 Message chain:");
-  messages.forEach((msg) => {
-    console.log(`- ${msg.role}: ${msg.content}`);
-  });
-
-  const temperature = chance.floating({ min: 0.4, max: 1.25 });
-  const presence_penalty = chance.floating({ min: 0.2, max: 0.66 });
-
-  console.log("🌡️ Temp: ", temperature);
-  console.log("👻 Presence: ", presence_penalty);
-
-  if (countMessageTokens(messages) > 8000) {
-    console.log("Total tokens is over 8000, trimming the message chain.");
-    messages = trimMessageChain(messages);
-    console.log("Message chain trimmed.");
-  }
-
-  return generateAiCompletion(messages, {
-    temperature,
-    presence_penalty,
-  });
+  return isExceedingTokenLimit(messages)
+    ? trimMessageChain(messages)
+    : messages;
 }
 
 async function processMessageAndSendResponse(
@@ -195,22 +138,121 @@ async function processMessageAndSendResponse(
   chainMessageStart,
   username
 ) {
-  const response = await processMessageChain(
-    message,
-    chainMessageStart,
-    username
-  );
-  const robotResponse = response[response.length - 1].content;
+  try {
+    // Initialize the response with the chainMessageStart
+    let response = chainMessageStart;
 
-  // Split and send the response
-  splitAndSendMessage(robotResponse, message);
+    // Initialize the messages array with the chainMessageStart
+    let messages = [chainMessageStart];
 
-  return robotResponse;
+    // If the message content is not empty, add it to the messages array
+    if (message.content.length > 0) {
+      messages.push({
+        role: "user",
+        content: removeMentionFromMessage(message.content),
+      });
+    }
+
+    // Process the messages in the messages array
+    const processedMessages = await processMessageChain(
+      message,
+      messages,
+      username
+    );
+
+    // For each message in the processedMessages array
+    for (let i = 0; i < processedMessages.length; i++) {
+      const message = processedMessages[i];
+      const { role, content } = message;
+
+      // If the role is user, add the content to the response
+      if (role === "user") {
+        response += `\n${content}`;
+
+        // If the role is system, add the content to the response
+      } else if (role === "system") {
+        response += `\n\n${content}`;
+
+        // If the role is bot, add the content to the response
+      } else {
+        response += `\n\n${content}`;
+      }
+    }
+
+    // Send the response to the channel where the initial message was sent
+    await splitAndSendMessage(message, response);
+  } catch (error) {
+    console.error(error);
+  }
 }
+
+async function addPreambleToMessages(username, messages, message) {
+  const preamble = await assembleMessagePreamble(username, client, message);
+  messages.unshift(preamble);
+  return messages;
+}
+
+function isBreakingMessageChain(capabilityMatch, lastMessage) {
+  return (
+    !capabilityMatch &&
+    lastMessage.role !== "user" &&
+    lastMessage.role !== "system"
+  );
+}
+
+function doesMessageContainCapability(message) {
+  return message.content.match(capabilityRegex);
+}
+
+function createTokenLimitWarning() {
+  return {
+    role: "user",
+    content:
+      "It looks like you are reaching the token limit. In the next response, please do not use a capability. Use all of this information to summarize a response.",
+  };
+}
+
+async function getCapabilityResponse(capSlug, capMethod, capArgs) {
+  let capabilityResponse;
+  try {
+    capabilityResponse = await callCapabilityMethod(
+      capSlug,
+      capMethod,
+      capArgs
+    );
+  } catch (e) {
+    console.error(e);
+    capabilityResponse = "Capability error: " + e;
+  }
+
+  return trimResponseIfNeeded(capabilityResponse);
+}
+
+function trimResponseIfNeeded(capabilityResponse) {
+  while (countTokens(capabilityResponse) > RESPONSE_LIMIT) {
+    capabilityResponse = trimResponseByLineCount(
+      capabilityResponse,
+      countTokens(capabilityResponse)
+    );
+  }
+  return capabilityResponse;
+}
+
+function isExceedingTokenLimit(messages) {
+  return countMessageTokens(messages) > TOKEN_LIMIT;
+}
+
+function generateAiParameters() {
+  return {
+    temperature: chance.floating({ min: 0.4, max: 1.25 }),
+    presence_penalty: chance.floating({ min: 0.2, max: 0.66 }),
+  };
+}
+
 function logMessageAndResponse(log) {
   // Log the JSON object to the console with pretty formatting
-  console.log(JSON.stringify(log, null, 2));
-  console.log(log.remember);
+  // console.log(JSON.stringify(log, null, 2));
+  // console.log(log.remember);
 
   // Append the log to the artie.log file as a single line
   fs.appendFile(
@@ -226,13 +268,23 @@ function logMessageAndResponse(log) {
 
 async function storeMessageAndRemember(username, message, robotResponse) {
   // Save the message to the database
-  await storeUserMessage(username, message);
+  try {
+    await storeUserMessage(username, message);
+  } catch (err) {
+    console.log("Error storing user message: " + err);
+  }
 
-  const rememberMessage = await generateAndStoreRememberCompletion(
-    username,
-    message.content,
-    robotResponse
-  );
+  let rememberMessage
+
+  try {
+    rememberMessage = await generateAndStoreRememberCompletion(
+      username,
+      message.content,
+      robotResponse
+    );
+  } catch (err) {
+    console.error(err);
+  }
 
   // Log and return
   console.log(`🧠 Message saved to database: ${message.content}`);
@@ -378,29 +430,36 @@ async function onMessageCreate(message) {
           content: prompt,
         },
       ];
-      const robotResponse = await processMessageAndSendResponse(
-        message,
-        chainMessageStart,
-        username
-      );
+      try {
+        const robotResponse = await processMessageAndSendResponse(
+          message,
+          chainMessageStart,
+          username
+        );
+
+        splitAndSendMessage(robotResponse, message);
+
+        const rememberMessage = await storeMessageAndRemember(
+          message.author.username,
+          message.content,
+          robotResponse
+        );
+
+        const log = {
+          user: message.author.username,
+          message: message.content,
+          response: robotResponse,
+          remember: rememberMessage,
+        };
+
+        logMessageAndResponse(log);
+      } catch (error) {
+        console.error(error);
+        await message.react("❌");
+      }
 
       // end typing indicator
       clearInterval(typing);
-
-      const rememberMessage = await storeMessageAndRemember(
-        message.author.username,
-        message.content,
-        robotResponse
-      );
-
-      const log = {
-        user: message.author.username,
-        message: message.content,
-        response: robotResponse,
-        remember: rememberMessage,
-      };
-
-      logMessageAndResponse(log);
     }
   } catch (error) {
     consolelog2(error);

@@ -68,9 +68,8 @@ async function getUserMessageHistory(userId, limit = 5) {
 }
 
 async function memoryToEmbedding(memory) {
-  // make sure memory is a string
-  if (typeof memory !== "string") {
-    memory = memory.toString();
+  if(!memory) {
+    return console.error("No memory provided to memoryToEmbedding");
   }
 
   const embeddingResponse = await openai.createEmbedding({
@@ -101,9 +100,7 @@ async function storeUserMemory(userId, value) {
   }
 }
 
-async function storeUserMessage(args) {
-  const [userId, value] = destructureArgs(args);
-
+async function storeUserMessage(userId, value) {
   const { data, error } = await supabase.from("messages").insert([
     {
       user_id: userId,
@@ -131,6 +128,33 @@ async function getAllMemories(args) {
   }
 
   return data;
+}
+
+async function getRelevantMemories(queryString, limit = 5) {
+  console.log('QUERY STRING', queryString)
+  // turn the queryString into an embedding
+  if(!queryString) { return [] }
+  
+  const embeddingResponse = await openai.createEmbedding({
+    model: 'text-embedding-ada-002',
+    input: queryString,
+  })
+
+  const [{ embedding }] = embeddingResponse.data.data
+
+  // query the database for the most relevant memories
+  const { data, error } = await supabase.rpc('match_documents', { 
+    query_embedding: embedding,
+    match_threshold: 0.78,
+    match_count: limit
+  });
+
+  if (error) {
+    console.error("Error fetching relevant user memory:", error);
+    return null;
+  }
+
+  return data
 }
 
 async function assembleMemory(args) {
@@ -185,4 +209,5 @@ module.exports = {
   storeUserMessage,
   assembleMemory,
   isRememberResponseFalsy,
+  getRelevantMemories
 };
