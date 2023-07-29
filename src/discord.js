@@ -1,21 +1,17 @@
 // Our collection of ethereal tech tools and righteous scripts
 const { Client, GatewayIntentBits, Events } = require("discord.js");
-// const {
-//   consolelog2,
-//   consolelog3,
-//   consolelog4,
-// } = require("./logging");
+const { consolelog2, consolelog3, consolelog4 } = require("./logging");
 
 // make empty console logs for now
-const consolelog2 = (message) => {
-  console.log(message);
-};
-const consolelog3 = (message) => {
-  console.log(message);
-};
-const consolelog4 = (message) => {
-  console.log(message);
-};
+// const consolelog2 = (message) => {
+//   console.log(message);
+// };
+// const consolelog3 = (message) => {
+//   console.log(message);
+// };
+// const consolelog4 = (message) => {
+//   console.log(message);
+// };
 
 const { openai } = require("./openai");
 const {
@@ -31,7 +27,7 @@ const {
   ERROR_MSG,
   removeMentionFromMessage,
   doesMessageContainCapability,
-  generateAiCompletionParams
+  generateAiCompletionParams,
 } = require("../helpers.js");
 const chance = require("chance").Chance();
 const fs = require("fs");
@@ -114,17 +110,22 @@ async function processMessageChain(message, messages, username) {
   const prompt = lastUserMessage.content;
 
   // Step 3: Generate AI response based on the messages, and generating the AI Completion parameters
-  const { temperature, frequency_penalty } = generateAiCompletionParams()
-  const { aiResponse }  = await generateAiCompletion(prompt, username, messages, {
-    temperature,
-    frequency_penalty,
-  });
+  const { temperature, frequency_penalty } = generateAiCompletionParams();
+  const { aiResponse } = await generateAiCompletion(
+    prompt,
+    username,
+    messages,
+    {
+      temperature,
+      frequency_penalty,
+    }
+  );
 
   // Step 4: Split and send the AI response back to the user through discord
   await splitAndSendMessage(aiResponse, message);
 
   // Step 5: Store the user message in the database
-  await storeUserMessage(message, messages);
+  // storeUserMessage(userId, value)
 
   // Step 6: Make a memory about the interaction and store THAT in the database
   await generateAndStoreRememberCompletion(prompt, aiResponse, username);
@@ -133,26 +134,25 @@ async function processMessageChain(message, messages, username) {
   return messages;
 }
 
-
 async function generateAiCompletion(prompt, username, messages, config) {
   const { temperature, presence_penalty } = config;
 
   // add the preamble to the messages
   messages = await addPreambleToMessages(username, prompt, messages);
 
-  let completion = null
+  let completion = null;
   try {
-  completion = await openai.createChatCompletion({
-    model: "gpt-4",
-    // model: "gpt-3.5-turbo-16k",
-    temperature,
-    presence_penalty,
-    max_tokens: 820,
-    messages: messages,
-  });
-} catch (err) {
-  console.log(err);
-}
+    completion = await openai.createChatCompletion({
+      model: "gpt-4",
+      // model: "gpt-3.5-turbo-16k",
+      temperature,
+      presence_penalty,
+      max_tokens: 820,
+      messages: messages,
+    });
+  } catch (err) {
+    console.log(err);
+  }
 
   const aiResponse = completion.data.choices[0].message.content;
   console.log("🤖 AI Response:", aiResponse);
@@ -172,7 +172,6 @@ async function addPreambleToMessages(username, prompt, messages) {
   return [...preamble, ...messages.flat()];
 }
 
-
 function createTokenLimitWarning() {
   return {
     role: "user",
@@ -185,7 +184,11 @@ async function getCapabilityResponse(capSlug, capMethod, capArgs) {
   let capabilityResponse;
   try {
     // Step 1: Call the capability method and retrieve the response
-    capabilityResponse = await callCapabilityMethod(capSlug, capMethod, capArgs);
+    capabilityResponse = await callCapabilityMethod(
+      capSlug,
+      capMethod,
+      capArgs
+    );
   } catch (e) {
     console.error(e);
     // Step 2: Handle errors and provide a default error response
@@ -368,19 +371,22 @@ async function onMessageCreate(message) {
 
       console.log(`✉️ Message received: ${prompt}`);
 
-      // Process the message/prompt 
-      await processMessageChain(message, [
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ], message.author.username)
+      // Process the message/prompt
+      await processMessageChain(
+        message,
+        [
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        message.author.username
+      );
 
       // Clear the typing indicator
       clearInterval(typingInterval);
-
     } else if (!message.author.bot) {
-      console.log('Another bot is trying to talk to me! 😡');
+      console.log("Another bot is trying to talk to me! 😡");
     }
   } catch (error) {
     console.error(error);

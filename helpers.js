@@ -133,7 +133,6 @@ function getHexagram() {
   return `${hexagramNumber}. ${hexNameMap[hexagramNumber]}`;
 }
 
-
 function doesMessageContainCapability(message) {
   return message.match(capabilityRegex);
 }

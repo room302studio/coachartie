@@ -39,7 +39,10 @@ async function callCapabilityMethod(capabilitySlug, methodName, args) {
 
   try {
     const capability = require(`../capabilities/${capabilitySlug}`);
-    const capabilityResponse = await capability.handleCapabilityMethod(methodName, args);
+    const capabilityResponse = await capability.handleCapabilityMethod(
+      methodName,
+      args
+    );
     console.log(`⚡️ Capability response: ${capabilityResponse}`);
     return capabilityResponse;
   } catch (error) {

@@ -24,8 +24,6 @@ async function handleCapabilityMethod(method, args) {
       return getAllMemories(arg1);
     case "storeUserMessage":
       return storeUserMessage(arg1, arg2);
-    case "assembleMemory":
-      return assembleMemory(arg1, arg2);
     case "isRememberResponseFalsy":
       return isRememberResponseFalsy(arg1);
     default:
@@ -34,7 +32,7 @@ async function handleCapabilityMethod(method, args) {
 }
 
 async function getUserMemory(userId, limit = 5) {
-  if(!userId) {
+  if (!userId) {
     console.error("No userId provided to getUserMemory");
     return [];
   }
@@ -43,12 +41,28 @@ async function getUserMemory(userId, limit = 5) {
     .from("storage")
     .select("*")
     .limit(limit)
-    .order("created_at", { ascending: true })
+    .order("created_at", { ascending: false })
     .eq("user_id", userId)
     .neq("value", "✨");
 
   if (error) {
     console.error("Error fetching user memory:", error);
+    return [];
+  }
+
+  return data;
+}
+
+async function getAllMemories(limit = 5) {
+  const { data, error } = await supabase
+    .from("storage")
+    .select("*")
+    .limit(limit)
+    .order("created_at", { ascending: false })
+    .neq("value", "✨");
+
+  if (error) {
+    console.error("Error fetching memories:", error);
     return [];
   }
 
@@ -72,7 +86,7 @@ async function getUserMessageHistory(userId, limit = 5) {
 }
 
 async function memoryToEmbedding(memory) {
-  if(!memory) {
+  if (!memory) {
     return console.error("No memory provided to memoryToEmbedding");
   }
 
@@ -86,39 +100,75 @@ async function memoryToEmbedding(memory) {
   return embedding;
 }
 
+/**
+ * Stores a memory in the database
+ * @param {string} userId
+ * @param {string} value
+ * @returns {Promise<void>}
+ */
 async function storeUserMemory(userId, value) {
+  // first we do some checks to make sure we have the right types of data
+  if (!userId) {
+    return console.error("No userId provided to storeUserMemory");
+  }
+
+  // if the user id is not a string, we need to error out
+  if (typeof userId !== "string") {
+    return console.error("userId provided to storeUserMemory is not a string");
+  }
+
+  // if the value is not a string, we need to error out
+  if (typeof value !== "string") {
+    return console.error("value provided to storeUserMemory is not a string");
+  }
+
   // TODO: We need to convert the memory into an embedding using the openai embeddings API
   // and include that in the database entry
-  const embedding = await memoryToEmbedding(value);
+  let embedding = null;
 
-  const { data, error } = await supabase.from("storage").insert([
+  try {
+    embedding = await memoryToEmbedding(value);
+  } catch (e) {
+    console.log(e.message);
+  }
+
+  console.log('Writing to DB: ', userId, value)
+
+  const { data, error } = await supabase.from("storage").insert(
     {
       user_id: userId,
       value,
       embedding,
     },
-  ]);
+  );
 
   if (error) {
     console.error("Error storing user memory:", error);
   }
 }
 
+/**
+ * Stores a message in the database
+ * @param {string} userId
+ * @param {string} value
+ * @returns {Promise<void>}
+ */
+
 async function storeUserMessage(userId, value) {
-  const { data, error } = await supabase.from("messages").insert([
+  const { data, error } = await supabase.from("messages").insert(
     {
       user_id: userId,
       value,
     },
-  ]);
+  );
 
   if (error) {
     console.error("Error storing user message:", error);
   }
 }
 
-async function getAllMemories(args) {
-  const [limit = 250] = destructureArgs(args);
+async function getAllMemories(limit) {
+  // const [limit = 250] = destructureArgs(args);
 
   const { data, error } = await supabase
     .from("storage")
@@ -135,22 +185,24 @@ async function getAllMemories(args) {
 }
 
 async function getRelevantMemories(queryString, limit = 5) {
-  console.log('QUERY STRING', queryString)
+  console.log("QUERY STRING", queryString);
   // turn the queryString into an embedding
-  if(!queryString) { return [] }
-  
-  const embeddingResponse = await openai.createEmbedding({
-    model: 'text-embedding-ada-002',
-    input: queryString,
-  })
+  if (!queryString) {
+    return [];
+  }
 
-  const [{ embedding }] = embeddingResponse.data.data
+  const embeddingResponse = await openai.createEmbedding({
+    model: "text-embedding-ada-002",
+    input: queryString,
+  });
+
+  const [{ embedding }] = embeddingResponse.data.data;
 
   // query the database for the most relevant memories
-  const { data, error } = await supabase.rpc('match_documents', { 
+  const { data, error } = await supabase.rpc("match_documents", {
     query_embedding: embedding,
     match_threshold: 0.78,
-    match_count: limit
+    match_count: limit,
   });
 
   if (error) {
@@ -158,28 +210,7 @@ async function getRelevantMemories(queryString, limit = 5) {
     return null;
   }
 
-  return data
-}
-
-async function assembleMemory(args) {
-  const [user, randomMemoryCount = 25] = destructureArgs(args);
-
-  try {
-    if (!user) {
-      console.error("No user provided to assembleMemory");
-      return [];
-    }
-
-    const memories = await getUserMemory(user, 5);
-
-    console.log(" assembling memories for user:", memories);
-
-    const memory = [...new Set([...memories.map((mem) => mem.value)])];
-
-    return memory;
-  } catch (e) {
-    console.error("assembleMemory error:", e);
-  }
+  return data;
 }
 
 function isRememberResponseFalsy(args) {
@@ -211,7 +242,6 @@ module.exports = {
   storeUserMemory,
   getAllMemories,
   storeUserMessage,
-  assembleMemory,
   isRememberResponseFalsy,
-  getRelevantMemories
+  getRelevantMemories,
 };
