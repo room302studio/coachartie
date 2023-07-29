@@ -165,6 +165,8 @@ async function storeUserMessage(userId, value) {
   if (error) {
     console.error("Error storing user message:", error);
   }
+
+  return data;
 }
 
 async function getAllMemories(limit) {
