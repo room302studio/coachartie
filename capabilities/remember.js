@@ -34,6 +34,10 @@ async function handleCapabilityMethod(method, args) {
 }
 
 async function getUserMemory(userId, limit = 5) {
+  if(!userId) {
+    console.error("No userId provided to getUserMemory");
+    return [];
+  }
   console.log("💾 Querying database for memories related to user:", userId);
   const { data, error } = await supabase
     .from("storage")
@@ -45,7 +49,7 @@ async function getUserMemory(userId, limit = 5) {
 
   if (error) {
     console.error("Error fetching user memory:", error);
-    return null;
+    return [];
   }
 
   return data;

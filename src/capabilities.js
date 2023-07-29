@@ -34,12 +34,14 @@ ${prepareCapabilities.join("\n")}
 // 📝 callCapabilityMethod: a function for calling capability methods
 async function callCapabilityMethod(capabilitySlug, methodName, args) {
   console.log(
-    `Calling capability method: ${capabilitySlug}.${methodName} with args: ${args}`
+    `⚡️ Calling capability method: ${capabilitySlug}.${methodName} with args: ${args}`
   );
 
   try {
     const capability = require(`../capabilities/${capabilitySlug}`);
-    return await capability.handleCapabilityMethod(methodName, args);
+    const capabilityResponse = await capability.handleCapabilityMethod(methodName, args);
+    console.log(`⚡️ Capability response: ${capabilityResponse}`);
+    return capabilityResponse;
   } catch (error) {
     console.error(error);
     return `Error: ${error.message}`;

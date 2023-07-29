@@ -30,6 +30,8 @@ const {
   countMessageTokens,
   ERROR_MSG,
   removeMentionFromMessage,
+  doesMessageContainCapability,
+  generateAiCompletionParams
 } = require("../helpers.js");
 const chance = require("chance").Chance();
 const fs = require("fs");
@@ -50,29 +52,6 @@ function onClientReady(c) {
   });
 }
 
-async function generateAiCompletion(messages, config) {
-  const { temperature, presence_penalty } = config;
-  const completion = await openai.createChatCompletion({
-    model: "gpt-4",
-    // model: "gpt-3.5-turbo-16k",
-    temperature,
-    presence_penalty,
-    max_tokens: 820,
-    messages: messages,
-  });
-
-  const aiResponse = await completion.data.choices[0].message;
-  consolelog4("🤖 AI Response:", aiResponse);
-
-  messages.push(aiResponse);
-
-  return await processMessageChain(aiResponse, messages);
-}
-
-const TOKEN_LIMIT = 8000;
-const RESPONSE_LIMIT = 5120;
-const WARNING_BUFFER = 900;
-
 /**
  * 📝 processMessageChain: a function for processing message chains
  * The purpose of this function is to take a message chain, and process it based on certain parameters.
@@ -81,128 +60,118 @@ const WARNING_BUFFER = 900;
  * The function also generates values for temperature and presence penalties.
  * Finally, all the processed messages are returned along with the mentioned AI Completion parameters.
  *
- * @param {Object} message - The message context the bot is working with
+ * @param {Object} message - The discord message context the bot is working with
  * @param {Array} messages - An array of message objects in the chain
  * @param {String} username - The username of the receiver of the message, used to assemble the preamble
  * @return {Array} - All processed messages along with AI Completion parameters
  */
 async function processMessageChain(message, messages, username) {
-  if (!messages.length) return [];
-
-  consolelog2("📝 Processing message chain...");
-
-  // Add preamble to messages
-  messages = await addPreambleToMessages(username, messages, message.content);
-
-  // If the last message contains a capability, process it
-  if (doesMessageContainCapability(messages[messages.length - 1])) {
-    messages = await processCapabilityInLastMessage(messages);
+  // Check if the messages array is empty
+  if (!messages.length) {
+    console.log("🤖 Processing empty message chain...");
+    return [];
   }
 
-  return await generateAiCompletion(messages, generateAiParameters());
-}
+  // Step 1: Add preamble to messages
+  // messages = await addPreambleToMessages(username, messages, message.content);
 
-async function processCapabilityInLastMessage(messages) {
+  // Get the last message in the chain
   const lastMessage = messages[messages.length - 1];
-  const capabilityMatch = lastMessage.content.match(capabilityRegex);
 
-  if (isBreakingMessageChain(capabilityMatch, lastMessage)) return messages;
+  // Step 2: Check if the last message contains a capability
+  if (doesMessageContainCapability(lastMessage.content)) {
+    console.log("🤖 Processing message chain...", lastMessage.content);
 
-  if (capabilityMatch) {
-    const [_, capSlug, capMethod, capArgs] = capabilityMatch;
-    const currentTokenCount = countMessageTokens(messages);
+    // Extract the capability information from the last message
+    const capabilityMatch = lastMessage.content.match(capabilityRegex);
+    if (capabilityMatch) {
+      const [_, capSlug, capMethod, capArgs] = capabilityMatch;
 
-    if (currentTokenCount >= TOKEN_LIMIT - WARNING_BUFFER) {
-      messages.push(createTokenLimitWarning());
-    }
+      // Calculate the current token count in the message chain
+      const currentTokenCount = countMessageTokens(messages);
 
-    const capabilityResponse = await getCapabilityResponse(
-      capSlug,
-      capMethod,
-      capArgs
-    );
+      // Step 2a: Check if the message chain is about to exceed the token limit
+      if (currentTokenCount >= TOKEN_LIMIT - WARNING_BUFFER) {
+        messages.push(createTokenLimitWarning());
+      }
 
-    messages.push({
-      role: "system",
-      content: `Capability ${capSlug}:${capMethod} responded with: ${capabilityResponse}`,
-    });
-  }
+      // Step 2b: Process the capability and add the system response
+      const capabilityResponse = await getCapabilityResponse(
+        capSlug,
+        capMethod,
+        capArgs
+      );
 
-  return isExceedingTokenLimit(messages)
-    ? trimMessageChain(messages)
-    : messages;
-}
-
-async function processMessageAndSendResponse(
-  message,
-  chainMessageStart,
-  username
-) {
-  try {
-    // Initialize the response with the chainMessageStart
-    let response = chainMessageStart;
-
-    // Initialize the messages array with the chainMessageStart
-    let messages = [chainMessageStart];
-
-    // If the message content is not empty, add it to the messages array
-    if (message.content.length > 0) {
       messages.push({
-        role: "user",
-        content: removeMentionFromMessage(message.content),
+        role: "system",
+        content: `Capability ${capSlug}:${capMethod} responded with: ${capabilityResponse}`,
       });
     }
-
-    // Process the messages in the messages array
-    const processedMessages = await processMessageChain(
-      message,
-      messages,
-      username
-    );
-
-    // For each message in the processedMessages array
-    for (let i = 0; i < processedMessages.length; i++) {
-      const message = processedMessages[i];
-      const { role, content } = message;
-
-      // If the role is user, add the content to the response
-      if (role === "user") {
-        response += `\n${content}`;
-
-        // If the role is system, add the content to the response
-      } else if (role === "system") {
-        response += `\n\n${content}`;
-
-        // If the role is bot, add the content to the response
-      } else {
-        response += `\n\n${content}`;
-      }
-    }
-
-    // Send the response to the channel where the initial message was sent
-    await splitAndSendMessage(message, response);
-  } catch (error) {
-    console.error(error);
   }
-}
 
-async function addPreambleToMessages(username, messages, message) {
-  const preamble = await assembleMessagePreamble(username, client, message);
-  messages.unshift(preamble);
+  // get the last message from a user in the chain
+  const lastUserMessage = messages.find((m) => m.role === "user");
+  const prompt = lastUserMessage.content;
+
+  // Step 3: Generate AI response based on the messages, and generating the AI Completion parameters
+  const { temperature, frequency_penalty } = generateAiCompletionParams()
+  const { aiResponse }  = await generateAiCompletion(prompt, username, messages, {
+    temperature,
+    frequency_penalty,
+  });
+
+  // Step 4: Split and send the AI response back to the user through discord
+  await splitAndSendMessage(aiResponse, message);
+
+  // Step 5: Store the user message in the database
+  await storeUserMessage(message, messages);
+
+  // Step 6: Make a memory about the interaction and store THAT in the database
+  await generateAndStoreRememberCompletion(prompt, aiResponse, username);
+
+  // Return the updated message chain
   return messages;
 }
 
-function isBreakingMessageChain(capabilityMatch, lastMessage) {
-  return (
-    !capabilityMatch &&
-    lastMessage.role !== "user" &&
-    lastMessage.role !== "system"
-  );
+
+async function generateAiCompletion(prompt, username, messages, config) {
+  const { temperature, presence_penalty } = config;
+
+  // add the preamble to the messages
+  messages = await addPreambleToMessages(username, prompt, messages);
+
+  let completion = null
+  try {
+  completion = await openai.createChatCompletion({
+    model: "gpt-4",
+    // model: "gpt-3.5-turbo-16k",
+    temperature,
+    presence_penalty,
+    max_tokens: 820,
+    messages: messages,
+  });
+} catch (err) {
+  console.log(err);
 }
 
-function doesMessageContainCapability(message) {
-  return message.content.match(capabilityRegex);
+  const aiResponse = completion.data.choices[0].message.content;
+  console.log("🤖 AI Response:", aiResponse);
+
+  messages.push(aiResponse);
+
+  return { messages, aiResponse };
 }
+
+async function addPreambleToMessages(username, prompt, messages) {
+  const preamble = await assembleMessagePreamble(username, prompt);
+  // messages.unshift(preamble);
+  // we need to make sure we return a flat array
+  // console.log('preamble', preamble)
+  // console.log('flattened', messages.flat())
+  // console.log('combined', [preamble, ...messages.flat()])
+  return [...preamble, ...messages.flat()];
+}
+
 
 function createTokenLimitWarning() {
   return {
@@ -215,27 +184,16 @@ function createTokenLimitWarning() {
 async function getCapabilityResponse(capSlug, capMethod, capArgs) {
   let capabilityResponse;
   try {
-    capabilityResponse = await callCapabilityMethod(
-      capSlug,
-      capMethod,
-      capArgs
-    );
+    // Step 1: Call the capability method and retrieve the response
+    capabilityResponse = await callCapabilityMethod(capSlug, capMethod, capArgs);
   } catch (e) {
     console.error(e);
+    // Step 2: Handle errors and provide a default error response
     capabilityResponse = "Capability error: " + e;
   }
 
+  // Step 3: Trim the capability response if needed to fit within the token limit
   return trimResponseIfNeeded(capabilityResponse);
-}
-
-function trimResponseIfNeeded(capabilityResponse) {
-  while (countTokens(capabilityResponse) > RESPONSE_LIMIT) {
-    capabilityResponse = trimResponseByLineCount(
-      capabilityResponse,
-      countTokens(capabilityResponse)
-    );
-  }
-  return capabilityResponse;
 }
 
 function isExceedingTokenLimit(messages) {
@@ -266,35 +224,6 @@ function logMessageAndResponse(log) {
   );
 }
 
-async function storeMessageAndRemember(username, message, robotResponse) {
-  // Save the message to the database
-  try {
-    await storeUserMessage(username, message);
-  } catch (err) {
-    console.log("Error storing user message: " + err);
-  }
-
-  let rememberMessage
-
-  try {
-    rememberMessage = await generateAndStoreRememberCompletion(
-      username,
-      message.content,
-      robotResponse
-    );
-  } catch (err) {
-    console.error(err);
-  }
-
-  // Log and return
-  console.log(`🧠 Message saved to database: ${message.content}`);
-  console.log(
-    `🧠 Memory saved to database: ${JSON.stringify(rememberMessage)}`
-  );
-
-  return rememberMessage;
-}
-
 // 🌐 Displaying all guilds & channels we're connected to!
 function logGuildsAndChannels() {
   console.log("\n🌐 Connected servers and channels:");
@@ -304,6 +233,11 @@ function logGuildsAndChannels() {
 }
 
 function splitMessageIntoChunks(messageString) {
+  // make sure the string is a string
+  if (typeof messageString !== "string") {
+    console.error("splitMessageIntoChunks: messageString is not a string");
+    return;
+  }
   const messageArray = messageString.split(" ");
   const messageChunks = [];
   let currentChunk = "";
@@ -325,8 +259,15 @@ function splitAndSendMessage(message, messageObject) {
   // messageObject is the discord message object
   // message is the string we want to send
   // make sure the messageObject is not null or undefined
-  if (!messageObject) return message.channel.send(ERROR_MSG);
-  if (!message) return messageObject.channel.send(ERROR_MSG);
+  if (!messageObject) {
+    console.error("splitAndSendMessage: messageObject is null or undefined");
+    return;
+  }
+  // make sure the message is a string
+  if (typeof message !== "string") {
+    console.error("splitAndSendMessage: message is not a string");
+    return;
+  }
 
   if (message.length < 2000) {
     try {
@@ -413,56 +354,36 @@ function displayTypingIndicator(message) {
 // 💌 onMessageCreate: Crucial, as life itself- translating gibberish to meaningful chats!
 async function onMessageCreate(message) {
   try {
+    // Check if the bot was mentioned or if the channel name includes a bot
     const botMentioned = message.mentions.has(client.user);
-    const username = message.author.username;
-
-    // Detecting if the bot was mentioned or if the channel name includes a bot
-    // second argument is channel name
     const channelNameHasBot = detectBotMentionOrChannel(message);
 
+    // Ensure that the message is not sent by a bot and that the bot was mentioned or the channel name includes a bot
     if (!message.author.bot && (botMentioned || channelNameHasBot)) {
-      const typing = displayTypingIndicator(message);
+      // Display typing indicator
+      const typingInterval = displayTypingIndicator(message);
 
+      // Remove the bot mention from the message content
       const prompt = removeMentionFromMessage(message.content, "@coachartie");
-      const chainMessageStart = [
+
+      console.log(`✉️ Message received: ${prompt}`);
+
+      // Process the message/prompt 
+      await processMessageChain(message, [
         {
-          role: "user",
+          role: 'user',
           content: prompt,
         },
-      ];
-      try {
-        const robotResponse = await processMessageAndSendResponse(
-          message,
-          chainMessageStart,
-          username
-        );
+      ], message.author.username)
 
-        splitAndSendMessage(robotResponse, message);
+      // Clear the typing indicator
+      clearInterval(typingInterval);
 
-        const rememberMessage = await storeMessageAndRemember(
-          message.author.username,
-          message.content,
-          robotResponse
-        );
-
-        const log = {
-          user: message.author.username,
-          message: message.content,
-          response: robotResponse,
-          remember: rememberMessage,
-        };
-
-        logMessageAndResponse(log);
-      } catch (error) {
-        console.error(error);
-        await message.react("❌");
-      }
-
-      // end typing indicator
-      clearInterval(typing);
+    } else if (!message.author.bot) {
+      console.log('Another bot is trying to talk to me! 😡');
     }
   } catch (error) {
-    consolelog2(error);
+    console.error(error);
   }
 }
 
