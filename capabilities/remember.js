@@ -132,8 +132,6 @@ async function storeUserMemory(userId, value) {
     console.log(e.message);
   }
 
-  console.log('Writing to DB: ', userId, value)
-
   const { data, error } = await supabase.from("storage").insert(
     {
       user_id: userId,

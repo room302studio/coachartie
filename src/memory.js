@@ -54,9 +54,10 @@ async function generateAndStoreRememberCompletion(
 
   const rememberCompletion = await openai.createChatCompletion({
     model: "gpt-3.5-turbo-16k",
-    temperature: 1.2,
-
-    max_tokens: 600,
+    temperature: 1.1,
+    top_p: 0.9,
+    presence_penalty: -0.1,
+    max_tokens: 500,
     messages: [
       ...memoryMessages,
       {
@@ -85,7 +86,6 @@ async function generateAndStoreRememberCompletion(
   if (rememberText === "✨") return rememberText;
   // if remember text length is 0 or less, we don't wanna store it
   if (rememberText.length <= 0) return rememberText;
-  console.log("🧠 Storing user memory", rememberText);
   await storeUserMemory(username, rememberText);
 
   return rememberText;

@@ -76,10 +76,10 @@ async function processMessageChain(message, messages, username) {
   // messages = await addPreambleToMessages(username, messages, message.content);
 
   // Get the last message in the chain
-  const lastMessage = messages[messages.length - 1];
+  const lastMessage = messages[messages.length - 1].content;
 
   // Step 2: Check if the last message contains a capability
-  if (doesMessageContainCapability(lastMessage.content)) {
+  if (doesMessageContainCapability(lastMessage)) {
     console.log("🤖 Processing message chain...", lastMessage.content);
 
     // Extract the capability information from the last message
@@ -113,6 +113,9 @@ async function processMessageChain(message, messages, username) {
   const lastUserMessage = messages.find((m) => m.role === "user");
   const prompt = lastUserMessage.content;
 
+  // Display typing indicator
+  const typingInterval = displayTypingIndicator(message);
+
   // Step 3: Generate AI response based on the messages, and generating the AI Completion parameters
   const { temperature, frequency_penalty } = generateAiCompletionParams();
   const { aiResponse } = await generateAiCompletion(
@@ -124,6 +127,9 @@ async function processMessageChain(message, messages, username) {
       frequency_penalty,
     }
   );
+
+  // Clear the typing indicator
+  clearInterval(typingInterval);
 
   // Step 4: Split and send the AI response back to the user through discord
   await splitAndSendMessage(aiResponse, message);
@@ -315,13 +321,6 @@ function isExceedingTokenLimit(messages) {
   return countMessageTokens(messages) > TOKEN_LIMIT;
 }
 
-function generateAiParameters() {
-  return {
-    temperature: chance.floating({ min: 0.4, max: 1.25 }),
-    presence_penalty: chance.floating({ min: 0.2, max: 0.66 }),
-  };
-}
-
 function logMessageAndResponse(log) {
   // Log the JSON object to the console with pretty formatting
   // console.log(JSON.stringify(log, null, 2));
@@ -475,8 +474,7 @@ async function onMessageCreate(message) {
 
     // Ensure that the message is not sent by a bot and that the bot was mentioned or the channel name includes a bot
     if (!message.author.bot && (botMentioned || channelNameHasBot)) {
-      // Display typing indicator
-      const typingInterval = displayTypingIndicator(message);
+      
 
       // Remove the bot mention from the message content
       const prompt = removeMentionFromMessage(message.content, "@coachartie");
@@ -494,9 +492,7 @@ async function onMessageCreate(message) {
         ],
         message.author.username
       );
-
-      // Clear the typing indicator
-      clearInterval(typingInterval);
+      
     } else if (!message.author.bot) {
       console.log("Another bot is trying to talk to me! 😡");
     }

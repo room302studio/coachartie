@@ -159,11 +159,11 @@ function trimResponseIfNeeded(capabilityResponse) {
 
 function generateAiCompletionParams() {
   // temp
-  const temperature = chance.floating({ min: 0.9, max: 1.5 });
+  const temperature = chance.floating({ min: 0.88, max: 1.2 });
   // presence
-  const presence_penalty = chance.floating({ min: 0.0, max: 0.05 });
+  const presence_penalty = chance.floating({ min: -0.05, max: 0.05 });
   // frequency
-  const frequency_penalty = chance.floating({ min: 0.0, max: 0.2 });
+  const frequency_penalty = chance.floating({ min: 0.0, max: 0.05 });
 
   return { temperature, presence_penalty, frequency_penalty };
 }
