@@ -1,34 +1,51 @@
-// 📜 prompts: our guidebook of conversational cues
-const prompts = require("../prompts");
 const { openai } = require("./openai");
 const { getHexagram, replaceRobotIdWithName } = require("../helpers.js");
 const {
   getUserMemory,
+  getAllMemories,
   storeUserMemory,
+  getRelevantMemories,
 } = require("../capabilities/remember.js");
 const chance = require("chance").Chance();
 const { CAPABILITY_PROMPT_INTRO } = require("../prompts.js");
 const { getUserMessageHistory } = require("../capabilities/remember.js");
 
-// 🚦 Constants Corner: prepping our prompts and error message
+// 📜 prompts: our guidebook of conversational cues
+const prompts = require("../prompts");
 const { PROMPT_SYSTEM, PROMPT_REMEMBER, PROMPT_REMEMBER_INTRO } = prompts;
 
-// 🧠 generateAndStoreRememberCompletion: the architect of our bot's memory palace
+/**
+ * Generates a remember completion and stores it in the database
+ * @param {string} prompt - The prompt to generate a response for
+ * @param {string} response - The robot's response to the prompt
+ * @param {string} username - The username of the user to generate a remember completion for
+ *
+ * @returns {string} - The remember completion
+ *
+ */
 async function generateAndStoreRememberCompletion(
-  message,
   prompt,
   response,
   username = ""
 ) {
-  const userMemoryCount = chance.integer({ min: 2, max: 48 });
-  console.log(`🧠 Generating ${userMemoryCount} memories for ${username}`);
-
+  console.log("🔧 Generating and storing remember completion", username);
+  console.log("🔧 Prompt:", prompt);
+  console.log("🔧 Response:", response);
+  const userMemoryCount = chance.integer({ min: 1, max: 12 });
   const memoryMessages = [];
   // get user memories
+  console.log(
+    `🔧 Enhancing memory with ${userMemoryCount} memories from ${username}`
+  );
   const userMemories = await getUserMemory(username, userMemoryCount);
 
+  const generalMemories = await getAllMemories(userMemoryCount);
+
+  // de-dupe memories
+  const memories = [...userMemories, ...generalMemories];
+
   // turn user memories into chatbot messages
-  userMemories.forEach((memory) => {
+  memories.forEach((memory) => {
     memoryMessages.push({
       role: "system",
       content: `You remember from a previous interaction at ${memory.created_at}: ${memory.value}  `,
@@ -37,8 +54,10 @@ async function generateAndStoreRememberCompletion(
 
   const rememberCompletion = await openai.createChatCompletion({
     model: "gpt-3.5-turbo-16k",
-    temperature: 0.75,
-    max_tokens: 600,
+    temperature: 1.1,
+    top_p: 0.9,
+    presence_penalty: -0.1,
+    max_tokens: 500,
     messages: [
       ...memoryMessages,
       {
@@ -61,85 +80,17 @@ async function generateAndStoreRememberCompletion(
   });
 
   const rememberText = rememberCompletion.data.choices[0].message.content;
+  console.log("🧠 Interaction memory", rememberText);
 
   // if the remember text is ✨ AKA empty, we don't wanna store it
   if (rememberText === "✨") return rememberText;
+  // if remember text length is 0 or less, we don't wanna store it
+  if (rememberText.length <= 0) return rememberText;
   await storeUserMemory(username, rememberText);
 
   return rememberText;
 }
 
-async function assembleMessagePreamble(username, client) {
-  const messages = [];
-
-  // add the current date and time as a system message
-  messages.push({
-    role: "system",
-    content: `Today is ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`,
-  });
-
-  if (chance.bool({ likelihood: 50 })) {
-    // pick a random hexagram from the i ching to guide this interaction
-    const hexagramPrompt = `Let this hexagram from the I Ching guide this interaction: ${getHexagram()}`;
-
-    console.log(`🔮 Adding hexagram prompt to message ${hexagramPrompt}`);
-    messages.push({
-      role: "system",
-      content: hexagramPrompt,
-    });
-  }
-
-  // add all the system prompts to the messsage
-  messages.push({
-    role: "user",
-    content: PROMPT_SYSTEM,
-  });
-
-  messages.push({
-    role: "system",
-    content: CAPABILITY_PROMPT_INTRO,
-  });
-
-  const userMessageCount = chance.integer({ min: 4, max: 16 });
-
-  console.log(
-    `🧠 Retrieving ${userMessageCount} previous messages for ${username}`
-  );
-
-  // get user messages
-  const userMessages = await getUserMessageHistory(username, userMessageCount);
-
-  // reverse the order of the messages
-  userMessages.reverse();
-
-  // turn previous user messages into chatbot messages
-  userMessages.forEach((message) => {
-    messages.push({
-      role: "user",
-      // content: `${replaceRobotIdWithName(message.value, client)}`,
-      content: `${message.value}`,
-    });
-  });
-
-  const userMemoryCount = chance.integer({ min: 2, max: 12 });
-
-  // get user memories
-  const userMemories = await getUserMemory(username, userMemoryCount);
-
-  const memories = userMemories;
-
-  // turn user memories into chatbot messages
-  memories.forEach((memory) => {
-    messages.push({
-      role: "system",
-      content: `You remember from a previous interaction on ${memory.created_at}: ${memory.value}`,
-    });
-  });
-
-  return messages;
-}
-
 module.exports = {
   generateAndStoreRememberCompletion,
-  assembleMessagePreamble,
 };

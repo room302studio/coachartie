@@ -1,6 +1,7 @@
 const { Chance } = require("chance");
 const chance = new Chance();
 const dotenv = require("dotenv");
+const { capabilityRegex } = require("./src/capabilities.js");
 dotenv.config();
 
 // const { generateAndStoreRememberCompletion } = require("./memory.js");
@@ -132,7 +133,46 @@ function getHexagram() {
   return `${hexagramNumber}. ${hexNameMap[hexagramNumber]}`;
 }
 
+function doesMessageContainCapability(message) {
+  return message.match(capabilityRegex);
+}
+
+function isBreakingMessageChain(capabilityMatch, lastMessage) {
+  return (
+    !capabilityMatch &&
+    lastMessage.role !== "user" &&
+    lastMessage.role !== "system"
+  );
+}
+
+function trimResponseIfNeeded(capabilityResponse) {
+  // Step 4: Check if the capability response exceeds the token limit
+  while (countTokens(capabilityResponse) > RESPONSE_LIMIT) {
+    // Step 5: Trim the response by line count to reduce the token count
+    capabilityResponse = trimResponseByLineCount(
+      capabilityResponse,
+      countTokens(capabilityResponse)
+    );
+  }
+  return capabilityResponse;
+}
+
+function generateAiCompletionParams() {
+  // temp
+  const temperature = chance.floating({ min: 0.88, max: 1.2 });
+  // presence
+  const presence_penalty = chance.floating({ min: -0.05, max: 0.05 });
+  // frequency
+  const frequency_penalty = chance.floating({ min: 0.0, max: 0.05 });
+
+  return { temperature, presence_penalty, frequency_penalty };
+}
+
 const ERROR_MSG = `I am so sorry, there was some sort of problem. Feel free to ask me again, or try again later.`;
+
+const TOKEN_LIMIT = 8000;
+const RESPONSE_LIMIT = 5120;
+const WARNING_BUFFER = 900;
 
 module.exports = {
   destructureArgs,
@@ -142,4 +182,11 @@ module.exports = {
   removeMentionFromMessage,
   ERROR_MSG,
   replaceRobotIdWithName,
+  doesMessageContainCapability,
+  isBreakingMessageChain,
+  trimResponseIfNeeded,
+  TOKEN_LIMIT,
+  RESPONSE_LIMIT,
+  WARNING_BUFFER,
+  generateAiCompletionParams,
 };
