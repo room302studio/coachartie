@@ -1,4 +1,5 @@
 // Our collection of ethereal tech tools and righteous scripts
+
 const { Client, GatewayIntentBits, Events } = require("discord.js");
 // const { consolelog2, consolelog3, consolelog4 } = require("./logging");
 
