@@ -1,7 +1,7 @@
 // Our collection of ethereal tech tools and righteous scripts
 
 const { Client, GatewayIntentBits, Events } = require("discord.js");
-// const { consolelog2, consolelog3, consolelog4 } = require("./logging");
+const { consolelog2, consolelog3, consolelog4 } = require("./logging");
 
 // make empty console logs for now
 // const consolelog2 = (message) => {
@@ -29,6 +29,9 @@ const {
   removeMentionFromMessage,
   doesMessageContainCapability,
   generateAiCompletionParams,
+  TOKEN_LIMIT,
+  WARNING_BUFFER,
+  trimResponseIfNeeded
 } = require("../helpers.js");
 const chance = require("chance").Chance();
 const fs = require("fs");
@@ -81,10 +84,13 @@ async function processMessageChain(message, messages, username) {
 
   // Step 2: Check if the last message contains a capability
   if (doesMessageContainCapability(lastMessage)) {
+    console.log('last message', lastMessage)
     console.log("🤖 Processing message chain...", lastMessage.content);
 
     // Extract the capability information from the last message
-    const capabilityMatch = lastMessage.content.match(capabilityRegex);
+    const capabilityMatch = lastMessage.match(capabilityRegex);
+
+
     if (capabilityMatch) {
       const [_, capSlug, capMethod, capArgs] = capabilityMatch;
 
@@ -270,6 +276,8 @@ async function assembleMessagePreamble(username, prompt) {
         role: "system",
         content: `You remember from a previous interaction on ${memory.created_at}: ${memory.value}`,
       });
+
+      consolelog2(`🔧 Adding memory to message ${memory.value}`);
     });
   } catch (err) {
     console.log(err);

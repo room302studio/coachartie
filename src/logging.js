@@ -151,19 +151,23 @@ console.log = function (...args) {
   // if the emoji is 🤖, send it to log2
   // if (args[0].match(/[\u{1F916}]/u)) {
   // wanna use the emoji directly in the regex
-  if (args[0].match(/🤖/u)) {
-    consolelog2(...args);
-  } else if (args[0].match(/📝/u)) {
-    consolelog3(...args);
-  } else if (args[0].match(/🧠/u)) {
-    consolelog3(...args);
-  } else if (args[0].match(/🔧/u)) {
-    consolelog4(...args);
-  } else {
-    log1.insertBottom(args.join(" "));
-    // scroll to bottom
-    log1.setScrollPerc(100);
-    screen.render();
+  const emoji = args[0].charAt(0);
+  switch (emoji) {
+    case '🤖':
+      consolelog2(...args);
+      break;
+    case '📝':
+    case '🧠':
+      consolelog3(...args);
+      break;
+    case '🔧':
+      consolelog4(...args);
+      break;
+    default:
+      log1.insertBottom(args.join(" "));
+      log1.setScrollPerc(100);
+      screen.render();
+      break;
   }
 };
 

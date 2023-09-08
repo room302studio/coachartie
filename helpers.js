@@ -134,6 +134,7 @@ function getHexagram() {
 }
 
 function doesMessageContainCapability(message) {
+  console.log('does message exist in the helper?', message)
   return message.match(capabilityRegex);
 }
 
