@@ -436,6 +436,18 @@ function splitAndSendMessage(message, messageObject) {
   }
 }
 
+function createTokenLimitWarning() {
+  return {
+    role: "user",
+    content:
+      "It looks like you are reaching the token limit. In the next response, please do not use a capability. Use all of this information to summarize a response.",
+  };
+}
+
+function isExceedingTokenLimit(messages) {
+  return countMessageTokens(messages) > TOKEN_LIMIT;
+}
+
 module.exports = {
   ERROR_MSG,
   TOKEN_LIMIT,
@@ -456,4 +468,6 @@ module.exports = {
   assembleMessagePreamble,
   splitMessageIntoChunks,
   splitAndSendMessage,
+  createTokenLimitWarning,
+  isExceedingTokenLimit,
 };

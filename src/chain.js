@@ -5,17 +5,36 @@ const {
   displayTypingIndicator,
   generateAiCompletion,
   splitAndSendMessage,
+  trimResponseIfNeeded,
+  TOKEN_LIMIT,
+  WARNING_BUFFER,
+  isExceedingTokenLimit
 } = require("../helpers.js");
-
 const { generateAndStoreRememberCompletion } = require("./memory.js");
+const { 
+  capabilityRegex, 
+  callCapabilityMethod
+} = require("./capabilities.js");
+const { storeUserMessage } = require("../capabilities/remember");
 
-const { capabilityRegex } = require("./capabilities.js");
+async function getCapabilityResponse(capSlug, capMethod, capArgs) {
+  let capabilityResponse;
+  try {
+    // Step 1: Call the capability method and retrieve the response
+    capabilityResponse = await callCapabilityMethod(
+      capSlug,
+      capMethod,
+      capArgs
+    );
+  } catch (e) {
+    console.error(e);
+    // Step 2: Handle errors and provide a default error response
+    capabilityResponse = "Capability error: " + e;
+  }
 
-const {
-  storeUserMessage,
-  getUserMessageHistory,
-  getUserMemory,
-} = require("../capabilities/remember");
+  // Step 3: Trim the capability response if needed to fit within the token limit
+  return trimResponseIfNeeded(capabilityResponse);
+}
 
 async function processCapability(messages, capabilityMatch) {
   // Get the capability arguments from the regex

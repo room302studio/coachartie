@@ -37,36 +37,6 @@ function onClientReady(c) {
   });
 }
 
-function createTokenLimitWarning() {
-  return {
-    role: "user",
-    content:
-      "It looks like you are reaching the token limit. In the next response, please do not use a capability. Use all of this information to summarize a response.",
-  };
-}
-
-async function getCapabilityResponse(capSlug, capMethod, capArgs) {
-  let capabilityResponse;
-  try {
-    // Step 1: Call the capability method and retrieve the response
-    capabilityResponse = await callCapabilityMethod(
-      capSlug,
-      capMethod,
-      capArgs
-    );
-  } catch (e) {
-    console.error(e);
-    // Step 2: Handle errors and provide a default error response
-    capabilityResponse = "Capability error: " + e;
-  }
-
-  // Step 3: Trim the capability response if needed to fit within the token limit
-  return trimResponseIfNeeded(capabilityResponse);
-}
-
-function isExceedingTokenLimit(messages) {
-  return countMessageTokens(messages) > TOKEN_LIMIT;
-}
 // 🤖 detectBotMentionOrChannel: Detecting if the bot was mentioned or if the channel name includes a bot
 function detectBotMentionOrChannel(message) {
   const botMentioned = message.mentions.has(client.user);
