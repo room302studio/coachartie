@@ -80,7 +80,7 @@ async function generateAndStoreRememberCompletion(
   });
 
   const rememberText = rememberCompletion.data.choices[0].message.content;
-  console.log("🧠 Interaction memory", rememberText);
+  // console.log("🧠 Interaction memory", rememberText);
 
   // if the remember text is ✨ AKA empty, we don't wanna store it
   if (rememberText === "✨") return rememberText;
