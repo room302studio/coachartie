@@ -132,13 +132,11 @@ async function storeUserMemory(userId, value) {
     console.log(e.message);
   }
 
-  const { data, error } = await supabase.from("storage").insert(
-    {
-      user_id: userId,
-      value,
-      embedding,
-    },
-  );
+  const { data, error } = await supabase.from("storage").insert({
+    user_id: userId,
+    value,
+    embedding,
+  });
 
   if (error) {
     console.error("Error storing user memory:", error);
@@ -153,32 +151,13 @@ async function storeUserMemory(userId, value) {
  */
 
 async function storeUserMessage(userId, value) {
-  const { data, error } = await supabase.from("messages").insert(
-    {
-      user_id: userId,
-      value,
-    },
-  );
+  const { data, error } = await supabase.from("messages").insert({
+    user_id: userId,
+    value,
+  });
 
   if (error) {
     console.error("Error storing user message:", error);
-  }
-
-  return data;
-}
-
-async function getAllMemories(limit) {
-  // const [limit = 250] = destructureArgs(args);
-
-  const { data, error } = await supabase
-    .from("storage")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(limit);
-
-  if (error) {
-    console.error("Error fetching user memory:", error);
-    return null;
   }
 
   return data;

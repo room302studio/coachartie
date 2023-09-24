@@ -5,7 +5,7 @@ const { CAPABILITY_PROMPT_INTRO } = prompts;
 const capabilityRegex = /(\w+):(\w+)\(([^]*?)\)/; // captures newlines in the  third argument
 
 // an example capability
-const callSomething = "callSomething:callSomething()"
+const callSomething = "callSomething:callSomething()";
 
 // 💪 Flexin' on 'em with our list of cool capabilities!
 const capabilities = require("../capabilities/_manifest.js").capabilities;

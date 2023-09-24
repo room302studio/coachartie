@@ -8,6 +8,9 @@ const { encode, decode } = require("@nem035/gpt-3-encoder");
 // import chance
 const chance = require("chance").Chance();
 const { destructureArgs } = require("../helpers");
+const fs = require("fs");
+const path = require("path");
+const crypto = require("crypto");
 
 dotenv.config();
 
@@ -301,7 +304,25 @@ async function generateSummary(url, data) {
 
   let factList = "";
   try {
-    const chunkResponses = await processChunks(chunks, data);
+    // Check if the chunks are already cached
+    const cacheKey = crypto.createHash("md5").update(url).digest("hex");
+    let chunkResponses;
+    if (fs.existsSync(path.join(__dirname, `../cache/${cacheKey}.json`))) {
+      console.log("📝  Using cached chunks...");
+      chunkResponses = JSON.parse(
+        fs.readFileSync(
+          path.join(__dirname, `../cache/${cacheKey}.json`),
+          "utf8"
+        )
+      );
+    } else {
+      chunkResponses = await processChunks(chunks, data);
+      // Cache the chunks
+      fs.writeFileSync(
+        path.join(__dirname, `../cache/${cacheKey}.json`),
+        JSON.stringify(chunkResponses)
+      );
+    }
 
     factList = chunkResponses.join("\n");
 
@@ -337,16 +358,6 @@ Remember to be as concise as possible and ignore any links or other text that is
   const summary = summaryCompletion.data.choices[0].message.content;
   return summary;
   // return factList
-}
-
-async function fetchAndSummarizeUrl(url) {
-  const cleanedUrl = cleanUrlForPuppeteer(url);
-  console.log(`📝  Fetching URL: ${cleanedUrl}`);
-  const data = await fetchAndParseURL(cleanedUrl);
-  console.log(`📝  Fetched URL: ${cleanedUrl}`);
-  const summary = await generateSummary(cleanedUrl, data);
-  console.log(`📝  Generated summary for URL: ${cleanedUrl}`, summary);
-  return summary;
 }
 
 function countMessageTokens(messageArray = []) {
@@ -396,6 +407,44 @@ async function handleCapabilityMethod(method, args) {
     const links = await fetchAllLinks(url);
     return links;
   }
+}
+
+// without caching
+// async function fetchAndSummarizeUrl(url) {
+//   const cleanedUrl = cleanUrlForPuppeteer(url);
+//   console.log(`📝  Fetching URL: ${cleanedUrl}`);
+//   const data = await fetchAndParseURL(cleanedUrl);
+//   console.log(`📝  Fetched URL: ${cleanedUrl}`);
+//   const summary = await generateSummary(cleanedUrl, data);
+//   console.log(`📝  Generated summary for URL: ${cleanedUrl}`, summary);
+//   return summary;
+// }
+
+// with caching
+async function fetchAndSummarizeUrl(url) {
+  const cleanedUrl = cleanUrlForPuppeteer(url);
+  const hashedUrl = crypto.createHash("md5").update(cleanedUrl).digest("hex");
+  const cachePath = path.join(__dirname, "cache", `${hashedUrl}.json`);
+
+  // Check if the cache file exists and is less than an hour old
+  if (
+    fs.existsSync(cachePath) &&
+    (Date.now() - fs.statSync(cachePath).mtime) / 1000 < 3600
+  ) {
+    console.log(`📝  Using cached data for URL: ${cleanedUrl}`);
+    return fs.readFileSync(cachePath, "utf8");
+  }
+
+  console.log(`📝  Fetching URL: ${cleanedUrl}`);
+  const data = await fetchAndParseURL(cleanedUrl);
+  console.log(`📝  Fetched URL: ${cleanedUrl}`);
+  const summary = await generateSummary(cleanedUrl, data);
+  console.log(`📝  Generated summary for URL: ${cleanedUrl}`, summary);
+
+  // Save the summary to the cache
+  fs.writeFileSync(cachePath, summary);
+
+  return summary;
 }
 
 module.exports = {

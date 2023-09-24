@@ -153,14 +153,14 @@ console.log = function (...args) {
   // wanna use the emoji directly in the regex
   const emoji = args[0].charAt(0);
   switch (emoji) {
-    case '🤖':
+    case "🤖":
       consolelog2(...args);
       break;
-    case '📝':
-    case '🧠':
+    case "📝":
+    case "🧠":
       consolelog3(...args);
       break;
-    case '🔧':
+    case "🔧":
       consolelog4(...args);
       break;
     default:
