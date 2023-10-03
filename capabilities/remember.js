@@ -33,23 +33,6 @@ async function getUserMemory(userId, limit = 5) {
   return data;
 }
 
-// use pgvector cosine similarity to find memories similar to the prompt input
-// async function getSimilarMemories(prompt, limit = 5) {
-//   console.log("💾 Querying database for similar memories...");
-//   const { data, error } = await supabase.rpc("find_similar_memories", {
-//     prompt,
-//     limit,
-//   });
-
-//   if (error) {
-//     console.error("Error fetching similar memories:", error);
-//     return null;
-//   }
-
-//   return data;
-// }
-
-
 // get all memories (regardless of user)
 async function getAllMemories(limit = 250) {
   // re-factor to pick a random 100 memories
@@ -58,8 +41,6 @@ async function getAllMemories(limit = 250) {
     .select("*")
     .order("created_at", { ascending: false })
     .limit(limit);
-
-
 
   if (error) {
     console.error("Error fetching user memory:", error);
@@ -132,33 +113,15 @@ async function storeUserMessage(userId, value) {
   }
 }
 
-// Get a random N number of memories
-// async function getRandomMemories(numberOfMemories) {
-//   // const memories = await getUserMemory(userId);
-//   const memories = await getAllMemories();
-
-//   if (!memories) {
-//     console.error("Error getting random memories");
-//     return [];
-//   }
-//   if (memories && memories.length > 0) {
-//     const randomMemories = chance.pickset(memories, numberOfMemories);
-//     return randomMemories; //.map(memory => memory.value);
-//   }
-
-//   return [];
-// }
-
-
 // Given a message, return the last 5 memories and the last 5 messages
-async function assembleMemory(user, randomMemoryCount = 25) {
+async function assembleMemory(user, memoryCount = 5) {
   try {
     if(!user) {
       console.error("No user provided to assembleMemory");
       return [];
     }
     // Get the last X memories for the current user
-    const memories = await getUserMemory(user, 5);
+    const memories = await getUserMemory(user, memoryCount);
 
     console.log(' assembling memories for user: ', memories);
 

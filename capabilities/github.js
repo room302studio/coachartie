@@ -5,12 +5,24 @@ const dotenv = require("dotenv");
 
 dotenv.config();
 
+/**
+ * This class provides methods to interact with Github.
+ * @class GithubCoach
+ */
 class GithubCoach {
+  /**
+   * Constructor for GithubCoach class.
+   * Initializes the GithubCoach.
+   */
   constructor() {
     console.log("Initializing GithubCoach...");
     this._init();
   }
 
+  /**
+   * Initializes the GithubCoach.
+   * @private
+   */
   async _init() {
     try {
       this.octokit = new Octokit({
@@ -40,6 +52,11 @@ class GithubCoach {
     }
   }
 
+  /**
+   * Creates a new repository.
+   * @param {string} repositoryName - The name of the repository.
+   * @returns {Promise<Object>} The response from the Github API.
+   */
   async createRepo(repositoryName) {
     const response = await this.octokit.repos.createForAuthenticatedUser({
       name: repositoryName,
@@ -47,15 +64,28 @@ class GithubCoach {
     return response.data;
   }
 
+  /**
+   * Clones a repository.
+   * @param {string} repositoryUrl - The URL of the repository.
+   */
   async cloneRepo(repositoryUrl) {
     // implement clone repository functionality
   }
 
+  /**
+   * Lists the repositories of the authenticated user.
+   * @returns {Promise<Array<string>>} An array of repository names and descriptions.
+   */
   async listRepos() {
     const response = await this.octokit.repos.listForAuthenticatedUser();
     return response.data.map((repo) => `${repo.name} - ${repo.description}`);
   }
 
+  /**
+   * Lists the repositories of a user.
+   * @param {string} username - The username of the user.
+   * @returns {Promise<Array<string>>} An array of repository names and descriptions.
+   */
   async listUserRepos(username) {
     const response = await this.octokit.repos.listForUser({
       username: username,
@@ -64,6 +94,11 @@ class GithubCoach {
     return response.data.map((repo) => `${repo.name} - ${repo.description}`);
   }
 
+  /**
+   * Gets the project ID from a URL.
+   * @param {string} url - The URL of the project.
+   * @returns {Promise<string|null>} The project ID, or null if the project was not found.
+   */
   async getProjectIdFromUrl(url) {
     const [, , , username, , , projectId] = url.split("/");
     const { data: projects } = await this.octokit.projects.listForUser({ username });
@@ -73,6 +108,11 @@ class GithubCoach {
     return project ? project.id : null;
   }
 
+  /**
+   * Lists the projects of a user.
+   * @param {string} username - The username of the user.
+   * @returns {Promise<string>} A stringified array of project nodes.
+   */
   async listUserProjects(username) {
     // const { data: projects } = await this.octokit.projects.listForUser({ username });
     // return projects.map(project => project.name);
@@ -103,6 +143,11 @@ class GithubCoach {
   }
 
 
+  /**
+   * Lists the project columns and cards of a project.
+   * @param {string} projectId - The ID of the project.
+   * @returns {Promise<string>} A stringified array of project nodes.
+   */
   async listProjectColumnsAndCards(projectId) {
     // need to use projectsV2 and graphql for this
     // https://docs.github.com/en/graphql/reference/objects#projectcolumn
@@ -182,6 +227,13 @@ class GithubCoach {
 
   }
 
+  /**
+   * Adds a draft issue to a project.
+   * @param {string} projectId - The ID of the project.
+   * @param {string} issueTitle - The title of the issue.
+   * @param {string} issueBody - The body of the issue.
+   * @returns {Promise<string>} A stringified response from the Github API.
+   */
   async addDraftIssueToProject(projectId, issueTitle, issueBody) {
     /*
    gh api graphql -f query='
@@ -205,6 +257,12 @@ class GithubCoach {
     return JSON.stringify(data)
   }
 
+  /**
+   * Creates a branch in a repository.
+   * @param {string} repositoryFullName - The full name of the repository, in the format of owner/repo.
+   * @param {string} branchName - The name of the branch.
+   * @returns {Promise<Object>} The response from the Github API.
+   */
   async createBranch(repositoryFullName, branchName) {
     // a repository full name is in the format of owner/repo
     const [owner, repositoryName] = repositoryFullName.split("/");
@@ -235,6 +293,11 @@ class GithubCoach {
 
   }
 
+  /**
+   * Lists the branches of a repository.
+   * @param {string} repositoryName - The name of the repository.
+   * @returns {Promise<Array<Object>>} An array of branch objects.
+   */
   async listBranches(repositoryName) {
     const response = await this.octokit.repos.listBranches({
       owner: process.env.GITHUB_USER,
@@ -243,6 +306,14 @@ class GithubCoach {
     return response.data;
   }
 
+  /**
+   * Creates a file in a repository.
+   * @param {string} repositoryName - The name of the repository.
+   * @param {string} filePath - The path of the file.
+   * @param {string} content - The content of the file.
+   * @param {string} commitMessage - The commit message.
+   * @returns {Promise<Object>} The response from the Github API.
+   */
   async createFile(repositoryName, filePath, content, commitMessage) {
     const response = await this.octokit.repos.createOrUpdateFileContents({
       owner: process.env.GITHUB_USER,
@@ -254,6 +325,13 @@ class GithubCoach {
     return response.data;
   }
 
+  /**
+   * Creates a gist.
+   * @param {string} fileName - The name of the file.
+   * @param {string} description - The description of the gist.
+   * @param {string} contentString - The content of the gist.
+   * @returns {Promise<string>} A message containing the URL of the created gist.
+   */
   async createGist(fileName, description, contentString) {
     // content string may contain newlines and we need to convert them to \n
     // contentString = contentString.replace(/\n/g, "\\n");
@@ -275,6 +353,14 @@ class GithubCoach {
   }
 
 
+  /**
+   * Edits a file in a repository.
+   * @param {string} repositoryName - The name of the repository.
+   * @param {string} filePath - The path of the file.
+   * @param {string} newContent - The new content of the file.
+   * @param {string} commitMessage - The commit message.
+   * @returns {Promise<Object>} The response from the Github API.
+   */
   async editFile(repositoryName, filePath, newContent, commitMessage) {
     const response = await this.octokit.repos.createOrUpdateFileContents({
       owner: process.env.GITHUB_USER,
@@ -286,6 +372,13 @@ class GithubCoach {
     return response.data;
   }
 
+  /**
+   * Deletes a file in a repository.
+   * @param {string} repositoryName - The name of the repository.
+   * @param {string} filePath - The path of the file.
+   * @param {string} commitMessage - The commit message.
+   * @returns {Promise<Object>} The response from the Github API.
+   */
   async deleteFile(repositoryName, filePath, commitMessage) {
     const response = await this.octokit.repos.deleteFile({
       owner: process.env.GITHUB_USER,
@@ -296,6 +389,15 @@ class GithubCoach {
     return response.data;
   }
 
+  /**
+   * Creates a pull request in a repository.
+   * @param {string} repositoryName - The name of the repository.
+   * @param {string} title - The title of the pull request.
+   * @param {string} headBranch - The name of the head branch.
+   * @param {string} baseBranch - The name of the base branch.
+   * @param {string} description - The description of the pull request.
+   * @returns {Promise<Object>} The response from the Github API.
+   */
   async createPullRequest(repositoryName, title, headBranch, baseBranch, description) {
     const response = await this.octokit.pulls.create({
       owner: process.env.GITHUB_USER,
@@ -308,6 +410,12 @@ class GithubCoach {
     return response.data;
   }
 
+  /**
+   * Reads the contents of a file in a repository.
+   * @param {string} repositoryName - The name of the repository.
+   * @param {string} filePath - The path of the file.
+   * @returns {Promise<Object>} The response from the Github API.
+   */
   async readFileContents(repositoryName, filePath) {
     const response = await this.octokit.repos.getContent({
       owner: process.env.GITHUB_USER,
@@ -316,7 +424,6 @@ class GithubCoach {
     });
     return response.data;
   }
-
 }
 
 module.exports = {

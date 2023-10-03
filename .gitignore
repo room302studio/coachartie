@@ -2,3 +2,5 @@
 node_modules/
 summaries/*.txt
 coachartiegithub.2023-05-02.private-key.pem
+/cache/*
+/capabilities/cache/*

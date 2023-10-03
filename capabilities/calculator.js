@@ -1,30 +1,16 @@
-/*
+/**
+ * This capability gives you the ability to do math.
+ * @module calculator
+ */
 
-    {
-      slug: 'calculator',
-      description: 'This capability gives you the ability to do math.',
-      methods: [
-        {
-          name: 'calculate',
-          description: 'This method gives you the ability to add, subtract, multiply, and divide numbers.',
-          returns: 'number',
-          parameters: [
-            {
-              name: 'operation',
-              type: 'string',
-              description: 'The operation to perform. Can be "add", "subtract", "multiply", or "divide".'
-            },
-            {
-              name: 'numbers',
-              type: 'array',
-              description: 'An array of numbers to perform the operation on.'
-            }
-          ]
-        },
-
-  */
-
- function calculate(args) {
+/**
+ * This method gives you the ability to add, subtract, multiply, and divide numbers.
+ * @function calculate
+ * @param {string} operation - The operation to perform. Can be "add", "subtract", "multiply", or "divide".
+ * @param {Array<number>} numbers - An array of numbers to perform the operation on.
+ * @returns {number} The result of the operation.
+ */
+function calculate(args) {
   // the args are comma-separated
   // the first arg is the operation
   // the rest of the args are the numbers
@@ -48,7 +34,6 @@
   } else if (operation === 'log') {
     return numbers.reduce((a, b) => Math.log(+a));
   }
-
 }
 
 module.exports = {
