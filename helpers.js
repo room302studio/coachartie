@@ -243,7 +243,8 @@ async function generateAiCompletion(prompt, username, messages, config) {
   let completion = null;
   try {
     completion = await openai.createChatCompletion({
-      model: "gpt-4",
+      model: "gpt-4-1106-preview",
+      // model: "gpt-4",
       // model: "gpt-3.5-turbo-16k",
       temperature,
       presence_penalty,
