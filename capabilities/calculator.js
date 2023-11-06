@@ -1,9 +1,6 @@
 /**
  * This capability gives you the ability to do math.
  * @module calculator
- */
-
-/**
  * This method gives you the ability to add, subtract, multiply, and divide numbers.
  * @function calculate
  * @param {string} operation - The operation to perform. Can be "add", "subtract", "multiply", or "divide".
