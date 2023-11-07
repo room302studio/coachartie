@@ -5,12 +5,21 @@ const dotenv = require("dotenv");
 
 dotenv.config();
 
+/**
+ * Class representing a Github Coach.
+ */
 class GithubCoach {
+  /**
+   * Create a Github Coach.
+   */
   constructor() {
     console.log("Initializing GithubCoach...");
     this._init();
   }
 
+  /**
+   * Initialize the Github Coach.
+   */
   async _init() {
     try {
       this.octokit = new Octokit({
@@ -36,6 +45,10 @@ class GithubCoach {
     }
   }
 
+  /**
+   * Create a repository.
+   * @param {string} repositoryName - The name of the repository.
+   */
   async createRepo(repositoryName) {
     const response = await this.octokit.repos.createForAuthenticatedUser({
       name: repositoryName,
@@ -43,15 +56,26 @@ class GithubCoach {
     return response.data;
   }
 
+  /**
+   * Clone a repository.
+   * @param {string} repositoryUrl - The URL of the repository.
+   */
   async cloneRepo(repositoryUrl) {
     // implement clone repository functionality
   }
 
+  /**
+   * List repositories for the authenticated user.
+   */
   async listRepos() {
     const response = await this.octokit.repos.listForAuthenticatedUser();
     return response.data.map((repo) => `${repo.name} - ${repo.description}`);
   }
 
+  /**
+   * List repositories for a user.
+   * @param {string} username - The username of the user.
+   */
   async listUserRepos(username) {
     const response = await this.octokit.repos.listForUser({
       username: username,
@@ -60,6 +84,10 @@ class GithubCoach {
     return response.data.map((repo) => `${repo.name} - ${repo.description}`);
   }
 
+  /**
+   * Get the project ID from a URL.
+   * @param {string} url - The URL of the project.
+   */
   async getProjectIdFromUrl(url) {
     const [, , , username, , , projectId] = url.split("/");
     const { data: projects } = await this.octokit.projects.listForUser({
@@ -69,6 +97,10 @@ class GithubCoach {
     return project ? project.id : null;
   }
 
+  /**
+   * List projects for a user.
+   * @param {string} username - The username of the user.
+   */
   async listUserProjects(username) {
     const data = await this.graphqlWithAuth(`
       query {
@@ -90,6 +122,10 @@ class GithubCoach {
     return projects.map((project) => project.name);
   }
 
+  /**
+   * List project columns and cards.
+   * @param {string} projectId - The ID of the project.
+   */
   async listProjectColumnsAndCards(projectId) {
     const data = await this.graphqlWithAuth(`
       query {
@@ -139,6 +175,12 @@ class GithubCoach {
     });
   }
 
+  /**
+   * Add a draft issue to a project.
+   * @param {string} projectId - The ID of the project.
+   * @param {string} issueTitle - The title of the issue.
+   * @param {string} issueBody - The body of the issue.
+   */
   async addDraftIssueToProject(projectId, issueTitle, issueBody) {
     const data = await this.graphqlWithAuth(`
       mutation {
@@ -153,6 +195,11 @@ class GithubCoach {
       : "Failed to add draft issue to project.";
   }
 
+  /**
+   * Create a branch.
+   * @param {string} repositoryFullName - The full name of the repository.
+   * @param {string} branchName - The name of the branch.
+   */
   async createBranch(repositoryFullName, branchName) {
     const [owner, repositoryName] = repositoryFullName.split("/");
     branchName = branchName.trim();
@@ -175,6 +222,10 @@ class GithubCoach {
     return response.data;
   }
 
+  /**
+   * List branches for a repository.
+   * @param {string} repositoryName - The name of the repository.
+   */
   async listBranches(repositoryName) {
     const response = await this.octokit.repos.listBranches({
       owner: process.env.GITHUB_USER,
@@ -183,6 +234,13 @@ class GithubCoach {
     return response.data;
   }
 
+  /**
+   * Create a file.
+   * @param {string} repositoryName - The name of the repository.
+   * @param {string} filePath - The path of the file.
+   * @param {string} content - The content of the file.
+   * @param {string} commitMessage - The commit message.
+   */
   async createFile(repositoryName, filePath, content, commitMessage) {
     const response = await this.octokit.repos.createOrUpdateFileContents({
       owner: process.env.GITHUB_USER,
@@ -194,6 +252,12 @@ class GithubCoach {
     return response.data;
   }
 
+  /**
+   * Create a gist.
+   * @param {string} fileName - The name of the file.
+   * @param {string} description - The description of the gist.
+   * @param {string} contentString - The content of the gist.
+   */
   async createGist(fileName, description, contentString) {
     const response = await this.octokit.gists.create({
       files: {
@@ -208,6 +272,13 @@ class GithubCoach {
     return `Gist created! You can access it at <${response.data.html_url}> - remember not to use markdown in your response.`;
   }
 
+  /**
+   * Edit a file.
+   * @param {string} repositoryName - The name of the repository.
+   * @param {string} filePath - The path of the file.
+   * @param {string} newContent - The new content of the file.
+   * @param {string} commitMessage - The commit message.
+   */
   async editFile(repositoryName, filePath, newContent, commitMessage) {
     const response = await this.octokit.repos.createOrUpdateFileContents({
       owner: process.env.GITHUB_USER,
@@ -219,6 +290,12 @@ class GithubCoach {
     return response.data;
   }
 
+  /**
+   * Delete a file.
+   * @param {string} repositoryName - The name of the repository.
+   * @param {string} filePath - The path of the file.
+   * @param {string} commitMessage - The commit message.
+   */
   async deleteFile(repositoryName, filePath, commitMessage) {
     const response = await this.octokit.repos.deleteFile({
       owner: process.env.GITHUB_USER,
@@ -229,6 +306,14 @@ class GithubCoach {
     return response.data;
   }
 
+  /**
+   * Create a pull request.
+   * @param {string} repositoryName - The name of the repository.
+   * @param {string} title - The title of the pull request.
+   * @param {string} headBranch - The head branch of the pull request.
+   * @param {string} baseBranch - The base branch of the pull request.
+   * @param {string} description - The description of the pull request.
+   */
   async createPullRequest(
     repositoryName,
     title,
@@ -247,6 +332,11 @@ class GithubCoach {
     return response.data;
   }
 
+  /**
+   * Read the contents of a file.
+   * @param {string} repositoryName - The name of the repository.
+   * @param {string} filePath - The path of the file.
+   */
   async readFileContents(repositoryName, filePath) {
     const response = await this.octokit.repos.getContent({
       owner: process.env.GITHUB_USER,
@@ -258,6 +348,11 @@ class GithubCoach {
 }
 
 module.exports = {
+  /**
+   * Handle a capability method.
+   * @param {string} method - The name of the method.
+   * @param {Array} args - The arguments for the method.
+   */
   handleCapabilityMethod: async (method, args) => {
     const githubCoach = new GithubCoach();
 

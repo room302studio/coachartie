@@ -16,27 +16,37 @@ const {
   callCapabilityMethod
 } = require("./capabilities.js");
 const { storeUserMessage } = require("../capabilities/remember");
+const chalk = require("chalk");
+const boxen = require("boxen");
 
-async function getCapabilityResponse(capSlug, capMethod, capArgs) {
+async function getCapabilityResponse(capSlug, capMethod, capArgs, message) {
   let capabilityResponse;
   try {
+    console.log(chalk.green(boxen(`Calling Capability: ${capSlug}:${capMethod}`, {padding: 1})));
+    message.channel.send(`Attempting to call capability ${capSlug}:${capMethod}...`);
     // Step 1: Call the capability method and retrieve the response
     capabilityResponse = await callCapabilityMethod(
       capSlug,
       capMethod,
       capArgs
     );
+    console.log(chalk.green(boxen(`Capability Responded: ${capSlug}:${capMethod}`, {padding: 1})));
+    message.channel.send(`Capability ${capSlug}:${capMethod} responded with: ${capabilityResponse}`);
   } catch (e) {
     console.error(e);
     // Step 2: Handle errors and provide a default error response
     capabilityResponse = "Capability error: " + e;
+    console.log(chalk.red(boxen(`Error: ${e}`, {padding: 1})));
+    message.channel.send(capabilityResponse);
   }
 
+  console.log(chalk.yellow(boxen(`Trimming Response: ${capabilityResponse.slice(0, 20)}...`, {padding: 1})));
+  message.channel.send(`Trimming capability response if needed to fit within the token limit...`);
   // Step 3: Trim the capability response if needed to fit within the token limit
   return trimResponseIfNeeded(capabilityResponse);
 }
 
-async function processCapability(messages, capabilityMatch) {
+async function processCapability(messages, capabilityMatch, message) {
   // Get the capability arguments from the regex
   const [_, capSlug, capMethod, capArgs] = capabilityMatch;
   // Calculate the current token count in the message chain
@@ -44,14 +54,19 @@ async function processCapability(messages, capabilityMatch) {
 
   // Check if the message chain is about to exceed the token limit
   if (currentTokenCount >= TOKEN_LIMIT - WARNING_BUFFER) {
+    console.log(chalk.yellow(boxen(`Token Limit Warning: Current Tokens - ${currentTokenCount}`, {padding: 1})));
+    message.channel.send(`Token limit is about to be exceeded. Adding warning...`);
     messages.push(createTokenLimitWarning());
   }
 
+  console.log(chalk.green(boxen(`Processing Capability: ${capSlug}:${capMethod}`, {padding: 1})));
+  message.channel.send(`Processing capability ${capSlug}:${capMethod}...`);
   // Process the capability and add the system response
   const capabilityResponse = await getCapabilityResponse(
     capSlug,
     capMethod,
-    capArgs
+    capArgs,
+    message
   );
 
   messages.push({
@@ -78,7 +93,7 @@ async function processCapability(messages, capabilityMatch) {
 async function processMessageChain(message, messages, username) {
   // Check if the messages array is empty
   if (!messages.length) {
-    console.log("🤖 Processing empty message chain...");
+    console.log(chalk.yellow(boxen('Empty Message Chain', {padding: 1})));
     return [];
   }
 
@@ -90,6 +105,8 @@ async function processMessageChain(message, messages, username) {
 
   // Process the message chain as long as the last message contains a capability call
   do {
+    console.log(chalk.green(boxen(`Processing Message Chain: ${lastMessage.slice(0, 20)}...`, {padding: 1})));
+    message.channel.send(`Processing message chain...`);
     // Process the message
     messages = await processMessage(message, messages, lastMessage, username);
 
@@ -100,6 +117,7 @@ async function processMessageChain(message, messages, username) {
     !isExceedingTokenLimit(messages)
   );
 
+  message.channel.send(`Splitting and sending the AI response back to the user...`);
   // Split and send the AI response back to the user through discord
   await splitAndSendMessage(lastMessage, message);
 
@@ -138,7 +156,7 @@ async function processMessage(message, messages, lastMessage, username) {
     try {
       // Process the capability
       message.channel.send(`Processing capability ${capabilityMatch[1]}...`);
-      messages = await processCapability(messages, capabilityMatch);
+      messages = await processCapability(messages, capabilityMatch, message);
     } catch (error) {
       messages.push({
         role: "system",
@@ -147,14 +165,17 @@ async function processMessage(message, messages, lastMessage, username) {
     }
   }
 
+  message.channel.send(`Getting the last user message from the chain...`);
   // get the last message from a user in the chain
   const lastUserMessage = messages.find((m) => m.role === "user");
   // That user message will be the prompt for the AI
   const prompt = lastUserMessage.content;
 
+  message.channel.send(`Storing the user message in the database...`);
   // Store the user message in the database
   storeUserMessage(username, prompt);
 
+  message.channel.send(`Generating AI response based on the messages...`);
   // Generate AI response based on the messages, and generating the AI Completion parameters
   // Randomized AI params for each message
   const { temperature, frequency_penalty } = generateAiCompletionParams();
@@ -170,14 +191,17 @@ async function processMessage(message, messages, lastMessage, username) {
     }
   );
 
+  message.channel.send(`Adding the AI response to the message chain...`);
   // add the AI response to the message chain
   messages.push({
     role: "assistant",
     content: aiResponse,
   });
 
+  message.channel.send(`Making a memory about the interaction and storing it in the database...`);
   // Make a memory about the interaction and store THAT in the database
-  generateAndStoreRememberCompletion(prompt, aiResponse, username);
+  // Now passing the entire message chain to the function
+  generateAndStoreRememberCompletion(prompt, aiResponse, username, messages);
 
   // Return the updated messages
   return messages;
@@ -188,3 +212,4 @@ module.exports = {
   processMessage,
   processCapability,
 };
+

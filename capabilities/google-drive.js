@@ -11,11 +11,19 @@ const auth = new google.auth.GoogleAuth({
   scopes,
 });
 
+/**
+ * Get an instance of Google Drive.
+ * @returns {Promise} A promise that resolves to an instance of Google Drive.
+ */
 const getDriveInstance = async () => {
   const client = await auth.getClient();
   return google.drive({ version: "v3", auth: client });
 };
 
+/**
+ * List all files in the Google Drive.
+ * @returns {Promise} A promise that resolves to an array of file names and IDs.
+ */
 async function listFiles() {
   const drive = await getDriveInstance();
 
@@ -31,6 +39,11 @@ async function listFiles() {
   });
 }
 
+/**
+ * Read a file from Google Drive.
+ * @param {string} fileId - The ID of the file to read.
+ * @returns {Promise} A promise that resolves when the file has been read.
+ */
 async function readFile(fileId) {
   const drive = await getDriveInstance();
 
@@ -70,6 +83,12 @@ jwtClient.authorize((err) => {
 
 const docs = google.docs({ version: "v1", auth: jwtClient });
 
+/**
+ * Append a string to a Google Doc.
+ * @param {string} docId - The ID of the Google Doc.
+ * @param {string} text - The text to append.
+ * @returns {Promise} A promise that resolves when the text has been appended.
+ */
 async function appendString(docId, text) {
   const doc = await docs.documents.get({ documentId: docId });
   doc.data.body.content += `\n${text}`;

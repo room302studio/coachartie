@@ -1,6 +1,7 @@
 // 🚀 Our wonderful, time-traveling imports!
 const DiscordBot = require("./src/discord.js");
-// If your discord.js file is in another folder, adjust the path accordingly!
+// overwrite console.log
+require("./src/logging.js");
 
 // 🏗 Constructing the Bot, universe's best contractor at work!
 const bot = new DiscordBot();

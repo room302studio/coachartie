@@ -2,24 +2,10 @@
 
 // const { console.log, consolelog3, consolelog4 } = require("./logging");
 const { Client, GatewayIntentBits, Events } = require("discord.js");
-const { callCapabilityMethod, capabilityRegex } = require("./capabilities.js");
 const {
-  countMessageTokens,
-  ERROR_MSG,
   removeMentionFromMessage,
-  TOKEN_LIMIT,
-  trimResponseIfNeeded,
 } = require("../helpers.js");
 const { processMessageChain } = require("./chain.js");
-
-// 📜 prompts: our guidebook of conversational cues
-const prompts = require("../prompts");
-const {
-  PROMPT_SYSTEM,
-  PROMPT_REMEMBER,
-  PROMPT_REMEMBER_INTRO,
-  CAPABILITY_PROMPT_INTRO,
-} = prompts;
 
 // 🌿 dotenv: As graceful as a morning dew drop, simplifying process.env access since 2012!
 const dotenv = require("dotenv");
@@ -110,8 +96,15 @@ class DiscordBot {
     console.log(`✉️ Message received: ${prompt}`);
 
     // Process the message/prompt – this may mean repeatedly calling capabilities until the response is found or token limit is reached
-    await processMessageChain(
-      message,
+    // Create a thread and send a temporary message
+    const thread = await message.startThread({
+      name: "Processing...",
+      autoArchiveDuration: 60,
+    });
+    const tempMessage = await thread.send('Processing...');
+    
+    const messages = await processMessageChain(
+      thread,
       [
         {
           role: "user",
@@ -120,6 +113,9 @@ class DiscordBot {
       ],
       message.author.username
     );
+
+    // Edit tempMessage to be the last message in messages
+    tempMessage.edit(messages[messages.length - 1])
   }
 }
 
