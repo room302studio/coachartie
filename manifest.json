@@ -1,0 +1,519 @@
+{
+  "_generate-manifest": [],
+  "calculator.test": [],
+  "evaluate": [],
+  "calculator": [],
+  "google-calendar": [],
+  "mastodon": [],
+  "schedule": [],
+  "google-drive": [],
+  "_manifest": [],
+  "remember": [
+    {
+      "description": {
+        "type": "root",
+        "children": [
+          {
+            "type": "paragraph",
+            "children": [
+              {
+                "type": "text",
+                "value": "Stores a memory in the database"
+              }
+            ]
+          }
+        ]
+      },
+      "tags": [
+        {
+          "title": "param",
+          "description": null,
+          "lineNumber": 2,
+          "type": {
+            "type": "NameExpression",
+            "name": "string"
+          },
+          "name": "userId"
+        },
+        {
+          "title": "param",
+          "description": null,
+          "lineNumber": 3,
+          "type": {
+            "type": "NameExpression",
+            "name": "string"
+          },
+          "name": "value"
+        },
+        {
+          "title": "returns",
+          "description": null,
+          "lineNumber": 4,
+          "type": {
+            "type": "TypeApplication",
+            "expression": {
+              "type": "NameExpression",
+              "name": "Promise"
+            },
+            "applications": [
+              {
+                "type": "NameExpression",
+                "name": "void"
+              }
+            ]
+          }
+        }
+      ],
+      "loc": {
+        "start": {
+          "line": 103,
+          "column": 0,
+          "index": 2482
+        },
+        "end": {
+          "line": 108,
+          "column": 3,
+          "index": 2603
+        }
+      },
+      "context": {
+        "loc": {
+          "start": {
+            "line": 109,
+            "column": 0,
+            "index": 2604
+          },
+          "end": {
+            "line": 144,
+            "column": 1,
+            "index": 3630
+          }
+        },
+        "file": "/Users/ejfox/code/coachartie_discord/capabilities/remember.js"
+      },
+      "augments": [],
+      "examples": [],
+      "implements": [],
+      "params": [
+        {
+          "title": "param",
+          "name": "userId",
+          "lineNumber": 2,
+          "type": {
+            "type": "NameExpression",
+            "name": "string"
+          }
+        },
+        {
+          "title": "param",
+          "name": "value",
+          "lineNumber": 3,
+          "type": {
+            "type": "NameExpression",
+            "name": "string"
+          }
+        }
+      ],
+      "properties": [],
+      "returns": [
+        {
+          "description": {
+            "type": "root",
+            "children": []
+          },
+          "title": "returns",
+          "type": {
+            "type": "TypeApplication",
+            "expression": {
+              "type": "NameExpression",
+              "name": "Promise"
+            },
+            "applications": [
+              {
+                "type": "NameExpression",
+                "name": "void"
+              }
+            ]
+          }
+        }
+      ],
+      "sees": [],
+      "throws": [],
+      "todos": [],
+      "yields": [],
+      "name": "storeUserMemory",
+      "kind": "function",
+      "async": true,
+      "members": {
+        "global": [],
+        "inner": [],
+        "instance": [],
+        "events": [],
+        "static": []
+      },
+      "path": [
+        {
+          "name": "storeUserMemory",
+          "kind": "function"
+        }
+      ],
+      "namespace": "storeUserMemory"
+    },
+    {
+      "description": {
+        "type": "root",
+        "children": [
+          {
+            "type": "paragraph",
+            "children": [
+              {
+                "type": "text",
+                "value": "Stores a message in the database"
+              }
+            ]
+          }
+        ]
+      },
+      "tags": [
+        {
+          "title": "param",
+          "description": null,
+          "lineNumber": 2,
+          "type": {
+            "type": "NameExpression",
+            "name": "string"
+          },
+          "name": "userId"
+        },
+        {
+          "title": "param",
+          "description": null,
+          "lineNumber": 3,
+          "type": {
+            "type": "NameExpression",
+            "name": "string"
+          },
+          "name": "value"
+        },
+        {
+          "title": "returns",
+          "description": null,
+          "lineNumber": 4,
+          "type": {
+            "type": "TypeApplication",
+            "expression": {
+              "type": "NameExpression",
+              "name": "Promise"
+            },
+            "applications": [
+              {
+                "type": "NameExpression",
+                "name": "void"
+              }
+            ]
+          }
+        }
+      ],
+      "loc": {
+        "start": {
+          "line": 146,
+          "column": 0,
+          "index": 3632
+        },
+        "end": {
+          "line": 151,
+          "column": 3,
+          "index": 3754
+        }
+      },
+      "context": {
+        "loc": {
+          "start": {
+            "line": 153,
+            "column": 0,
+            "index": 3756
+          },
+          "end": {
+            "line": 164,
+            "column": 1,
+            "index": 4004
+          }
+        },
+        "file": "/Users/ejfox/code/coachartie_discord/capabilities/remember.js"
+      },
+      "augments": [],
+      "examples": [],
+      "implements": [],
+      "params": [
+        {
+          "title": "param",
+          "name": "userId",
+          "lineNumber": 2,
+          "type": {
+            "type": "NameExpression",
+            "name": "string"
+          }
+        },
+        {
+          "title": "param",
+          "name": "value",
+          "lineNumber": 3,
+          "type": {
+            "type": "NameExpression",
+            "name": "string"
+          }
+        }
+      ],
+      "properties": [],
+      "returns": [
+        {
+          "description": {
+            "type": "root",
+            "children": []
+          },
+          "title": "returns",
+          "type": {
+            "type": "TypeApplication",
+            "expression": {
+              "type": "NameExpression",
+              "name": "Promise"
+            },
+            "applications": [
+              {
+                "type": "NameExpression",
+                "name": "void"
+              }
+            ]
+          }
+        }
+      ],
+      "sees": [],
+      "throws": [],
+      "todos": [],
+      "yields": [],
+      "name": "storeUserMessage",
+      "kind": "function",
+      "async": true,
+      "members": {
+        "global": [],
+        "inner": [],
+        "instance": [],
+        "events": [],
+        "static": []
+      },
+      "path": [
+        {
+          "name": "storeUserMessage",
+          "kind": "function"
+        }
+      ],
+      "namespace": "storeUserMessage"
+    }
+  ],
+  "github": [],
+  "web-search": [],
+  "web": [],
+  "web.test": [],
+  "wikipedia.test": [],
+  "twitter": [],
+  "wolframalpha.test": [],
+  "wolframalpha": [],
+  "wikipedia": [
+    {
+      "description": {
+        "type": "root",
+        "children": [
+          {
+            "type": "paragraph",
+            "children": [
+              {
+                "type": "text",
+                "value": "This function is used to search Wikipedia for a given query.\nIt uses the Wikipedia API to perform the search and then uses OpenAI to evaluate the search results."
+              }
+            ]
+          }
+        ]
+      },
+      "tags": [
+        {
+          "title": "async",
+          "description": null,
+          "lineNumber": 4
+        },
+        {
+          "title": "function",
+          "description": null,
+          "lineNumber": 5,
+          "name": "askWikipedia"
+        },
+        {
+          "title": "param",
+          "description": "An array containing the arguments passed to the function.",
+          "lineNumber": 6,
+          "type": {
+            "type": "NameExpression",
+            "name": "Array"
+          },
+          "name": "args"
+        },
+        {
+          "title": "returns",
+          "description": "A promise that resolves to a string containing the evaluated search results.",
+          "lineNumber": 7,
+          "type": {
+            "type": "TypeApplication",
+            "expression": {
+              "type": "NameExpression",
+              "name": "Promise"
+            },
+            "applications": [
+              {
+                "type": "NameExpression",
+                "name": "string"
+              }
+            ]
+          }
+        },
+        {
+          "title": "throws",
+          "description": "If an error occurs while contacting Wikipedia or OpenAI.",
+          "lineNumber": 8,
+          "type": {
+            "type": "NameExpression",
+            "name": "Error"
+          }
+        }
+      ],
+      "loc": {
+        "start": {
+          "line": 24,
+          "column": 0,
+          "index": 634
+        },
+        "end": {
+          "line": 33,
+          "column": 3,
+          "index": 1118
+        }
+      },
+      "context": {
+        "loc": {
+          "start": {
+            "line": 34,
+            "column": 0,
+            "index": 1119
+          },
+          "end": {
+            "line": 88,
+            "column": 1,
+            "index": 3010
+          }
+        },
+        "file": "/Users/ejfox/code/coachartie_discord/capabilities/wikipedia.js"
+      },
+      "augments": [],
+      "examples": [],
+      "implements": [],
+      "params": [
+        {
+          "title": "param",
+          "name": "args",
+          "lineNumber": 6,
+          "description": {
+            "type": "root",
+            "children": [
+              {
+                "type": "paragraph",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "An array containing the arguments passed to the function."
+                  }
+                ]
+              }
+            ]
+          },
+          "type": {
+            "type": "NameExpression",
+            "name": "Array"
+          }
+        }
+      ],
+      "properties": [],
+      "returns": [
+        {
+          "description": {
+            "type": "root",
+            "children": [
+              {
+                "type": "paragraph",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "A promise that resolves to a string containing the evaluated search results."
+                  }
+                ]
+              }
+            ]
+          },
+          "title": "returns",
+          "type": {
+            "type": "TypeApplication",
+            "expression": {
+              "type": "NameExpression",
+              "name": "Promise"
+            },
+            "applications": [
+              {
+                "type": "NameExpression",
+                "name": "string"
+              }
+            ]
+          }
+        }
+      ],
+      "sees": [],
+      "throws": [
+        {
+          "description": {
+            "type": "root",
+            "children": [
+              {
+                "type": "paragraph",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "If an error occurs while contacting Wikipedia or OpenAI."
+                  }
+                ]
+              }
+            ]
+          },
+          "type": {
+            "type": "NameExpression",
+            "name": "Error"
+          }
+        }
+      ],
+      "todos": [],
+      "yields": [],
+      "async": true,
+      "kind": "function",
+      "name": "askWikipedia",
+      "members": {
+        "global": [],
+        "inner": [],
+        "instance": [],
+        "events": [],
+        "static": []
+      },
+      "path": [
+        {
+          "name": "askWikipedia",
+          "kind": "function"
+        }
+      ],
+      "namespace": "askWikipedia"
+    }
+  ]
+}
