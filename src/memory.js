@@ -19,6 +19,7 @@ const { PROMPT_SYSTEM, PROMPT_REMEMBER, PROMPT_REMEMBER_INTRO } = prompts;
  * @param {string} prompt - The prompt to generate a response for
  * @param {string} response - The robot's response to the prompt
  * @param {string} username - The username of the user to generate a remember completion for
+ * @param {Array} conversationHistory - The entire conversation history up to the point of the user's last message
  *
  * @returns {string} - The remember completion
  *
@@ -26,7 +27,8 @@ const { PROMPT_SYSTEM, PROMPT_REMEMBER, PROMPT_REMEMBER_INTRO } = prompts;
 async function generateAndStoreRememberCompletion(
   prompt,
   response,
-  username = ""
+  username = "",
+  conversationHistory = []
 ) {
   console.log("🔧 Generating and storing remember completion", username);
   console.log("🔧 Prompt:", prompt);
@@ -59,6 +61,7 @@ async function generateAndStoreRememberCompletion(
     presence_penalty: -0.1,
     max_tokens: 500,
     messages: [
+      ...conversationHistory,
       ...memoryMessages,
       {
         role: "system",

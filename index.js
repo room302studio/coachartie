@@ -1,5 +1,3 @@
-// src/index.js
-
 // Import modules from chain.js
 const {
   processMessageChain,
