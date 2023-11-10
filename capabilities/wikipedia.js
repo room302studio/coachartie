@@ -21,6 +21,16 @@ async function handleCapabilityMethod(method, args) {
   }
 }
 
+/**
+ * This function is used to search Wikipedia for a given query.
+ * It uses the Wikipedia API to perform the search and then uses OpenAI to evaluate the search results.
+ *
+ * @async
+ * @function askWikipedia
+ * @param {Array} args - An array containing the arguments passed to the function.
+ * @returns {Promise<string>} - A promise that resolves to a string containing the evaluated search results.
+ * @throws {Error} - If an error occurs while contacting Wikipedia or OpenAI.
+ */
 async function askWikipedia(args) {
   const query = destructureArgs(args)[0];
 
