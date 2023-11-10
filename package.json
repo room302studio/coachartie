@@ -4,7 +4,7 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "start": "node index.js",
+    "start": "node bot.js",
     "test": "jest"
   },
   "dependencies": {
@@ -38,6 +38,7 @@
     "twitter-api-v2": "^1.14.2"
   },
   "devDependencies": {
+    "documentation": "^14.0.2",
     "jest": "^29.6.4"
   }
 }
