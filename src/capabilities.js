@@ -47,6 +47,9 @@ async function callCapabilityMethod(capabilitySlug, methodName, args) {
       args
     );
     console.log(`⚡️ Capability response: ${capabilityResponse}`);
+    if (capabilityResponse instanceof Buffer) {
+      return { type: 'image', data: capabilityResponse };
+    }
     return capabilityResponse;
   } catch (error) {
     console.error(error);

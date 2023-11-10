@@ -1,20 +1,15 @@
-// Our collection of ethereal tech tools and righteous scripts
-
-// const { console.log, consolelog3, consolelog4 } = require("./logging");
 const { Client, GatewayIntentBits, Events } = require("discord.js");
 const {
   removeMentionFromMessage,
 } = require("../helpers.js");
 const { processMessageChain } = require("./chain.js");
+const vision = require('./capabilities/vision.js');
 
-// 🌿 dotenv: As graceful as a morning dew drop, simplifying process.env access since 2012!
 const dotenv = require("dotenv");
 dotenv.config();
 
-// A whole heap of essential variables & functions ahead...
 let client;
 
-// 💫 Ready, set... wait! We let Discord know that we're ready to perform!
 function onClientReady(c) {
   console.log(`⭐️ Ready! Logged in as ${c.user.username}`);
   console.log("\n🌐 Connected servers and channels:");
@@ -23,7 +18,6 @@ function onClientReady(c) {
   });
 }
 
-// 🤖 detectBotMentionOrChannel: Detecting if the bot was mentioned or if the channel name includes a bot
 function detectBotMentionOrChannel(message) {
   const botMentioned = message.mentions.has(client.user);
   const channelName = message.channel.name;
@@ -32,7 +26,6 @@ function detectBotMentionOrChannel(message) {
   return !message.author.bot && (botMentioned || channelNameHasBot);
 }
 
-// 🤖 Assembling the Discord bot client!
 class DiscordBot {
   constructor() {
     this.bot = new Client({
@@ -47,7 +40,6 @@ class DiscordBot {
     this.bot.on("ready", onClientReady);
     this.bot.on("messageCreate", this.onMessageCreate);
 
-    // The sentient moment 🙌
     client = this.bot;
   }
 
@@ -67,54 +59,51 @@ class DiscordBot {
     }
   }
 
-  // 💌 onMessageCreate: Crucial, as life itself- translating gibberish to meaningful chats!
   async onMessageCreate(message) {
-    // console.log("💌 Message seen:", message.content);
-    // This function is run on every message received by the bot
-    // Check if the bot was mentioned or if the channel name includes a bot
-    const botMentioned = message.mentions.has(client.user);
-    // const channelNameHasBot = detectBotMentionOrChannel(message);
     const botMentionOrChannel = detectBotMentionOrChannel(message);
-    const channelNameHasBot = message.channel.name.includes("🤖");
     const messageAuthorIsBot = message.author.bot;
     const authorIsMe = message.author.username === "coachartie";
 
-    if (!botMentionOrChannel) return;
+    if (!botMentionOrChannel || authorIsMe || messageAuthorIsBot) return;
 
-    if (authorIsMe) {
-      console.log("I'm talking to myself! 😳");
-      return;
-    }
-
-    if (messageAuthorIsBot) {
-      console.log("Another bot is trying to talk to me! 😡");
-      return;
-    }
-
-    // Remove the bot mention from the message content
     const prompt = removeMentionFromMessage(message.content, "@coachartie");
     console.log(`✉️ Message received: ${prompt}`);
 
-    // Process the message/prompt – this may mean repeatedly calling capabilities until the response is found or token limit is reached
-    // Create a thread and send a temporary message
     const thread = await message.startThread({
       name: "Processing...",
       autoArchiveDuration: 60,
     });
     const tempMessage = await thread.send('Processing...');
     
-    const messages = await processMessageChain(
-      thread,
-      [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      message.author.username
-    );
+    let messages;
+    if (message.attachments.first()) {
+      const imageUrl = message.attachments.first().url;
+      vision.setup().imageUrl = imageUrl;
+      await vision.setup().fetchImageDescription();
+      const imageDescription = vision.setup().imageDescription;
+      messages = await processMessageChain(
+        thread,
+        [
+          {
+            role: "user",
+            content: `${prompt}\n\nImage Description: ${imageDescription}`,
+          },
+        ],
+        message.author.username
+      );
+    } else {
+      messages = await processMessageChain(
+        thread,
+        [
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        message.author.username
+      );
+    }
 
-    // Edit tempMessage to be the last message in messages
     tempMessage.edit(messages[messages.length - 1])
   }
 }
