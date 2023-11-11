@@ -34,7 +34,16 @@ These are all of your capabilities:
 ${prepareCapabilities.join("\n")}
 `;
 
-// 📝 callCapabilityMethod: a function for calling capability methods
+/**
+ * Function for calling capability methods.
+ * It logs the method call and its response, and returns the response.
+ * If the response is an instance of Buffer, it returns an object with type 'image' and the Buffer as data.
+ * If an error occurs, it logs the error and returns a string with the error message.
+ * @param {string} capabilitySlug - The slug of the capability to call.
+ * @param {string} methodName - The name of the method to call.
+ * @param {Array} args - The arguments to pass to the method.
+ * @returns {Promise<*>} - The response from the capability method.
+ */
 async function callCapabilityMethod(capabilitySlug, methodName, args) {
   console.log(
     `⚡️ Calling capability method: ${capabilitySlug}.${methodName} with args: ${args}`

@@ -43,6 +43,11 @@ class DiscordBot {
     client = this.bot;
   }
 
+  /**
+   * Sends a message to a specific channel.
+   * @param {string} message - The message to be sent.
+   * @param {object} channel - The channel where the message will be sent.
+   */
   async sendMessage(message, channel) {
     try {
       await channel.send(message);
@@ -51,6 +56,11 @@ class DiscordBot {
     }
   }
 
+  /**
+   * Sends an embedded message to a specific channel.
+   * @param {string} message - The message to be embedded and sent.
+   * @param {object} channel - The channel where the message will be sent.
+   */
   async sendEmbedMessage(message, channel) {
     try {
       await channel.send({ embeds: [message] });
@@ -59,52 +69,97 @@ class DiscordBot {
     }
   }
 
-  async onMessageCreate(message) {
+  /**
+   * Processes the prompt from the message content.
+   * @param {object} message - The message object containing the content.
+   */
+  async processPrompt(message) {
+    const prompt = removeMentionFromMessage(message.content, "@coachartie");
+    console.log(`✉️ Message received: ${prompt}`);
+    return prompt;
+  }
+
+  /**
+   * Processes the image attachment from the message and adds its description to the prompt.
+   * @param {object} message - The message object containing the attachment.
+   * @param {string} prompt - The prompt to which the image description will be added.
+   */
+  async processImageAttachment(message, prompt) {
+    if (message.attachments.first()) {
+      const imageUrl = message.attachments.first().url;
+      vision.setup().imageUrl = imageUrl;
+      await vision.setup().fetchImageDescription();
+      const imageDescription = vision.setup().imageDescription;
+      return `${prompt}\n\nDescription of user-provided image: ${imageDescription}`;
+    } else {
+      return prompt;
+    }
+  }
+
+  /**
+   * Processes the message chain with the given prompt and username.
+   * @param {string} prompt - The prompt to be processed.
+   * @param {string} username - The username of the message author.
+   */
+  async processMessageChain(prompt, username) {
+    return await processMessageChain(
+      [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      username
+    );
+  }
+
+  /**
+   * Responds to a message if it mentions the bot or is in a bot channel, and is not from the bot itself.
+   * @param {object} message - The message to respond to.
+   */
+  async respondToMessage(message) {
     const botMentionOrChannel = detectBotMentionOrChannel(message);
     const messageAuthorIsBot = message.author.bot;
     const authorIsMe = message.author.username === "coachartie";
 
     if (!botMentionOrChannel || authorIsMe || messageAuthorIsBot) return;
 
-    const prompt = removeMentionFromMessage(message.content, "@coachartie");
-    console.log(`✉️ Message received: ${prompt}`);
-
-    const thread = await message.startThread({
-      name: "Processing...",
-      autoArchiveDuration: 60,
-    });
-    const tempMessage = await thread.send('Processing...');
     
-    let messages;
-    if (message.attachments.first()) {
-      const imageUrl = message.attachments.first().url;
-      vision.setup().imageUrl = imageUrl;
-      await vision.setup().fetchImageDescription();
-      const imageDescription = vision.setup().imageDescription;
-      messages = await processMessageChain(
-        thread,
-        [
-          {
-            role: "user",
-            content: `${prompt}\n\nImage Description: ${imageDescription}`,
-          },
-        ],
-        message.author.username
-      );
-    } else {
-      messages = await processMessageChain(
-        thread,
-        [
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-        message.author.username
-      );
-    }
 
-    tempMessage.edit(messages[messages.length - 1])
+    let prompt = await this.processPrompt(message);
+    let processedPrompt = await this.processImageAttachment(message, prompt);
+    let messages = await this.processMessageChain(processedPrompt, message.author.username);
+
+    
+
+    // Check if the last message contains an image- if so send it as a file
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage.image) {
+      // Send the image as an attachment
+      message.channel.send({
+        files: [{
+          attachment: lastMessage.image,
+          name: 'image.png'
+        }]
+      });
+    } 
+    
+    if (lastMessage.content) {
+      // Send the last message of the message chain back to the channel
+      this.sendMessage(lastMessage.content, message.channel);
+    }
+  }
+
+  /**
+   * Handles the creation of a message, including displaying a typing indicator and responding to the message.
+   * @param {object} message - The message to be created.
+   */
+  async onMessageCreate(message) {
+    // Display typing indicator
+    message.channel.startTyping();
+    await this.respondToMessage(message);
+    // Stop typing indicator
+    message.channel.stopTyping();
   }
 }
 

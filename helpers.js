@@ -21,61 +21,137 @@ const TOKEN_LIMIT = 8000;
 const RESPONSE_LIMIT = 5120;
 const WARNING_BUFFER = 900;
 
-// 🤖 replaceRobotIdWithName: given a string, replace the robot id with the robot name
+/**
+ * Replaces the robot id with the robot name in a given string.
+ * @param {string} string - The string to replace the robot id in.
+ * @param {object} client - The client object.
+ * @returns {string} - The string with the robot id replaced by the robot name.
+ */
 function replaceRobotIdWithName(string, client) {
-  // TODO: We need to get the client from discord somehow
-
-  // console.log("Replacing robot id with name");
-  const coachArtieId = client.user.id;
-  // console.log("coachArtieId", coachArtieId);
-  const coachArtieName = client.user.username;
-  // console.log("coachArtieName", coachArtieName);
-
-  // console.log("Before replace", string);
-  const replaced = string.replace(`<@!${coachArtieId}>`, coachArtieName);
-  // console.log("After replace", replaced);
-  return replaced;
+  const coachArtieId = getCoachArtieId(client);
+  const coachArtieName = getCoachArtieName(client);
+  return replaceStringWithId(string, coachArtieId, coachArtieName);
 }
 
-function destructureArgs(args) {
+/**
+ * Gets the id of Coach Artie.
+ * @param {object} client - The client object.
+ * @returns {string} - The id of Coach Artie.
+ */
+function getCoachArtieId(client) {
+  return client.user.id;
+}
+
+/**
+ * Gets the name of Coach Artie.
+ * @param {object} client - The client object.
+ * @returns {string} - The name of Coach Artie.
+ */
+function getCoachArtieName(client) {
+  return client.user.username;
+}
+
+/**
+ * Replaces an id with a name in a given string.
+ * @param {string} string - The string to replace the id in.
+ * @param {string} id - The id to replace.
+ * @param {string} name - The name to replace the id with.
+ * @returns {string} - The string with the id replaced by the name.
+ */
+function replaceStringWithId(string, id, name) {
+  return string.replace(`<@!${id}>`, name);
+}
+
+/**
+ * Splits a string into an array of arguments.
+ * @param {string} args - The string to split into arguments.
+ * @returns {Array} - The array of arguments.
+ */
+function splitArgs(args) {
   return args.split(",").map((arg) => arg.trim());
 }
 
+/**
+ * Counts the number of tokens in a string.
+ * @param {string} str - The string to count the tokens in.
+ * @returns {number} - The number of tokens in the string.
+ */
 function countTokens(str) {
   const encodedMessage = encode(str.toString());
-  const tokenCount = encodedMessage.length;
-  return tokenCount;
+  return encodedMessage.length;
 }
 
-function countMessageTokens(messageArray = []) {
+/**
+ * Counts the number of tokens in an array of messages.
+ * @param {Array} messageArray - The array of messages to count the tokens in.
+ * @returns {number} - The number of tokens in the array of messages.
+ */
+function countTokensInMessageArray(messageArray = []) {
   let totalTokens = 0;
-  // console.log("Message Array: ", messageArray);
-  if (!messageArray) {
+  if (!messageArray || messageArray.length === 0) {
     return totalTokens;
   }
-  if (messageArray.length === 0) {
-    return totalTokens;
-  }
+  return countTokensInArray(messageArray);
+}
 
-  // for loop
+/**
+ * Counts the number of tokens in an array of messages.
+ * @param {Array} messageArray - The array of messages to count the tokens in.
+ * @returns {number} - The number of tokens in the array of messages.
+ */
+function countTokensInArray(messageArray) {
+  let totalTokens = 0;
   for (let i = 0; i < messageArray.length; i++) {
-    const message = messageArray[i];
-    // encode message.content
-    const encodedMessage = encode(JSON.stringify(message));
-    totalTokens += encodedMessage.length;
+    totalTokens += countTokensInMessage(messageArray[i]);
   }
-
   return totalTokens;
 }
 
-// 🔪 removeMentionFromMessage: slice out the mention from the message
+/**
+ * Counts the number of tokens in a message.
+ * @param {object} message - The message to count the tokens in.
+ * @returns {number} - The number of tokens in the message.
+ */
+function countTokensInMessage(message) {
+  const encodedMessage = encode(JSON.stringify(message));
+  return encodedMessage.length;
+}
+
+/**
+ * Removes a mention from a message.
+ * @param {string} message - The message to remove the mention from.
+ * @param {string} mention - The mention to remove.
+ * @returns {string} - The message with the mention removed.
+ */
 function removeMentionFromMessage(message, mention) {
   return message.replace(mention, "").trim();
 }
 
-function getHexagram() {
+/**
+ * Generates a hexagram.
+ * @returns {string} - The generated hexagram.
+ */
+function generateHexagram() {
   const hexagramNumber = chance.integer({ min: 1, max: 64 });
-  const hexNameMap = {
+  return `${hexagramNumber}. ${getHexName(hexagramNumber)}`;
+}
+
+/**
+ * Gets the name of a hexagram.
+ * @param {number} hexagramNumber - The number of the hexagram.
+ * @returns {string} - The name of the hexagram.
+ */
+function getHexName(hexagramNumber) {
+  const hexNameMap = getHexNameMap();
+  return hexNameMap[hexagramNumber];
+}
+
+/**
+ * Gets a map of hexagram numbers to names.
+ * @returns {object} - The map of hexagram numbers to names.
+ */
+function getHexNameMap() {
+  return {
     1: "The Creative",
     2: "The Receptive",
     3: "Difficulty at the Beginning",
@@ -141,14 +217,23 @@ function getHexagram() {
     63: "After Completion",
     64: "Before Completion",
   };
-
-  return `${hexagramNumber}. ${hexNameMap[hexagramNumber]}`;
 }
 
+/**
+ * Checks if a message contains a capability.
+ * @param {string} message - The message to check.
+ * @returns {boolean} - True if the message contains a capability, false otherwise.
+ */
 function doesMessageContainCapability(message) {
   return message.match(capabilityRegex);
 }
 
+/**
+ * Checks if a message is breaking the message chain.
+ * @param {string} capabilityMatch - The capability match.
+ * @param {object} lastMessage - The last message.
+ * @returns {boolean} - True if the message is breaking the chain, false otherwise.
+ */
 function isBreakingMessageChain(capabilityMatch, lastMessage) {
   return (
     !capabilityMatch &&
@@ -157,10 +242,13 @@ function isBreakingMessageChain(capabilityMatch, lastMessage) {
   );
 }
 
+/**
+ * Trims a response if it exceeds the limit.
+ * @param {string} capabilityResponse - The response to trim.
+ * @returns {string} - The trimmed response.
+ */
 function trimResponseIfNeeded(capabilityResponse) {
-  // Step 4: Check if the capability response exceeds the token limit
-  while (countTokens(capabilityResponse) > RESPONSE_LIMIT) {
-    // Step 5: Trim the response by line count to reduce the token count
+  while (isResponseExceedingLimit(capabilityResponse)) {
     capabilityResponse = trimResponseByLineCount(
       capabilityResponse,
       countTokens(capabilityResponse)
@@ -169,232 +257,341 @@ function trimResponseIfNeeded(capabilityResponse) {
   return capabilityResponse;
 }
 
-function generateAiCompletionParams() {
-  // temp
-  const temperature = chance.floating({ min: 0.88, max: 1.2 });
-  // presence
-  const presence_penalty = chance.floating({ min: -0.05, max: 0.05 });
-  // frequency
-  const frequency_penalty = chance.floating({ min: 0.0, max: 0.05 });
-
-  return { temperature, presence_penalty, frequency_penalty };
+/**
+ * Checks if a response exceeds the limit.
+ * @param {string} response - The response to check.
+ * @returns {boolean} - True if the response exceeds the limit, false otherwise.
+ */
+function isResponseExceedingLimit(response) {
+  return countTokens(response) > RESPONSE_LIMIT;
 }
 
-// trimMessageChain: trim the message chain until it's under 8000 tokens
+/**
+ * Generates parameters for AI completion.
+ * @returns {object} - The generated parameters.
+ */
+function generateAiCompletionParams() {
+  return {
+    temperature: generateTemperature(),
+    presence_penalty: generatePresencePenalty(),
+    frequency_penalty: generateFrequencyPenalty(),
+  };
+}
+
+/**
+ * Generates a temperature value.
+ * @returns {number} - The generated temperature value.
+ */
+function generateTemperature() {
+  return chance.floating({ min: 0.88, max: 1.2 });
+}
+
+/**
+ * Generates a presence penalty value.
+ * @returns {number} - The generated presence penalty value.
+ */
+function generatePresencePenalty() {
+  return chance.floating({ min: -0.05, max: 0.05 });
+}
+
+/**
+ * Generates a frequency penalty value.
+ * @returns {number} - The generated frequency penalty value.
+ */
+function generateFrequencyPenalty() {
+  return chance.floating({ min: 0.0, max: 0.05 });
+}
+
+/**
+ * Trims a message chain until it's under 8000 tokens.
+ * @param {Array} messages - The message chain to trim.
+ * @param {number} maxTokens - The maximum number of tokens.
+ * @returns {Array} - The trimmed message chain.
+ */
 function trimMessageChain(messages, maxTokens = 8000) {
-  // trim the messages until the total tokens is under 8000
-  while (countMessageTokens(messages) > maxTokens) {
-    // pick a random message to consider trimming
-    const messageToRemove = chance.pickone(messages);
-
-    // trim down the message.content to 1/2 of the original length
-    const trimmedMessageContent = messageToRemove.content.slice(
-      0,
-      messageToRemove.content.length / 2
-    );
-
-    // replace the message with the trimmed version
-    messageToRemove.content = trimmedMessageContent;
-
-    // if the message is now empty, remove it from the messages array
-    if (messageToRemove.content.length === 0) {
-      messages = messages.filter((message) => {
-        return message !== messageToRemove;
-      });
-    }
-
-    // if the messages array is now empty, break out of the loop
-    if (messages.length === 0) {
-      break;
-    }
+  while (isMessageChainExceedingLimit(messages, maxTokens)) {
+    messages = trimMessages(messages);
   }
   console.log("Message chain trimmed.");
   return messages;
 }
 
-// trimResponseByLineCount: trim the response by a certain percentage
+/**
+ * Checks if a message chain exceeds the limit.
+ * @param {Array} messages - The message chain to check.
+ * @param {number} maxTokens - The maximum number of tokens.
+ * @returns {boolean} - True if the message chain exceeds the limit, false otherwise.
+ */
+function isMessageChainExceedingLimit(messages, maxTokens) {
+  return countTokensInMessageArray(messages) > maxTokens;
+}
+
+/**
+ * Trims messages.
+ * @param {Array} messages - The messages to trim.
+ * @returns {Array} - The trimmed messages.
+ */
+function trimMessages(messages) {
+  const messageToRemove = selectRandomMessage(messages);
+  const trimmedMessageContent = trimMessageContent(messageToRemove);
+  messageToRemove.content = trimmedMessageContent;
+  if (isMessageEmpty(messageToRemove)) {
+    messages = removeEmptyMessage(messages, messageToRemove);
+  }
+  if (isMessagesEmpty(messages)) {
+    break;
+  }
+  return messages;
+}
+
+/**
+ * Selects a random message.
+ * @param {Array} messages - The messages to select from.
+ * @returns {object} - The selected message.
+ */
+function selectRandomMessage(messages) {
+  return chance.pickone(messages);
+}
+
+/**
+ * Trims the content of a message.
+ * @param {object} message - The message to trim the content of.
+ * @returns {string} - The trimmed content.
+ */
+function trimMessageContent(message) {
+  return message.content.slice(0, message.content.length / 2);
+}
+
+/**
+ * Checks if a message is empty.
+ * @param {object} message - The message to check.
+ * @returns {boolean} - True if the message is empty, false otherwise.
+ */
+function isMessageEmpty(message) {
+  return message.content.length === 0;
+}
+
+/**
+ * Removes an empty message.
+ * @param {Array} messages - The messages to remove the empty message from.
+ * @param {object} messageToRemove - The empty message to remove.
+ * @returns {Array} - The messages with the empty message removed.
+ */
+function removeEmptyMessage(messages, messageToRemove) {
+  return messages.filter((message) => {
+    return message !== messageToRemove;
+  });
+}
+
+/**
+ * Checks if messages are empty.
+ * @param {Array} messages - The messages to check.
+ * @returns {boolean} - True if the messages are empty, false otherwise.
+ */
+function isMessagesEmpty(messages) {
+  return messages.length === 0;
+}
+
+/**
+ * Trims a response by a certain percentage.
+ * @param {string} response - The response to trim.
+ * @param {number} lineCount - The number of lines in the response.
+ * @param {number} trimAmount - The percentage to trim by.
+ * @returns {string} - The trimmed response.
+ */
 function trimResponseByLineCount(response, lineCount, trimAmount = 0.1) {
-  const lines = response.split("\n");
-  // we are going to remove 10% of the lines
-  const linesToRemove = Math.floor(lineCount * trimAmount);
-  // pick some random lines to remove
-  const randomLines = chance.pickset(lines, linesToRemove);
-  // filter out the random lines
-  const trimmedLines = lines.filter((line) => {
+  const lines = splitResponseIntoLines(response);
+  const linesToRemove = calculateLinesToRemove(lineCount, trimAmount);
+  const randomLines = selectRandomLines(lines, linesToRemove);
+  const trimmedLines = removeRandomLines(lines, randomLines);
+  return joinLinesIntoResponse(trimmedLines);
+}
+
+/**
+ * Splits a response into lines.
+ * @param {string} response - The response to split.
+ * @returns {Array} - The lines of the response.
+ */
+function splitResponseIntoLines(response) {
+  return response.split("\n");
+}
+
+/**
+ * Calculates the number of lines to remove.
+ * @param {number} lineCount - The number of lines in the response.
+ * @param {number} trimAmount - The percentage to trim by.
+ * @returns {number} - The number of lines to remove.
+ */
+function calculateLinesToRemove(lineCount, trimAmount) {
+  return Math.floor(lineCount * trimAmount);
+}
+
+/**
+ * Selects random lines from a response.
+ * @param {Array} lines - The lines of the response.
+ * @param {number} linesToRemove - The number of lines to remove.
+ * @returns {Array} - The selected lines.
+ */
+function selectRandomLines(lines, linesToRemove) {
+  return chance.pickset(lines, linesToRemove);
+}
+
+/**
+ * Removes random lines from a response.
+function removeRandomLines(lines, randomLines) {
+  return lines.filter((line) => {
     return !randomLines.includes(line);
   });
-  // join the lines back together
+}
+
+function joinLinesIntoResponse(trimmedLines) {
   return trimmedLines.join("\n");
 }
 
 function displayTypingIndicator(message) {
-  // Start typing indicator
-  message.channel.sendTyping();
-  const typingInterval = setInterval(() => message.channel.sendTyping(), 5000);
+  startTypingIndicator(message);
+  const typingInterval = setTypingInterval(message);
   return typingInterval; // To allow for clearing the interval outside of this function
+}
+
+function startTypingIndicator(message) {
+  message.channel.sendTyping();
+}
+
+function setTypingInterval(message) {
+  return setInterval(() => message.channel.sendTyping(), 5000);
 }
 
 async function generateAiCompletion(prompt, username, messages, config) {
   const { temperature, presence_penalty } = config;
-
-  // add the preamble to the messages
   messages = await addPreambleToMessages(username, prompt, messages);
-
   let completion = null;
   try {
-    completion = await openai.createChatCompletion({
-      model: "gpt-4-1106-preview",
-      // model: "gpt-4",
-      // model: "gpt-3.5-turbo-16k",
-      temperature,
-      presence_penalty,
-      max_tokens: 820,
-      messages: messages,
-    });
+    completion = await createChatCompletion(messages, temperature, presence_penalty);
   } catch (err) {
     console.log(err);
   }
-
-  const aiResponse = completion.data.choices[0].message.content;
+  const aiResponse = getAiResponse(completion);
   console.log("🤖 AI Response:", aiResponse);
-
   messages.push(aiResponse);
-
   return { messages, aiResponse };
+}
+
+async function createChatCompletion(messages, temperature, presence_penalty) {
+  return await openai.createChatCompletion({
+    model: "gpt-4-1106-preview",
+    temperature,
+    presence_penalty,
+    max_tokens: 820,
+    messages: messages,
+  });
+}
+
+function getAiResponse(completion) {
+  return completion.data.choices[0].message.content;
 }
 
 async function addPreambleToMessages(username, prompt, messages) {
   const preamble = await assembleMessagePreamble(username, prompt);
-  // messages.unshift(preamble);
-  // we need to make sure we return a flat array
-  // console.log('preamble', preamble)
-  // console.log('flattened', messages.flat())
-  // console.log('combined', [preamble, ...messages.flat()])
   return [...preamble, ...messages.flat()];
 }
 
 async function assembleMessagePreamble(username, prompt) {
   console.log(`🔧 Assembling message preamble for <${username}> ${prompt}`);
-
   const messages = [];
+  addCurrentDateTime(messages);
+  await addHexagramPrompt(messages);
+  addSystemPrompt(messages);
+  addCapabilityPromptIntro(messages);
+  await addUserMessages(username, messages);
+  await addUserMemories(username, messages);
+  return messages;
+}
 
-  // add the current date and time as a system message
+function addCurrentDateTime(messages) {
   messages.push({
     role: "system",
     content: `Today is ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`,
   });
+}
 
-  // randomly add a hexagram prompt
+async function addHexagramPrompt(messages) {
   if (chance.bool({ likelihood: 50 })) {
-    // pick a random hexagram from the i ching to guide this interaction
-    const hexagramPrompt = `Let this hexagram from the I Ching guide this interaction: ${getHexagram()}`;
-
+    const hexagramPrompt = `Let this hexagram from the I Ching guide this interaction: ${generateHexagram()}`;
     console.log(`🔧 Adding hexagram prompt to message ${hexagramPrompt}`);
     messages.push({
       role: "system",
       content: hexagramPrompt,
     });
   }
+}
 
-  // add the system prompt
+function addSystemPrompt(messages) {
   messages.push({
     role: "user",
     content: PROMPT_SYSTEM,
   });
+}
 
-  // Add the capability prompt intro
+function addCapabilityPromptIntro(messages) {
   messages.push({
     role: "system",
     content: CAPABILITY_PROMPT_INTRO,
   });
+}
 
-  // Decide how many user messages to retrieve
+async function addUserMessages(username, messages) {
   const userMessageCount = chance.integer({ min: 4, max: 16 });
-
-  console.log(
-    `🔧 Retrieving ${userMessageCount} previous messages for ${username}`
-  );
-
-  // wrap in try/catch
+  console.log(`🔧 Retrieving ${userMessageCount} previous messages for ${username}`);
   try {
-    // get user messages
-    const userMessages = await getUserMessageHistory(
-      username,
-      userMessageCount
-    );
-
-    // reverse the order of the messages so the most recent ones are last
+    const userMessages = await getUserMessageHistory(username, userMessageCount);
     userMessages.reverse();
-
-    // turn previous user messages into chatbot-formatted messages
     userMessages.forEach((message) => {
       messages.push({
         role: "user",
-        // content: `${replaceRobotIdWithName(message.value, client)}`,
         content: `${message.value}`,
       });
-
-      // if this is the last message, return
-      if (message === userMessages[userMessages.length - 1]) return;
-
-      // otherwise add a new message placeholder for the assistant response
-      // messages.push({
-      //   role: "assistant",
-      //   content: "[RESPONSE]",
-      // });
     });
   } catch (error) {
     console.error("Error getting previous user messages:", error);
   }
+}
 
+async function addUserMemories(username, messages) {
   const userMemoryCount = chance.integer({ min: 1, max: 12 });
   try {
-    // // get user memories
     const userMemories = await getUserMemory(username, userMemoryCount);
-
     console.log(`🔧 Retrieving ${userMemoryCount} memories for ${username}`);
-
-    // turn user memories into chatbot messages
     userMemories.forEach((memory) => {
       messages.push({
         role: "system",
         content: `You remember from a previous interaction on ${memory.created_at}: ${memory.value}`,
       });
-
-      // console.log(`🔧 Adding memory to message ${memory.value}`);
     });
   } catch (err) {
     console.log(err);
   }
-
-  // TODO: Get relevant memories working using embedding query
-  // get relevant user memories
-  // const relevantUserMemories = await getRelevantMemories(prompt, userMemoryCount);
-  // if (relevantUserMemories) {
-  //   // add all of those memories to the messages
-  //   relevantUserMemories.forEach((memory) => {
-  //     messages.push({
-  //       role: "system",
-  //       content: `You remember from a previous interaction on ${memory.created_at}: ${memory.value}`,
-  //     });
-  //   });
-  // }
-
-  return messages;
 }
 
 function splitMessageIntoChunks(messageString) {
-  // make sure the string is a string
   if (typeof messageString !== "string") {
     console.error("splitMessageIntoChunks: messageString is not a string");
     return;
   }
-  const messageArray = messageString.split(" ");
+  const messageArray = splitMessageIntoArray(messageString);
+  return splitArrayIntoChunks(messageArray);
+}
+
+function splitMessageIntoArray(messageString) {
+  return messageString.split(" ");
+}
+
+function splitArrayIntoChunks(messageArray) {
   const messageChunks = [];
   let currentChunk = "";
   for (let i = 0; i < messageArray.length; i++) {
     const word = messageArray[i];
-    if (currentChunk.length + word.length < 2000) {
+    if (isChunkSizeAcceptable(currentChunk, word)) {
       currentChunk += word + " ";
     } else {
       messageChunks.push(currentChunk);
@@ -405,23 +602,22 @@ function splitMessageIntoChunks(messageString) {
   return messageChunks;
 }
 
+function isChunkSizeAcceptable(currentChunk, word) {
+  return currentChunk.length + word.length < 2000;
+}
+
 function splitAndSendMessage(message, messageObject) {
-  // messageObject is the discord message object
-  // message is the string we want to send
-  // make sure the messageObject is not null or undefined
   if (!messageObject) {
     console.error("splitAndSendMessage: messageObject is null or undefined");
     return;
   }
-  // make sure the message is a string
   if (typeof message !== "string") {
     console.error("splitAndSendMessage: message is not a string");
     return;
   }
-
   if (message.length < 2000) {
     try {
-      messageObject.channel.send(message);
+      sendMessage(messageObject, message);
     } catch (e) {
       console.error(e);
     }
@@ -429,12 +625,16 @@ function splitAndSendMessage(message, messageObject) {
     const messageChunks = splitMessageIntoChunks(message);
     for (let i = 0; i < messageChunks.length; i++) {
       try {
-        messageObject.channel.send(messageChunks[i]);
+        sendMessage(messageObject, messageChunks[i]);
       } catch (error) {
         console.error(error);
       }
     }
   }
+}
+
+function sendMessage(messageObject, message) {
+  messageObject.channel.send(message);
 }
 
 function createTokenLimitWarning() {
