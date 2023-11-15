@@ -2,6 +2,7 @@ const { Octokit } = require("@octokit/rest");
 const { graphql } = require("@octokit/graphql");
 const { createAppAuth } = require("@octokit/auth-app");
 const dotenv = require("dotenv");
+const { destructureArgs } = require("../helpers");
 
 dotenv.config();
 
@@ -53,7 +54,8 @@ class GithubCoach {
     const response = await this.octokit.repos.createForAuthenticatedUser({
       name: repositoryName,
     });
-    return response.data;
+    console.log('create repo response')
+    return JSON.stringify(response)
   }
 
   /**
@@ -194,6 +196,32 @@ class GithubCoach {
       ? "Draft issue added to project."
       : "Failed to add draft issue to project.";
   }
+
+  /**
+   * Add an issue to a GitHub repo
+   * @param {string} repoName - The name of the repo.
+   * @param {string} repoOwner - The owner user of the repo.
+   * @param {string} issueTitle - The title of the issue.
+   * @param {string} issueBody - The body of the issue.
+   * @example github:addIssueToRepo(coachartie/Room302Studio_Todo, Test issue 1, This is a test issue)
+   */
+  async addIssueToRepo(repoName, issueTitle, issueBody) {
+    let [owner, repositoryName] = repoName.split("/");
+    // if there is no owner, default to `coachartie`
+    if (!owner) {
+      owner = 'coachartie';
+    }
+    console.log('adding issue to repo', owner, repositoryName, issueTitle, issueBody);
+    const response = await this.octokit.issues.create({
+      owner,
+      repo: repositoryName,
+      title: issueTitle,
+      body: issueBody,
+    });
+    return JSON.stringify(response)
+  }
+
+  
 
   /**
    * Create a branch.
@@ -356,9 +384,20 @@ module.exports = {
   handleCapabilityMethod: async (method, args) => {
     const githubCoach = new GithubCoach();
 
+    const destructuredArgs = destructureArgs(args);
+    console.log("destructuredArgs", destructuredArgs);
+    // destructuredArgs [ 'coachartie/test2', 'Test issue 1', 'This is a test issue' ]  
+    // to pass the array off arguments to each method
+    // we need to 
+    // 1. destructure the array
+    // 2. pass the destructured arguments to the method
+
     switch (method) {
       case "createRepo":
-        return await githubCoach.createRepo(...args);
+        // return await githubCoach.createRepo(args);
+        return await githubCoach.createRepo(...destructuredArgs);
+      case "addIssueToRepo":
+        return await githubCoach.addIssueToRepo(...destructuredArgs);
       case "cloneRepo":
         return await githubCoach.cloneRepo(...args);
       case "listRepos":
@@ -373,8 +412,8 @@ module.exports = {
         return await githubCoach.listProjectColumnsAndCards(...args);
       case "addDraftIssueToProject":
         return await githubCoach.addDraftIssueToProject(...args);
-      case "createBranch":
-        return await githubCoach.createBranch(...args);
+      case "createBranch":      
+        return await githubCoach.createBranch(...args);        
       case "listBranches":
         return await githubCoach.listBranches(...args);
       case "createFile":

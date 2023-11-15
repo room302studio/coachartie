@@ -10,7 +10,7 @@ const {
   displayTypingIndicator,
   generateAiCompletion,
   splitAndSendMessage
-} = require('./chain');
+} = require('./src/chain');
 
 // Import modules from capabilities.js
 const {
@@ -18,17 +18,17 @@ const {
   capabilities,
   capabilityPrompt,
   callCapabilityMethod
-} = require('./capabilities');
+} = require('./src/capabilities');
 
 // Import modules from memory.js
 const {
   generateAndStoreRememberCompletion
-} = require('./memory');
+} = require('./src/memory');
 
 // Import modules from openai.js
 const {
   openai
-} = require('./openai');
+} = require('./src/openai');
 
 // Export modules
 module.exports = {

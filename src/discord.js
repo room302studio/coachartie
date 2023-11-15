@@ -3,7 +3,7 @@ const {
   removeMentionFromMessage,
 } = require("../helpers.js");
 const { processMessageChain } = require("./chain.js");
-const vision = require('./capabilities/vision.js');
+const vision = require('../capabilities/vision.js');
 
 const dotenv = require("dotenv");
 dotenv.config();
@@ -38,7 +38,9 @@ class DiscordBot {
     });
     this.bot.login(process.env.DISCORD_BOT_TOKEN);
     this.bot.on("ready", onClientReady);
-    this.bot.on("messageCreate", this.onMessageCreate);
+    // this.bot.on("messageCreate", this.onMessageCreate);
+    this.bot.on("messageCreate", this.onMessageCreate.bind(this)); // Bind the context of `this`
+
 
     client = this.bot;
   }
@@ -156,10 +158,10 @@ class DiscordBot {
    */
   async onMessageCreate(message) {
     // Display typing indicator
-    message.channel.startTyping();
+    message.channel.sendTyping();
     await this.respondToMessage(message);
     // Stop typing indicator
-    message.channel.stopTyping();
+    // message.channel.stopTyping();
   }
 }
 

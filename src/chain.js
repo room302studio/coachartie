@@ -1,3 +1,11 @@
+const chalk = require("chalk");
+
+// Change this:
+// const boxen = require("boxen");
+// To this:
+const { boxen } = import("boxen");
+
+// The rest of the code remains the same
 const {
   countMessageTokens,
   doesMessageContainCapability,
@@ -16,8 +24,6 @@ const {
   callCapabilityMethod
 } = require("./capabilities.js");
 const { storeUserMessage } = require("../capabilities/remember");
-const chalk = require("chalk");
-const boxen = require("boxen");
 
 /**
  * getCapabilityResponse is a function that calls a capability method and retrieves the response.
@@ -31,7 +37,7 @@ const boxen = require("boxen");
 async function getCapabilityResponse(capSlug, capMethod, capArgs) {
   let capabilityResponse;
   try {
-    console.log(chalk.green(boxen(`Calling Capability: ${capSlug}:${capMethod}`, {padding: 1})));
+    console.log(chalk.green('Calling Capability: ' + capSlug + ':' + capMethod));
     // Step 1: Call the capability method and retrieve the response
     // the response will either be a string of text or a Buffer of an image
     capabilityResponse = await callCapabilityMethod(
@@ -39,15 +45,15 @@ async function getCapabilityResponse(capSlug, capMethod, capArgs) {
       capMethod,
       capArgs
     );
-    console.log(chalk.green(boxen(`Capability Responded: ${capSlug}:${capMethod}`, {padding: 1})));
+    console.log(chalk.green('Capability Responded: ' + capSlug + ':' + capMethod));
   } catch (e) {
     console.error(e);
     // Step 2: Handle errors and provide a default error response
     capabilityResponse = "Capability error: " + e;
-    console.log(chalk.red(boxen(`Error: ${e}`, {padding: 1})));
+    console.log(chalk.red('Error: ' + e));
   }
 
-  console.log(chalk.yellow(boxen(`Trimming Response: ${capabilityResponse.slice(0, 20)}...`, {padding: 1})));
+  console.log(chalk.yellow('Trimming Response: ' + capabilityResponse.slice(0, 20) + '...'));
   // Step 3: Trim the capability response if needed to fit within the token limit
   return trimResponseIfNeeded(capabilityResponse);
 }
@@ -69,11 +75,11 @@ async function processCapability(messages, capabilityMatch) {
 
   // Check if the message chain is about to exceed the token limit
   if (currentTokenCount >= TOKEN_LIMIT - WARNING_BUFFER) {
-    console.log(chalk.yellow(boxen(`Token Limit Warning: Current Tokens - ${currentTokenCount}`, {padding: 1})));
+    console.log(chalk.yellow('Token Limit Warning: Current Tokens - ' + currentTokenCount));
     messages.push(createTokenLimitWarning());
   }
 
-  console.log(chalk.green(boxen(`Processing Capability: ${capSlug}:${capMethod}`, {padding: 1})));
+  console.log(chalk.green('Processing Capability: ' + capSlug + ':' + capMethod));
   // Process the capability and add the system response
   const capabilityResponse = await getCapabilityResponse(
     capSlug,
@@ -83,7 +89,7 @@ async function processCapability(messages, capabilityMatch) {
 
   const message = {
     role: "system",
-    content: `Capability ${capSlug}:${capMethod} responded with: ${capabilityResponse}`,
+    content: 'Capability ' + capSlug + ':' + capMethod + ' responded with: ' + capabilityResponse,
   }
 
   // if the capabilityResponse is a Buffer/image we need to make the content empty and add the buffer as an `image` property
@@ -113,7 +119,7 @@ async function processCapability(messages, capabilityMatch) {
 async function processMessageChain(messages, username) {
   // Check if the messages array is empty
   if (!messages.length) {
-    console.log(chalk.yellow(boxen('Empty Message Chain', {padding: 1})));
+    console.log(chalk.yellow('Empty Message Chain'));
     return [];
   }
 
@@ -122,7 +128,7 @@ async function processMessageChain(messages, username) {
 
   // Process the message chain as long as the last message contains a capability call
   do {
-    console.log(chalk.green(boxen(`Processing Message Chain: ${lastMessage.slice(0, 20)}...`, {padding: 1})));
+    console.log(chalk.green('Processing Message Chain: ' + lastMessage.slice(0, 20) + '...'));
     // Process the message
     messages = await processMessage(messages, lastMessage, username);
 
@@ -161,7 +167,7 @@ async function processMessage(messages, lastMessage, username) {
     } catch (error) {
       messages.push({
         role: "system",
-        content: `Error processing capability: ${error}`,
+        content: 'Error processing capability: ' + error,
       });
     }
   }
@@ -208,4 +214,3 @@ module.exports = {
   processMessage,
   processCapability,
 };
-

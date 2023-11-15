@@ -1,6 +1,6 @@
-import axios from 'axios';
+const axios = require('axios');
 
-export default {
+module.exports = {
   setup() {
     let imageUrl = '';
     let imageDescription = '';

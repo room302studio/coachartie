@@ -339,7 +339,7 @@ function trimMessages(messages) {
     messages = removeEmptyMessage(messages, messageToRemove);
   }
   if (isMessagesEmpty(messages)) {
-    break;
+    return console.error("All messages are empty.");
   }
   return messages;
 }
@@ -436,8 +436,8 @@ function selectRandomLines(lines, linesToRemove) {
   return chance.pickset(lines, linesToRemove);
 }
 
-/**
- * Removes random lines from a response.
+
+//  * Removes random lines from a response.
 function removeRandomLines(lines, randomLines) {
   return lines.filter((line) => {
     return !randomLines.includes(line);
@@ -647,6 +647,109 @@ function createTokenLimitWarning() {
 
 function isExceedingTokenLimit(messages) {
   return countMessageTokens(messages) > TOKEN_LIMIT;
+}
+
+function destructureArgs(args) {
+  return args.split(",").map((arg) => arg.trim());
+}
+
+function getHexagram() {
+  const hexagramNumber = chance.integer({ min: 1, max: 64 });
+  const hexNameMap = {
+    1: "The Creative",
+    2: "The Receptive",
+    3: "Difficulty at the Beginning",
+    4: "Youthful Folly",
+    5: "Waiting",
+    6: "Conflict",
+    7: "The Army",
+    8: "Holding Together",
+    9: "The Taming Power of the Small",
+    10: "Treading",
+    11: "Peace",
+    12: "Standstill",
+    13: "Fellowship with Men",
+    14: "Possession in Great Measure",
+    15: "Modesty",
+    16: "Enthusiasm",
+    17: "Following",
+    18: "Work on What Has Been Spoiled",
+    19: "Approach",
+    20: "Contemplation",
+    21: "Biting Through",
+    22: "Grace",
+    23: "Splitting Apart",
+    24: "Return",
+    25: "Innocence",
+    26: "The Taming Power of the Great",
+    27: "The Corners of the Mouth",
+    28: "Preponderance of the Great",
+    29: "The Abysmal",
+    30: "The Clinging",
+    31: "Influence",
+    32: "Duration",
+    33: "Retreat",
+    34: "The Power of the Great",
+    35: "Progress",
+    36: "Darkening of the Light",
+    37: "The Family",
+    38: "Opposition",
+    39: "Obstruction",
+    40: "Deliverance",
+    41: "Decrease",
+    42: "Increase",
+    43: "Breakthrough",
+    44: "Coming to Meet",
+    45: "Gathering Together",
+    46: "Pushing Upward",
+    47: "Oppression",
+    48: "The Well",
+    49: "Revolution",
+    50: "The Cauldron",
+    51: "The Arousing (Shock, Thunder)",
+    52: "Keeping Still (Mountain)",
+    53: "Development (Gradual Progress)",
+    54: "The Marrying Maiden",
+    55: "Abundance (Fullness)",
+    56: "The Wanderer",
+    57: "The Gentle (Wind)",
+    58: "The Joyous (Lake)",
+    59: "Dispersion (Dissolution)",
+    60: "Limitation",
+    61: "Inner Truth",
+    62: "Preponderance of the Small",
+    63: "After Completion",
+    64: "Before Completion",
+  };
+
+  return `${hexagramNumber}. ${hexNameMap[hexagramNumber]}`;
+}
+
+function countTokens(str) {
+  const encodedMessage = encode(str.toString());
+  const tokenCount = encodedMessage.length;
+  return tokenCount;
+}
+
+function countMessageTokens(messageArray = []) {
+  let totalTokens = 0;
+  // console.log("Message Array: ", messageArray);
+  if (!messageArray) {
+    return totalTokens;
+  }
+  if (messageArray.length === 0) {
+    return totalTokens;
+  }
+
+  // for loop
+  for (let i = 0; i < messageArray.length; i++) {
+    const message = messageArray[i];
+    // encode message.content
+    const encodedMessage = encode(JSON.stringify(message));
+    totalTokens += encodedMessage.length;
+  }
+
+  return totalTokens;
 }
 
 module.exports = {
