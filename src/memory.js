@@ -35,6 +35,7 @@ async function generateAndStoreRememberCompletion(
   console.log("🔧 Response:", response);
   const userMemoryCount = chance.integer({ min: 1, max: 12 });
   const memoryMessages = [];
+
   // get user memories
   console.log(
     `🔧 Enhancing memory with ${userMemoryCount} memories from ${username}`
@@ -54,26 +55,54 @@ async function generateAndStoreRememberCompletion(
     });
   });
 
+    // if the response has a .image, delete that
+    if (response.image) {
+      delete response.image;
+    }
+
+    // make sure none of the messages in conversation history have an image
+    conversationHistory.forEach((message) => {
+      if (message.image) {
+        delete message.image;
+      }
+    });
+
+    // make sure none of the memory messages have an image
+    memoryMessages.forEach((message) => {
+      if (message.image) {
+        delete message.image;
+      }
+    });
+
   const rememberCompletion = await openai.createChatCompletion({
-    model: "gpt-3.5-turbo-16k",
-    temperature: 1.1,
-    top_p: 0.9,
-    presence_penalty: -0.1,
-    max_tokens: 500,
+    model: "gpt-3.5-turbo-1106",
+    // temperature: 1.1,
+    // top_p: 0.9,
+    // presence_penalty: -0.1,
+    max_tokens: 300,
     messages: [
       ...conversationHistory,
       ...memoryMessages,
       {
         role: "system",
+        content: '---',
+      },
+      {
+        role: "system",
         content: PROMPT_REMEMBER_INTRO,
       },
+      // {
+      //   role: "user",
+      //   content: `${prompt}`,
+      // },
+      // {
+      //   role: "assistant",
+      //   content: `${response}`,
+      // },
+      // instead, we wil just make a big user message
       {
         role: "user",
-        content: `${prompt}`,
-      },
-      {
-        role: "assistant",
-        content: `${response}`,
+        content: `# User (${username}): ${prompt} \n # Robot (Artie): ${response}`,
       },
       {
         role: "user",

@@ -1,7 +1,8 @@
 const { Client, GatewayIntentBits, Events } = require("discord.js");
 const {
   removeMentionFromMessage,
-  splitAndSendMessage
+  splitAndSendMessage,
+  displayTypingIndicator
 } = require("../helpers.js");
 const { processMessageChain } = require("./chain.js");
 const vision = require('./vision.js');
@@ -55,6 +56,19 @@ class DiscordBot {
     try {
       // await channel.send(message);
       splitAndSendMessage(message, channel);
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  async sendAttachment(image, channel) {
+    try {
+      await channel.send({
+        files: [{
+          attachment: image,
+          name: 'image.png'
+        }]
+      });
     } catch (error) {
       console.log(error);
     }
@@ -128,6 +142,8 @@ class DiscordBot {
 
     if (!botMentionOrChannel || authorIsMe || messageAuthorIsBot) return;
 
+    const typing = displayTypingIndicator(message)
+
     
 
     let prompt = await this.processPrompt(message);
@@ -138,18 +154,32 @@ class DiscordBot {
 
     // Check if the last message contains an image- if so send it as a file
     const lastMessage = messages[messages.length - 1];
-    if (lastMessage.image) {
+
+
+    // we need to make a better check of whether it is an image or not
+    // if it is, we are going to be receiving a buffer from the processMessageChain function
+    // if it isn't, it'll be a string
+    // so we check if the last message is a buffer
+    const lastMsgIsBuffer = lastMessage.image
+
+    if (lastMsgIsBuffer) {
+      console.log('last message is a buffer');
       // Send the image as an attachment
-      message.channel.send({
-        files: [{
-          attachment: lastMessage.image,
-          name: 'image.png'
-        }]
-      });
+      // message.channel.send({
+      //   files: [{
+      //     attachment: lastMessage.image,
+      //     name: 'image.png'
+      //   }]
+      // });
+      // stop typing interval
+      clearInterval(typing);
+
+      this.sendAttachment(lastMessage.image, message.channel);
     } 
     
     if (lastMessage.content) {
       // Send the last message of the message chain back to the channel
+      clearInterval(typing);
       this.sendMessage(lastMessage.content, message.channel);
     }
   }
@@ -160,7 +190,7 @@ class DiscordBot {
    */
   async onMessageCreate(message) {
     // Display typing indicator
-    message.channel.sendTyping();
+    // message.channel.sendTyping();
     await this.respondToMessage(message);
     // Stop typing indicator
     // message.channel.stopTyping();

@@ -17,7 +17,7 @@ const { PROMPT_SYSTEM, CAPABILITY_PROMPT_INTRO } = require("./prompts");
 const { encode, decode } = require("@nem035/gpt-3-encoder");
 
 const ERROR_MSG = `I am so sorry, there was some sort of problem. Feel free to ask me again, or try again later.`;
-const TOKEN_LIMIT = 8000;
+const TOKEN_LIMIT = 12000;
 const RESPONSE_LIMIT = 5120;
 const WARNING_BUFFER = 900;
 
@@ -464,6 +464,12 @@ function setTypingInterval(message) {
 
 async function generateAiCompletion(prompt, username, messages, config) {
   const { temperature, presence_penalty } = config;
+
+  // if the last message has .image, delete it that property off it
+  if (messages[messages.length - 1].image) {
+    delete messages[messages.length - 1].image;
+  }
+
   messages = await addPreambleToMessages(username, prompt, messages);
   let completion = null;
   try {
@@ -492,6 +498,7 @@ function getAiResponse(completion) {
 }
 
 async function addPreambleToMessages(username, prompt, messages) {
+  console.log(`🔧 Adding preamble to messages for <${username}> ${prompt}`);
   const preamble = await assembleMessagePreamble(username, prompt);
   return [...preamble, ...messages.flat()];
 }
