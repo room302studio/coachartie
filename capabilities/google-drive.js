@@ -39,6 +39,34 @@ async function listFiles() {
   });
 }
 
+/** Read a Google Doc from Drive and return it as a string
+ * 
+ * @param {string} fileId - The ID of the file to read.
+ * @returns {Promise} A promise that resolves when the file has been read.
+ */
+
+async function readDoc(fileId) {
+  const drive = await getDriveInstance();
+
+  return new Promise((resolve, reject) => {
+    drive.files
+      .export({ fileId, mimeType: "text/plain" }, { responseType: "stream" })
+      .then((res) => {
+        res.data
+          .on("end", () => {
+            resolve("Done reading file.");
+          })
+          .on("error", (error) => {
+            reject(error);
+          })
+          .pipe(process.stdout);
+      })
+      .catch((error) => {
+        reject(error);
+      });
+  });
+}
+
 /**
  * Read a file from Google Drive.
  * @param {string} fileId - The ID of the file to read.

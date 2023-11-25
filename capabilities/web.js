@@ -393,22 +393,6 @@ function randomUserAgent() {
   return pickedUserAgent;
 }
 
-async function handleCapabilityMethod(method, args) {
-  // first we need to figure out what the method is
-  // then grab the URL from the args
-  // then we need to call the method with the URL
-  // then we need to return the result of the method
-
-  const url = destructureArgs(args)[0];
-  if (method === "fetchAndSummarizeUrl") {
-    const summary = await fetchAndSummarizeUrl(url);
-    return summary;
-  } else if (method === "fetchAllLinks") {
-    const links = await fetchAllLinks(url);
-    return links;
-  }
-}
-
 // without caching
 // async function fetchAndSummarizeUrl(url) {
 //   const cleanedUrl = cleanUrlForPuppeteer(url);
@@ -445,6 +429,23 @@ async function fetchAndSummarizeUrl(url) {
   fs.writeFileSync(cachePath, summary);
 
   return summary;
+}
+
+
+async function handleCapabilityMethod(method, args) {
+  // first we need to figure out what the method is
+  // then grab the URL from the args
+  // then we need to call the method with the URL
+  // then we need to return the result of the method
+
+  const url = destructureArgs(args)[0];
+  if (method === "fetchAndSummarizeUrl") {
+    const summary = await fetchAndSummarizeUrl(url);
+    return summary;
+  } else if (method === "fetchAllLinks") {
+    const links = await fetchAllLinks(url);
+    return links;
+  }
 }
 
 module.exports = {

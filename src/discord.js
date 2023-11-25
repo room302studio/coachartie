@@ -1,9 +1,10 @@
 const { Client, GatewayIntentBits, Events } = require("discord.js");
 const {
   removeMentionFromMessage,
+  splitAndSendMessage
 } = require("../helpers.js");
 const { processMessageChain } = require("./chain.js");
-const vision = require('../capabilities/vision.js');
+const vision = require('./vision.js');
 
 const dotenv = require("dotenv");
 dotenv.config();
@@ -52,7 +53,8 @@ class DiscordBot {
    */
   async sendMessage(message, channel) {
     try {
-      await channel.send(message);
+      // await channel.send(message);
+      splitAndSendMessage(message, channel);
     } catch (error) {
       console.log(error);
     }
@@ -89,9 +91,9 @@ class DiscordBot {
   async processImageAttachment(message, prompt) {
     if (message.attachments.first()) {
       const imageUrl = message.attachments.first().url;
-      vision.setup().imageUrl = imageUrl;
-      await vision.setup().fetchImageDescription();
-      const imageDescription = vision.setup().imageDescription;
+      console.log(imageUrl)
+      vision.setImageUrl(imageUrl);
+      const imageDescription = await vision.fetchImageDescription();
       return `${prompt}\n\nDescription of user-provided image: ${imageDescription}`;
     } else {
       return prompt;

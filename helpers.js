@@ -606,8 +606,15 @@ function isChunkSizeAcceptable(currentChunk, word) {
   return currentChunk.length + word.length < 2000;
 }
 
-function splitAndSendMessage(message, messageObject) {
-  if (!messageObject) {
+/**
+ * Splits a message into chunks and sends them as separate messages.
+ *
+ * @param {string} message - The message to be split and sent.
+ * @param {object} channel - The channel to send the message to.
+ * @returns {void}
+ */
+function splitAndSendMessage(message, channel) {
+  if (!channel) {
     console.error("splitAndSendMessage: messageObject is null or undefined");
     return;
   }
@@ -617,7 +624,7 @@ function splitAndSendMessage(message, messageObject) {
   }
   if (message.length < 2000) {
     try {
-      sendMessage(messageObject, message);
+      channel.send(message);
     } catch (e) {
       console.error(e);
     }
@@ -625,7 +632,7 @@ function splitAndSendMessage(message, messageObject) {
     const messageChunks = splitMessageIntoChunks(message);
     for (let i = 0; i < messageChunks.length; i++) {
       try {
-        sendMessage(messageObject, messageChunks[i]);
+        channel.send(messageChunks[i]);
       } catch (error) {
         console.error(error);
       }
@@ -633,9 +640,6 @@ function splitAndSendMessage(message, messageObject) {
   }
 }
 
-function sendMessage(messageObject, message) {
-  messageObject.channel.send(message);
-}
 
 function createTokenLimitWarning() {
   return {

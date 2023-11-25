@@ -1,18 +1,11 @@
 const chalk = require("chalk");
 
-// Change this:
-// const boxen = require("boxen");
-// To this:
-const { boxen } = import("boxen");
 
-// The rest of the code remains the same
 const {
   countMessageTokens,
   doesMessageContainCapability,
   generateAiCompletionParams,
-  displayTypingIndicator,
   generateAiCompletion,
-  splitAndSendMessage,
   trimResponseIfNeeded,
   TOKEN_LIMIT,
   WARNING_BUFFER,
