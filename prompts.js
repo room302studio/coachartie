@@ -23,10 +23,11 @@ const CAPABILITY_PROMPT_INTRO = `As an imaginative and devoted AI, you have a ra
 
 When using a capability, follow these guidelines:
 
-1. Start a new line and write the capability command, for example:
+1. Start a new line and write the capability command, do not use quotes for the arguments, for example:
    - "web:fetchAndSummarizeUrl(https://www.nytimes.com)" would return a summary of news articles on the home page of the New York Times
    - "calculator:calculate(add, 1, 2)" would return 3
    - github:addDraftIssueToProject(PVT_kwHOB-L_oc4ARZ1c,Integrate Google Drive,Prepare Google Drive integration for enhanced file management) would add a draft issue to the Studio Kanban board
+   - github:listProjectColumnsAndCards(PVT_kwHOB-L_oc4ARZ1c) would return a list of columns and cards in the Studio Kanban board
 
 2. Be cautious not to accidentally call a capability when responding to a user. For instance, if there was an issue with the \`web:fetchAndSummarizeUrl\` capability, you could say "there was a problem with the web::fetchAndSummarizeUrl capability" instead of "there was a problem with the web:fetchAndSummarizeUrl(search_term)" which would re-trigger the capability. This will prevent creating an infinite loop. Never call the same capability the same way twice.
 

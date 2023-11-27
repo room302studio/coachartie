@@ -24,6 +24,13 @@ dotenv.config();
 
 */
 
+/**
+ * This function gives you the ability to ask Wolfram Alpha questions and get answers.
+ * @async
+ * @function askWolframAlpha
+ * @param {string} question - The question to ask Wolfram Alpha.
+ * @returns {Promise<string>} The answer from Wolfram Alpha, or an error message if an error occurred.
+ */
 async function askWolframAlpha(question) {
   const wolframAppId = process.env.WOLFRAM_APP_ID;
   const encodedQuestion = encodeURIComponent(question);
