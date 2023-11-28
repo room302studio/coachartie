@@ -399,35 +399,35 @@ module.exports = {
       case "addIssueToRepo":
         return await githubCoach.addIssueToRepo(...destructuredArgs);
       case "cloneRepo":
-        return await githubCoach.cloneRepo(...args);
+        return await githubCoach.cloneRepo(...destructuredArgs);
       case "listRepos":
         return await githubCoach.listRepos();
       case "listUserRepos":
-        return await githubCoach.listUserRepos(...args);
+        return await githubCoach.listUserRepos(...destructuredArgs);
       case "getProjectIdFromUrl":
-        return await githubCoach.getProjectIdFromUrl(...args);
+        return await githubCoach.getProjectIdFromUrl(...destructuredArgs);
       case "listUserProjects":
-        return await githubCoach.listUserProjects(...args);
+        return await githubCoach.listUserProjects(...destructuredArgs);
       case "listProjectColumnsAndCards":
-        return await githubCoach.listProjectColumnsAndCards(...args);
+        return await githubCoach.listProjectColumnsAndCards(...destructuredArgs);
       case "addDraftIssueToProject":
-        return await githubCoach.addDraftIssueToProject(...args);
+        return await githubCoach.addDraftIssueToProject(...destructuredArgs);
       case "createBranch":      
-        return await githubCoach.createBranch(...args);        
+        return await githubCoach.createBranch(...destructuredArgs);        
       case "listBranches":
-        return await githubCoach.listBranches(...args);
+        return await githubCoach.listBranches(...destructuredArgs);
       case "createFile":
-        return await githubCoach.createFile(...args);
+        return await githubCoach.createFile(...destructuredArgs);
       case "createGist":
-        return await githubCoach.createGist(...args);
+        return await githubCoach.createGist(...destructuredArgs);
       case "editFile":
-        return await githubCoach.editFile(...args);
+        return await githubCoach.editFile(...destructuredArgs);
       case "deleteFile":
-        return await githubCoach.deleteFile(...args);
+        return await githubCoach.deleteFile(...destructuredArgs);
       case "createPullRequest":
-        return await githubCoach.createPullRequest(...args);
+        return await githubCoach.createPullRequest(...destructuredArgs);
       case "readFileContents":
-        return await githubCoach.readFileContents(...args);
+        return await githubCoach.readFileContents(...destructuredArgs);
       default:
         throw new Error(`Invalid method: ${method}`);
     }
