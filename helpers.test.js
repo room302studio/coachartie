@@ -31,7 +31,7 @@ const {
   splitAndSendMessage,
   createTokenLimitWarning,
   isExceedingTokenLimit,
-} = require('./helpers');
+} = require('./helpers.js');
 
 describe('Helpers', () => {
   describe('destructureArgs', () => {

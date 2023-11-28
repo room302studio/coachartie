@@ -1,4 +1,3 @@
-const { destructureArgs } = require("../helpers.js");
 const prompts = require("../prompts");
 
 const { CAPABILITY_PROMPT_INTRO } = prompts;

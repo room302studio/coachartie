@@ -1,5 +1,6 @@
 const axios = require("axios");
 const { createCanvas, loadImage } = require("canvas");
+const { destructureArgs } = require("../helpers");
 
 async function handleCapabilityMethod(method, args) {
   const [arg1] = destructureArgs(args);
