@@ -125,6 +125,30 @@ module.exports = {
         },
       ],
     },
+    {
+      slug: "scratch",
+      description: "This gives you a local text file to store data in- think of it as a scratchpad.",
+      enabled: true,
+      methods: [
+        {
+          name: "write",
+          description: "Write a string to the scratch file.",
+          parameters: [
+            {
+              name: "string",
+            },
+          ],
+        },
+        {
+          name: "read",
+          description: "Read the scratch file.",
+        },
+        {
+          name: "clear",
+          description: "Clear the scratch file.",
+        },
+      ],
+    },
     // {
     //   slug: 'github',
     //   description: 'This capability gives you the ability to interact with GitHub repositories, projects, and gists.',

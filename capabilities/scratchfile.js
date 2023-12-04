@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const scratchFilePath = path.join(__dirname, 'scratch.txt');
+const scratchFilePath = path.join(__dirname, 'cache', 'scratch.txt');
 
 function handleCapabilityMethod(args) {
   const [operation, ...content] = args;
