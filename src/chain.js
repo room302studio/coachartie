@@ -16,6 +16,9 @@ const {
 } = require("./capabilities.js");
 const { storeUserMessage } = require("../capabilities/remember");
 
+const MAX_RETRY_COUNT = 3;
+const MAX_CAPABILITY_CALLS = 6;
+
 // Create a new logger instance
 const logger = winston.createLogger({
   level: 'info',
@@ -86,7 +89,8 @@ async function processCapability(messages, capabilityMatch) {
   return messages;
 }
 
-async function processMessageChain(messages, username) {
+async function processMessageChain(messages, username, retryCount = 0, capabilityCallCount = 0) {  
+
   if (!messages.length) {
     logger.warn('Empty Message Chain');
     return [];
@@ -99,14 +103,28 @@ async function processMessageChain(messages, username) {
     return messages;
   }
 
-  do {
-    logger.info('Processing Message Chain: ' + lastMessage.content.slice(0, 20) + '...');
-    messages = await processMessage(messages, lastMessage.content, username);
-    lastMessage = messages[messages.length - 1];
-  } while (
-    doesMessageContainCapability(lastMessage.content) &&
-    !isExceedingTokenLimit(messages)
-  );
+  try {
+    do {
+      logger.info('Processing Message Chain: ' + lastMessage.content.slice(0, 20) + '...');
+      messages = await processMessage(messages, lastMessage.content, username);
+      lastMessage = messages[messages.length - 1];
+      if (doesMessageContainCapability(lastMessage.content)) {
+        capabilityCallCount++;
+      }
+    } while (
+      doesMessageContainCapability(lastMessage.content) &&
+      !isExceedingTokenLimit(messages) &&
+      capabilityCallCount <= MAX_CAPABILITY_CALLS
+    );
+  } catch (error) {
+    if (retryCount < MAX_RETRY_COUNT) {
+      logger.warn(`Error processing message chain, retrying (${retryCount + 1}/${MAX_RETRY_COUNT})`);
+      return processMessageChain(messages, username, retryCount + 1, capabilityCallCount);
+    } else {
+      logger.error('Error processing message chain, maximum retries exceeded');
+      throw error;
+    }
+  }
 
   return messages;
 }
