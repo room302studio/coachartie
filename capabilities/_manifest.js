@@ -142,10 +142,12 @@ module.exports = {
         {
           name: "read",
           description: "Read the scratch file.",
+          parameters: [],
         },
         {
           name: "clear",
           description: "Clear the scratch file.",
+          parameters: [],
         },
       ],
     },
