@@ -4,3 +4,8 @@ summaries/*.txt
 coachartiegithub.2023-05-02.private-key.pem
 /cache/*
 /capabilities/cache/*
+*.log
+artie.log
+artie.log
+capabilities/cache/*.json
+/cache/*.json

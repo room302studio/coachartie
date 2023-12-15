@@ -2,6 +2,7 @@ const { Octokit } = require("@octokit/rest");
 const { graphql } = require("@octokit/graphql");
 const { createAppAuth } = require("@octokit/auth-app");
 const dotenv = require("dotenv");
+const { destructureArgs } = require("../helpers");
 
 dotenv.config();
 
@@ -26,18 +27,16 @@ class GithubCoach {
   async _init() {
     try {
       this.octokit = new Octokit({
-        // auth: authentication.token,
         auth: process.env.GITHUB_PERSONAL_ACCESS_TOKEN,
         userAgent: "github-capability",
         timeZone: "America/New_York",
         baseUrl: "https://api.github.com",
         log: {
-          debug: () => { },
-          info: () => { },
+          debug: () => {},
+          info: () => {},
           warn: console.warn,
           error: console.error,
         },
-        userAgent: "Coach-Artie/1.0.0"
       });
 
       this.graphqlWithAuth = graphql.defaults({
@@ -45,10 +44,8 @@ class GithubCoach {
           authorization: `token ${process.env.GITHUB_PERSONAL_ACCESS_TOKEN}`,
         },
       });
-
-    }
-    catch (error) {
-      console.log(error);
+    } catch (error) {
+      console.error(error);
     }
   }
 
@@ -61,7 +58,8 @@ class GithubCoach {
     const response = await this.octokit.repos.createForAuthenticatedUser({
       name: repositoryName,
     });
-    return response.data;
+    console.log('create repo response')
+    return JSON.stringify(response)
   }
 
   /**
@@ -101,10 +99,10 @@ class GithubCoach {
    */
   async getProjectIdFromUrl(url) {
     const [, , , username, , , projectId] = url.split("/");
-    const { data: projects } = await this.octokit.projects.listForUser({ username });
-    console.log("PROJECTS", projects);
-    const project = projects.find(project => project.html_url === url);
-    console.log("PROJECT", project);
+    const { data: projects } = await this.octokit.projects.listForUser({
+      username,
+    });
+    const project = projects.find((project) => project.html_url === url);
     return project ? project.id : null;
   }
 
@@ -114,32 +112,24 @@ class GithubCoach {
    * @returns {Promise<string>} A stringified array of project nodes.
    */
   async listUserProjects(username) {
-    // const { data: projects } = await this.octokit.projects.listForUser({ username });
-    // return projects.map(project => project.name);
-    // so this uses the rest API which only works for old projects :(
-    // new projects have to be accessed with the graphql API
-    // joy!
-    const data = await this.graphqlWithAuth(`query {
-      user(login: "${username}") {
-        projectsV2(first: 20) {
-          nodes {
-            id
-            title
+    const data = await this.graphqlWithAuth(`
+      query {
+        user(login: "${username}") {
+          projects(first: 20) {
+            nodes {
+              name
+            }
           }
         }
       }
-    }`)
+    `);
 
-    console.log('🔴', data);
-    console.log('🟢', data.user)
-
-    if(!data.user.projectsV2.nodes) {
-      return 'no projects found for this user';
+    const projects = data.user.projects.nodes;
+    if (!projects) {
+      return "No projects found for this user.";
     }
 
-    console.log('🟡', data.user.projectsV2.nodes)
-    
-    return JSON.stringify(data.user.projectsV2.nodes)
+    return projects.map((project) => project.name);
   }
 
 
@@ -149,63 +139,24 @@ class GithubCoach {
    * @returns {Promise<string>} A stringified array of project nodes.
    */
   async listProjectColumnsAndCards(projectId) {
-    // need to use projectsV2 and graphql for this
-    // https://docs.github.com/en/graphql/reference/objects#projectcolumn
-    // https://docs.github.com/en/graphql/reference/objects#projectcard
-    // https://docs.github.com/en/graphql/reference/objects#projectcarditem
-    // https://docs.github.com/en/graphql/reference/objects#projectcardstate
-    const data = await this.graphqlWithAuth(`query {
-      node(id: "${projectId}") {
-        ... on ProjectV2 {
-          items(first: 20) {
-            nodes{
-              id
-              fieldValues(first: 8) {
-                nodes{                
-                  ... on ProjectV2ItemFieldTextValue {
-                    text
-                    field {
-                      ... on ProjectV2FieldCommon {
-                        name
+    const data = await this.graphqlWithAuth(`
+      query {
+        node(id: "${projectId}") {
+          ... on Project {
+            columns(first: 20) {
+              nodes {
+                name
+                cards {
+                  nodes {
+                    content {
+                      __typename
+                      ... on Issue {
+                        title
+                        body
                       }
-                    }
-                  }
-                  ... on ProjectV2ItemFieldDateValue {
-                    date
-                    field {
-                      ... on ProjectV2FieldCommon {
-                        name
+                      ... on PullRequest {
+                        title
                       }
-                    }
-                  }
-                  ... on ProjectV2ItemFieldSingleSelectValue {
-                    name
-                    field {
-                      ... on ProjectV2FieldCommon {
-                        name
-                      }
-                    }
-                  }
-                }              
-              }
-              content{              
-                ... on DraftIssue {
-                  title
-                  body
-                }
-                ...on Issue {
-                  title
-                  assignees(first: 10) {
-                    nodes{
-                      login
-                    }
-                  }
-                }
-                ...on PullRequest {
-                  title
-                  assignees(first: 10) {
-                    nodes{
-                      login
                     }
                   }
                 }
@@ -214,17 +165,26 @@ class GithubCoach {
           }
         }
       }
-    }`)
+    `);
 
-    console.log('🔴', data);
-    console.log('🟢', data.node.items.nodes)
-
-    if(!data.node.items.nodes) {
-      return 'no columns found for this project';
+    const columns = data.node.columns.nodes;
+    if (!columns) {
+      return "No columns found for this project.";
     }
 
-    return JSON.stringify(data.node.items.nodes)
-
+    return columns.map((column) => {
+      const cards = column.cards.nodes.map((card) => {
+        const content = card.content;
+        if (content.__typename === "Issue") {
+          return `Issue: ${content.title}\n${content.body}`;
+        } else if (content.__typename === "PullRequest") {
+          return `Pull Request: ${content.title}`;
+        } else {
+          return "";
+        }
+      });
+      return `${column.name}:\n${cards.join("\n")}`;
+    });
   }
 
   /**
@@ -235,26 +195,17 @@ class GithubCoach {
    * @returns {Promise<string>} A stringified response from the Github API.
    */
   async addDraftIssueToProject(projectId, issueTitle, issueBody) {
-    /*
-   gh api graphql -f query='
-  mutation {
-    addProjectV2DraftIssue(input: {projectId: "PROJECT_ID" title: "TITLE" body: "BODY"}) {
-      projectItem {
-        id
-      }
-    }
-  }'
-
-  */
-    const data = await this.graphqlWithAuth(`mutation {
-      addProjectV2DraftIssue(input: {projectId: "${projectId}" title: "${issueTitle}" body: "${issueBody}"}) {
-        projectItem {
-          id
+    const data = await this.graphqlWithAuth(`
+      mutation {
+        addProjectCard(input: { projectId: "${projectId}", contentId: "${projectId}", contentType: "Issue", note: "${issueBody}" }) {
+          clientMutationId
         }
       }
-    }`)
+    `);
 
-    return JSON.stringify(data)
+    return data.addProjectCard
+      ? "Draft issue added to project."
+      : "Failed to add draft issue to project.";
   }
 
   /**
@@ -264,33 +215,25 @@ class GithubCoach {
    * @returns {Promise<Object>} The response from the Github API.
    */
   async createBranch(repositoryFullName, branchName) {
-    // a repository full name is in the format of owner/repo
     const [owner, repositoryName] = repositoryFullName.split("/");
-
-    console.log('🔴', owner, repositoryName);
-
-    // trim any preceding or trailing whitespace from branchName
     branchName = branchName.trim();
 
-    const baseRefMaster = await this.octokit.git.getRef({
+    const baseRef = await this.octokit.git.getRef({
       owner,
       repo: repositoryName,
       ref: "heads/master",
     });
 
-    const baseRef = baseRefMaster;
-
     const baseSHA = baseRef.data.object.sha;
 
-    // use octokit.rest.git.createRef
     const response = await this.octokit.git.createRef({
       owner,
       repo: repositoryName,
       ref: `refs/heads/${branchName}`,
       sha: baseSHA,
     });
-    return response.data;
 
+    return response.data;
   }
 
   /**
@@ -333,15 +276,9 @@ class GithubCoach {
    * @returns {Promise<string>} A message containing the URL of the created gist.
    */
   async createGist(fileName, description, contentString) {
-    // content string may contain newlines and we need to convert them to \n
-    // contentString = contentString.replace(/\n/g, "\\n");
-
-    console.log('Making gist from string: \n', contentString);
-
     const response = await this.octokit.gists.create({
       files: {
         [fileName]: {
-          // content: `${contentString}`,
           content: contentString,
         },
       },
@@ -427,5 +364,60 @@ class GithubCoach {
 }
 
 module.exports = {
-  GithubCoach,
+  /**
+   * Handle a capability method.
+   * @param {string} method - The name of the method.
+   * @param {Array} args - The arguments for the method.
+   */
+  handleCapabilityMethod: async (method, args) => {
+    const githubCoach = new GithubCoach();
+
+    const destructuredArgs = destructureArgs(args);
+    console.log("destructuredArgs", destructuredArgs);
+    // destructuredArgs [ 'coachartie/test2', 'Test issue 1', 'This is a test issue' ]  
+    // to pass the array off arguments to each method
+    // we need to 
+    // 1. destructure the array
+    // 2. pass the destructured arguments to the method
+
+    switch (method) {
+      case "createRepo":
+        // return await githubCoach.createRepo(args);
+        return await githubCoach.createRepo(...destructuredArgs);
+      case "addIssueToRepo":
+        return await githubCoach.addIssueToRepo(...destructuredArgs);
+      case "cloneRepo":
+        return await githubCoach.cloneRepo(...destructuredArgs);
+      case "listRepos":
+        return await githubCoach.listRepos();
+      case "listUserRepos":
+        return await githubCoach.listUserRepos(...destructuredArgs);
+      case "getProjectIdFromUrl":
+        return await githubCoach.getProjectIdFromUrl(...destructuredArgs);
+      case "listUserProjects":
+        return await githubCoach.listUserProjects(...destructuredArgs);
+      case "listProjectColumnsAndCards":
+        return await githubCoach.listProjectColumnsAndCards(...destructuredArgs);
+      case "addDraftIssueToProject":
+        return await githubCoach.addDraftIssueToProject(...destructuredArgs);
+      case "createBranch":      
+        return await githubCoach.createBranch(...destructuredArgs);        
+      case "listBranches":
+        return await githubCoach.listBranches(...destructuredArgs);
+      case "createFile":
+        return await githubCoach.createFile(...destructuredArgs);
+      case "createGist":
+        return await githubCoach.createGist(...destructuredArgs);
+      case "editFile":
+        return await githubCoach.editFile(...destructuredArgs);
+      case "deleteFile":
+        return await githubCoach.deleteFile(...destructuredArgs);
+      case "createPullRequest":
+        return await githubCoach.createPullRequest(...destructuredArgs);
+      case "readFileContents":
+        return await githubCoach.readFileContents(...destructuredArgs);
+      default:
+        throw new Error(`Invalid method: ${method}`);
+    }
+  },
 };

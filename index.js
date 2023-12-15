@@ -1,68 +1,26 @@
-/*
-🚀 Welcome to the Cyberpunk Future of Discord Bots! 🤖
-In this realm, we import the necessary modules, packages, 
-and wire up our bot's brain to bring it to life. Let's go!
-*/
-
-// 📜 prompts: our guidebook of conversational cues
-const prompts = require("./prompts");
-
-// 🚦 Constants Corner: prepping our prompts and error message
+// Import modules from chain.js
 const {
-  PROMPT_SYSTEM,
-  PROMPT_REMEMBER,
-  PROMPT_REMEMBER_INTRO,
-  PROMPT_CONVO_EVALUATE_FOR_TWEET,
-  PROMPT_CONVO_EVALUATE_INSTRUCTIONS,
-  PROMPT_TWEET_REQUEST,
-  CAPABILITY_PROMPT_INTRO,
-} = prompts;
-const ERROR_MSG = `I am so sorry, there was some sort of problem. Feel free to ask me again, or try again later.`;
+  processMessageChain,
+  processMessage,
+  processCapability,
+  DiscordBot,
+  countMessageTokens,
+  doesMessageContainCapability,
+  generateAiCompletionParams,
+  displayTypingIndicator,
+  generateAiCompletion,
+  splitAndSendMessage
+} = require('./src/chain');
 
-// 🧩 Importing essential building blocks from the Discord package
-const { Client, GatewayIntentBits, Events } = require("discord.js");
-
-// 🌿 dotenv: a lifeline for using environment variables
-const dotenv = require("dotenv");
-
-// 📚 GPT-3 token-encoder: our linguistic enigma machine
-const { encode, decode } = require("@nem035/gpt-3-encoder");
-
-// ⚡ OpenAI API: connecting to the almighty AI powerhouse
-const { Configuration, OpenAIApi } = require("openai");
-
-// ❓ Chance: a randomizer to keep our bot from being boring
-const { Chance } = require("chance");
-const chance = new Chance();
-
-/*
-💾 Memory Lane: the 'remember' capability for our bot.
-The ability to store and retrieve memories and message history.
-*/
+// Import modules from capabilities.js
 const {
-  assembleMemory,
-  getUserMessageHistory,
-  getAllMemories,
-  getUserMemory,
-  storeUserMessage,
-  storeUserMemory,
-} = require("./capabilities/remember.js");
+  capabilityRegex,
+  capabilities,
+  capabilityPrompt,
+  callCapabilityMethod
+} = require('./src/capabilities');
 
-const { calculate } = require("./capabilities/calculator.js");
-
-const { askWolframAlpha } = require("./capabilities/wolframalpha.js");
-
-const { askWikipedia } = require("./capabilities/wikipedia.js");
-
-const { listFiles, readFile, appendString } = require("./capabilities/google-drive.js");
-
-const { GithubCoach } = require("./capabilities/github.js");
-const github = new GithubCoach();
-
-/*
-🌐 Our trusty browsing companion! The 'chrome_gpt_browser' module,
-giving us fetching and parsing superpowers for URLs.
-*/
+// Import modules from memory.js
 const {
   fetchAndSummarizeUrl,
   fetchAllLinks,
