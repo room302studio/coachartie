@@ -1,25 +1,46 @@
 const { google } = require("googleapis");
 const { destructureArgs } = require("../helpers");
 
-const keyfile = "your-keyfile.json"; // Path to JSON file
-const scopes = ["https://www.googleapis.com/auth/calendar"]; // Scope for Google Calendar
-
-const privatekey = require(`./${keyfile}`);
-
-const auth = new google.auth.GoogleAuth({
-  keyFile: keyfile,
-  scopes,
-});
+const keyFile = "./auth/coach-artie-5f8c6debae41.json"; // Path to JSON file
+const scopes = ['https://www.googleapis.com/auth/drive','https://www.googleapis.com/auth/calendar']; 
 
 const getCalendarInstance = async () => {
+  const auth = new google.auth.GoogleAuth({
+    keyFile,
+    scopes,
+  });
+
   const client = await auth.getClient();
   return google.calendar({ version: "v3", auth: client });
 };
 
 async function accessCalendar(calendarId) {
   const calendar = await getCalendarInstance();
+  // log the calendar object to see what methods are available
+  console.log(calendar);
   return calendar.calendars.get({ calendarId });
 }
+
+/**
+ * Retrieves a list of all calendars.
+ * @returns {Promise<Array>} A promise that resolves to an array of calendars.
+ */
+async function listAllCalendars() {
+  const calendar = await getCalendarInstance();
+  
+  // return calendar.calendarList.list();
+  // we want a human-readable list of calendars and their IDs, not the raw API response
+  const response = await calendar.calendarList.list();
+  console.log('\n\n');
+  console.log(response);
+  console.log('\n\n');
+  if(!(response.data.items.length > 0)) throw new Error('No calendars found');
+  const calendars = response.data.items.map(({ summary, id }) => `${summary} (${id})`);
+
+  return calendars;
+}
+
+
 
 /**
  * Retrieves a specific event from a Google Calendar.
@@ -36,7 +57,7 @@ async function accessEvent(calendarId, eventId) {
  * Adds a person to an event in the Google Calendar.
  *
  * @param {string} calendarId - The ID of the calendar.
- * @param {string} eventId - The ID of the event.
+ * @param {string} eventId - Th e ID of the event.
  * @param {string} attendeeEmail - The email address of the attendee to be added.
  * @returns {Promise} - A promise that resolves to the updated event.
  */
@@ -52,6 +73,8 @@ async function addPersonToEvent(calendarId, eventId, attendeeEmail) {
     resource: event.data,
   });
 }
+
+
 
 /**
  * Creates a new event in the specified calendar.
@@ -89,6 +112,8 @@ module.exports = {
     const [arg1, arg2, arg3] = destructureArgs(args);
 
     switch (method) {
+      case "listAllCalendars":
+        return await listAllCalendars();
       case "accessCalendar":
         return await accessCalendar(arg1);
       case "accessEvent":

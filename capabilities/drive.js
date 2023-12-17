@@ -1,21 +1,26 @@
 const { google } = require("googleapis");
 const { destructureArgs } = require("../helpers");
 
-const keyfile = "coach-artie-6ea4b87e7c72.json"; // Path to JSON file
-const scopes = ["https://www.googleapis.com/auth/drive.readonly"]; // Example scope
+const keyFile = "./auth/coach-artie-5f8c6debae41.json"; // Path to JSON file
+const scopes = ['https://www.googleapis.com/auth/drive','https://www.googleapis.com/auth/calendar']; 
 
-const privatekey = require(`./${keyfile}`);
 
-const auth = new google.auth.GoogleAuth({
-  keyFile: keyfile,
-  scopes,
-});
 
 /**
  * Get an instance of Google Drive.
  * @returns {Promise} A promise that resolves to an instance of Google Drive.
  */
 const getDriveInstance = async () => {
+  const auth = new google.auth.GoogleAuth({
+    keyFile,
+    scopes,
+  });
+
+  // console log the scopes we are authed into
+  console.log('auth.scopes are: ');
+  console.log(auth.scopes);
+
+
   const client = await auth.getClient();
   return google.drive({ version: "v3", auth: client });
 };
@@ -25,18 +30,31 @@ const getDriveInstance = async () => {
  * @returns {Promise} A promise that resolves to an array of file names and IDs.
  */
 async function listFiles() {
-  const drive = await getDriveInstance();
+  try {
+    const drive = await getDriveInstance();
 
-  return new Promise((resolve, reject) => {
-    drive.files.list({}, (err, res) => {
-      if (err) {
-        reject(err);
-      } else {
-        const files = res.data.files.map(({ name, id }) => `${name} (${id})`);
-        resolve(files);
-      }
+    return new Promise((resolve, reject) => {
+      drive.files.list({}, (err, res) => {
+        if (err) {
+          reject(err);
+        } else {
+          if (res.data.files.length === 0) {
+            reject(new Error("No files found."));
+          } else {
+            const files = res.data.files.map(({ name, id }) => `${name} (${id})`);
+            resolve(files);
+          }
+        }
+      });
     });
-  });
+  } catch (error) {
+    console.error(error);
+    if (error.code === "AUTH_ERROR") {
+      throw new Error("Authentication problem.");
+    } else {
+      throw error;
+    }
+  }
 }
 
 /** Read a Google Doc from Drive and return it as a string
@@ -94,23 +112,6 @@ async function readFile(fileId) {
   });
 }
 
-const jwtClient = new google.auth.JWT(
-  privatekey.client_email,
-  null,
-  privatekey.private_key,
-  ["https://www.googleapis.com/auth/documents"],
-);
-
-jwtClient.authorize((err) => {
-  if (err) {
-    console.log(err);
-  } else {
-    console.log("Successfully connected!");
-  }
-});
-
-const docs = google.docs({ version: "v1", auth: jwtClient });
-
 /**
  * Append a string to a Google Doc.
  * @param {string} docId - The ID of the Google Doc.
@@ -134,6 +135,8 @@ module.exports = {
     switch (method) {
       case "listFiles":
         return await listFiles();
+      case "readDoc":
+        return await readDoc(arg1);
       case "readFile":
         return await readFile(arg1);
       case "appendString":
