@@ -7,7 +7,7 @@ dotenv.config();
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
-  process.env.SUPABASE_API_KEY
+  process.env.SUPABASE_API_KEY,
 );
 
 async function handleCapabilityMethod(method, args) {
@@ -143,13 +143,6 @@ async function storeUserMemory(userId, value) {
   }
 }
 
-/**
- * Stores a message in the database
- * @param {string} userId
- * @param {string} value
- * @returns {Promise<void>}
- */
-
 async function storeUserMessage(userId, value) {
   const { data, error } = await supabase.from("messages").insert({
     user_id: userId,
@@ -161,35 +154,6 @@ async function storeUserMessage(userId, value) {
   }
 
   return data;
-}
-
-// Given a message, return the last 5 memories and the last 5 messages
-async function assembleMemory(user, memoryCount = 5) {
-  try {
-    if(!user) {
-      console.error("No user provided to assembleMemory");
-      return [];
-    }
-    // Get the last X memories for the current user
-    const memories = await getUserMemory(user, memoryCount);
-
-    console.log(' assembling memories for user: ', memories);
-
-    // get X random memories
-    // const randomMemories = await getRandomMemories(randomMemoryCount);
-
-    // Concat the memories and messages
-    const memory = [
-      ...new Set([
-        ...memories.map(mem => mem.value)
-        // ...randomMemories,
-      ]),
-    ];
-
-    return memory;
-  } catch (e) {
-    console.error("assembleMemory error: ", e);
-  }
 }
 
 async function getRelevantMemories(queryString, limit = 5) {

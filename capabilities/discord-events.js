@@ -7,7 +7,13 @@ class DiscordEvents {
   }
 
   // Function to create a new scheduled event
-  async createScheduledEvent(guildId, channelId, name, description, scheduledStartTime) {
+  async createScheduledEvent(
+    guildId,
+    channelId,
+    name,
+    description,
+    scheduledStartTime,
+  ) {
     try {
       const guild = this.discord.guilds.cache.get(guildId);
       const channel = guild.channels.cache.get(channelId);
@@ -15,9 +21,9 @@ class DiscordEvents {
       const event = await channel.createScheduledEvent({
         name: name,
         description: description,
-        privacyLevel: 'GUILD_ONLY',
+        privacyLevel: "GUILD_ONLY",
         scheduledStartTime: scheduledStartTime,
-        entityType: 'EXTERNAL',
+        entityType: "EXTERNAL",
       });
 
       console.log(`Scheduled event '${name}' created successfully.`);
@@ -42,4 +48,3 @@ class DiscordEvents {
 }
 
 module.exports = DiscordEvents;
-

@@ -11,7 +11,7 @@ describe("Capabilities", () => {
     const response = await callCapabilityMethod(
       capabilitySlug,
       methodName,
-      args
+      args,
     );
     expect(response).toContain("Error");
   });

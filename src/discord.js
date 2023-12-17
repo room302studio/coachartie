@@ -2,10 +2,10 @@ const { Client, GatewayIntentBits, Events } = require("discord.js");
 const {
   removeMentionFromMessage,
   splitAndSendMessage,
-  displayTypingIndicator
+  displayTypingIndicator,
 } = require("../helpers.js");
 const { processMessageChain } = require("./chain.js");
-const vision = require('./vision.js');
+const vision = require("./vision.js");
 
 const dotenv = require("dotenv");
 dotenv.config();
@@ -43,7 +43,6 @@ class DiscordBot {
     // this.bot.on("messageCreate", this.onMessageCreate);
     this.bot.on("messageCreate", this.onMessageCreate.bind(this)); // Bind the context of `this`
 
-
     client = this.bot;
   }
 
@@ -64,10 +63,12 @@ class DiscordBot {
   async sendAttachment(image, channel) {
     try {
       await channel.send({
-        files: [{
-          attachment: image,
-          name: 'image.png'
-        }]
+        files: [
+          {
+            attachment: image,
+            name: "image.png",
+          },
+        ],
       });
     } catch (error) {
       console.log(error);
@@ -103,9 +104,12 @@ class DiscordBot {
    * @param {string} prompt - The prompt to which the image description will be added.
    */
   async processImageAttachment(message, prompt) {
+    if (!message.attachments) {
+      return prompt;
+    }
     if (message.attachments.first()) {
       const imageUrl = message.attachments.first().url;
-      console.log(imageUrl)
+      console.log(imageUrl);
       vision.setImageUrl(imageUrl);
       const imageDescription = await vision.fetchImageDescription();
       return `${prompt}\n\nDescription of user-provided image: ${imageDescription}`;
@@ -119,7 +123,7 @@ class DiscordBot {
    * @param {string} prompt - The prompt to be processed.
    * @param {string} username - The username of the message author.
    */
-  async processMessageChain(prompt, username) {
+  async processMessageChain(prompt, username, message) {
     return await processMessageChain(
       [
         {
@@ -127,7 +131,8 @@ class DiscordBot {
           content: prompt,
         },
       ],
-      username
+      username,
+      message,
     );
   }
 
@@ -142,28 +147,27 @@ class DiscordBot {
 
     if (!botMentionOrChannel || authorIsMe || messageAuthorIsBot) return;
 
-    const typing = displayTypingIndicator(message)
-
-    
+    const typing = displayTypingIndicator(message);
 
     let prompt = await this.processPrompt(message);
     let processedPrompt = await this.processImageAttachment(message, prompt);
-    let messages = await this.processMessageChain(processedPrompt, message.author.username);
-
-    
+    let messages = await this.processMessageChain(
+      processedPrompt,
+      message.author.username,
+      message,
+    );
 
     // Check if the last message contains an image- if so send it as a file
     const lastMessage = messages[messages.length - 1];
-
 
     // we need to make a better check of whether it is an image or not
     // if it is, we are going to be receiving a buffer from the processMessageChain function
     // if it isn't, it'll be a string
     // so we check if the last message is a buffer
-    const lastMsgIsBuffer = lastMessage.image
+    const lastMsgIsBuffer = lastMessage.image;
 
     if (lastMsgIsBuffer) {
-      console.log('last message is a buffer');
+      console.log("last message is a buffer");
       // Send the image as an attachment
       // message.channel.send({
       //   files: [{
@@ -175,8 +179,8 @@ class DiscordBot {
       clearInterval(typing);
 
       this.sendAttachment(lastMessage.image, message.channel);
-    } 
-    
+    }
+
     if (lastMessage.content) {
       // Send the last message of the message chain back to the channel
       clearInterval(typing);

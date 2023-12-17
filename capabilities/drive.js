@@ -40,7 +40,7 @@ async function listFiles() {
 }
 
 /** Read a Google Doc from Drive and return it as a string
- * 
+ *
  * @param {string} fileId - The ID of the file to read.
  * @returns {Promise} A promise that resolves when the file has been read.
  */
@@ -98,7 +98,7 @@ const jwtClient = new google.auth.JWT(
   privatekey.client_email,
   null,
   privatekey.private_key,
-  ["https://www.googleapis.com/auth/documents"]
+  ["https://www.googleapis.com/auth/documents"],
 );
 
 jwtClient.authorize((err) => {

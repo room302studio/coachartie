@@ -1,13 +1,13 @@
 const { openai } = require("./openai");
 
-let imageUrl = '';
-let imageDescription = '';
+let imageUrl = "";
+let imageDescription = "";
 let isFetching = false;
 let error = null;
 
 const fetchImageDescription = async () => {
   isFetching = true;
-  console.log('requesgting description of image at', imageUrl);
+  console.log("requesgting description of image at", imageUrl);
   try {
     const completion = await openai.createChatCompletion({
       model: "gpt-4-vision-preview",
@@ -17,21 +17,21 @@ const fetchImageDescription = async () => {
           role: "user",
           content: [
             {
-              "type": "text",
-              "text": "What’s in this image? Please be as specific as possible, especially any text that may be present."
+              type: "text",
+              text: "What’s in this image? Please be as specific as possible, especially any text that may be present.",
             },
             {
-              "type": "image_url",
-              "image_url": {
-                "url": imageUrl
-              }
-            }
-          ]
+              type: "image_url",
+              image_url: {
+                url: imageUrl,
+              },
+            },
+          ],
         },
       ],
     });
-    
-    imageDescription = completion.data.choices[0].message.content
+
+    imageDescription = completion.data.choices[0].message.content;
     console.log(imageDescription);
   } catch (err) {
     error = err;
@@ -42,9 +42,9 @@ const fetchImageDescription = async () => {
 };
 
 module.exports = {
-  setImageUrl: (url) => imageUrl = url,
+  setImageUrl: (url) => (imageUrl = url),
   fetchImageDescription,
   getImageDescription: () => imageDescription,
   getIsFetching: () => isFetching,
-  getError: () => error
+  getError: () => error,
 };

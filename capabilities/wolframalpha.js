@@ -11,7 +11,7 @@ async function handleCapabilityMethod(method, args) {
     return askWolframAlpha(arg1);
   } else {
     throw new Error(
-      `Method ${method} not supported by Wolfram Alpha capability.`
+      `Method ${method} not supported by Wolfram Alpha capability.`,
     );
   }
 }
@@ -25,7 +25,7 @@ async function handleCapabilityMethod(method, args) {
  */
 async function askWolframAlpha(question) {
   const wolframAppId = process.env.WOLFRAM_APP_ID;
-  const [question] = destructureArgs(args);
+  // const [question] = destructureArgs(args);
 
   const encodedQuestion = encodeURIComponent(question);
   const wolframUrl = `https://api.wolframalpha.com/v1/result?i=${encodedQuestion}&appid=${wolframAppId}`;

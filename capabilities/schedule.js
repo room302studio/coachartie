@@ -26,17 +26,19 @@ const getCalendarInstance = async () => {
 
 /**
  * Function to find potential meeting times within a specified interval
- * @param {Array} emails - Array of emails to check for availability
+ * @param {String} emailString - Space-separated list of emails to check for availability, escape any commas in the list
  * @param {String} timeMin - Start of time interval in human readable format
  * @param {String} timeMax - End of time interval in human readable format
  * @returns {Promise} Array of potential meeting times
  */
-async function findPotentialMeetingTimes(emails, timeMin, timeMax) {
+async function findPotentialMeetingTimes(emailString, timeMin, timeMax) {
   // Get an instance of the Google Calendar API
   const calendar = await getCalendarInstance();
 
+  const emails = emailString.split(" ");
+
   // Map the emails to an array of objects with id as the email
-  const items = emails.map(email => ({ id: email }));
+  const items = emails.map((email) => ({ id: email }));
 
   // Convert human readable time to JavaScript Date objects
   const timeMinDate = new Date(timeMin);
@@ -68,7 +70,11 @@ async function findPotentialMeetingTimes(emails, timeMin, timeMax) {
       const formattedTime = format(potentialTime, "yyyy-MM-dd'T'HH:mm:ss");
 
       // If none of the busy times overlap with the potential time, add it to the potential times array
-      if (!busyTimes.some(time => time.start <= formattedTime && time.end >= formattedTime)) {
+      if (
+        !busyTimes.some(
+          (time) => time.start <= formattedTime && time.end >= formattedTime,
+        )
+      ) {
         potentialTimes.push(formattedTime);
       }
     }

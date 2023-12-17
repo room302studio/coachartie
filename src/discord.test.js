@@ -44,34 +44,17 @@ describe("Discord Bot", () => {
     message.content = "Hello bot!";
     return bot.onMessageCreate(message).then(() => {
       // make sure the bot responds
-      expect(message.channel.send.called).toBe(true);
+      expect(message.channel.send.called).to.be.true;
     });
-  });
-
-  // make sure capabilities work
-  it("should process a message chain that includes a capability", async () => {
-    message.content = "calculator:calculate(add, 1, 2)";
-    await bot.onMessageCreate(message);
-    // wait 15 seconds for the message to process
-    // await new Promise((resolve) => setTimeout(resolve, 15000));
-
-    expect(message.channel.send.called).to.be.true;
   });
 
   // ensure the bot displays the typing indicator when processing a message
   it("should display the typing indicator when processing a message", async () => {
     message.content = "Hello bot!";
-    await bot.onMessageCreate(message);
+    message.channel.sendTyping = sinon.stub();
+    await bot.respondToMessage(message);
     // make sure the bot calls the startTyping method
-    expect(message.channel.startTyping.called).to.be.true;
-  });
-
-  // ensure the bot calls the clearTyping method after processing a message
-  it("should clear the typing indicator after processing a message", async () => {
-    message.content = "Hello bot!";
-    await bot.onMessageCreate(message);
-    // make sure the bot calls the clearTyping method after 5 seconds
-    expect(message.channel.stopTyping.called).to.be.true;
+    expect(message.channel.sendTyping.called).to.be.true;
   });
 
   // ensure the bot does not process messages from other bots

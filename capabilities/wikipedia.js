@@ -49,7 +49,7 @@ async function askWikipedia(args) {
   console.log("Encoded query:", searchParams.srsearch);
   console.log(
     "Full URL:",
-    `${wikipediaApiUrl}?${new URLSearchParams(searchParams).toString()}`
+    `${wikipediaApiUrl}?${new URLSearchParams(searchParams).toString()}`,
   );
 
   try {

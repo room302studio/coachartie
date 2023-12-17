@@ -1,0 +1,449 @@
+{
+  "_generate-manifest": [],
+  "calculator": [
+    {
+      "name": "calculator:add()",
+      "description": "Adds up an array of numbers. Returns: The sum of the numbers.",
+      "parameters": [
+        {
+          "name": "numbers",
+          "description": "The array of numbers to be added."
+        }
+      ]
+    },
+    {
+      "name": "calculator:subtract()",
+      "description": "Subtracts the numbers in the array. Returns: The result of subtracting the numbers.",
+      "parameters": [
+        {
+          "name": "numbers",
+          "description": "The array of numbers to subtract."
+        }
+      ]
+    },
+    {
+      "name": "calculator:multiply()",
+      "description": "Multiplies an array of numbers. Returns: The product of the numbers.",
+      "parameters": [
+        {
+          "name": "numbers",
+          "description": "The array of numbers to multiply."
+        }
+      ]
+    },
+    {
+      "name": "calculator:divide()",
+      "description": "Divides an array of numbers. Returns: The result of dividing the numbers.",
+      "parameters": [
+        {
+          "name": "numbers",
+          "description": "The array of numbers to be divided."
+        }
+      ]
+    },
+    {
+      "name": "calculator:pow()",
+      "description": "Calculates the power of numbers. Returns: The result of the power calculation.",
+      "parameters": [
+        {
+          "name": "numbers",
+          "description": "The numbers to calculate the power of."
+        }
+      ]
+    },
+    {
+      "name": "calculator:sqrt()",
+      "description": "Calculates the square root of each number in the given array. Returns: The array of square roots.",
+      "parameters": [
+        {
+          "name": "numbers",
+          "description": "The array of numbers to calculate the square root for."
+        }
+      ]
+    },
+    {
+      "name": "calculator:log()",
+      "description": "Calculates the logarithm of an array of numbers. Returns: The result of the logarithm calculation.",
+      "parameters": [
+        {
+          "name": "numbers",
+          "description": "The array of numbers to calculate the logarithm for."
+        }
+      ]
+    }
+  ],
+  "chance": [],
+  "discord-events": [],
+  "drive": [
+    {
+      "name": "drive:getDriveInstance()",
+      "description": "Get an instance of Google Drive. Returns: A promise that resolves to an instance of Google Drive."
+    },
+    {
+      "name": "drive:listFiles()",
+      "description": "List all files in the Google Drive. Returns: A promise that resolves to an array of file names and IDs."
+    },
+    {
+      "name": "drive:readDoc()",
+      "description": "Read a Google Doc from Drive and return it as a string Returns: A promise that resolves when the file has been read.",
+      "parameters": [
+        {
+          "name": "fileId",
+          "description": "The ID of the file to read."
+        }
+      ]
+    },
+    {
+      "name": "drive:readFile()",
+      "description": "Read a file from Google Drive. Returns: A promise that resolves when the file has been read.",
+      "parameters": [
+        {
+          "name": "fileId",
+          "description": "The ID of the file to read."
+        }
+      ]
+    },
+    {
+      "name": "drive:appendString()",
+      "description": "Append a string to a Google Doc. Returns: A promise that resolves when the text has been appended.",
+      "parameters": [
+        {
+          "name": "docId",
+          "description": "The ID of the Google Doc."
+        },
+        {
+          "name": "text",
+          "description": "The text to append."
+        }
+      ]
+    }
+  ],
+  "evaluate": [
+    {
+      "name": "evaluate:runCodeInSandbox()",
+      "description": "Runs the provided code in a sandboxed environment. Returns: The result of the code execution.",
+      "parameters": [
+        {
+          "name": "code",
+          "description": "The code to be executed."
+        },
+        {
+          "name": "sandbox",
+          "description": "The sandbox object to provide the execution context."
+        }
+      ]
+    }
+  ],
+  "github": [
+    {
+      "name": "github:GithubCoach()",
+      "description": "This class provides methods to interact with Github."
+    }
+  ],
+  "google-calendar": [
+    {
+      "name": "google-calendar:accessEvent()",
+      "description": "Retrieves a specific event from a Google Calendar. Returns: A promise that resolves to the event object.",
+      "parameters": [
+        {
+          "name": "calendarId",
+          "description": "The ID of the calendar."
+        },
+        {
+          "name": "eventId",
+          "description": "The ID of the event."
+        }
+      ]
+    },
+    {
+      "name": "google-calendar:addPersonToEvent()",
+      "description": "Adds a person to an event in the Google Calendar. Returns: A promise that resolves to the updated event.",
+      "parameters": [
+        {
+          "name": "calendarId",
+          "description": "The ID of the calendar."
+        },
+        {
+          "name": "eventId",
+          "description": "The ID of the event."
+        },
+        {
+          "name": "attendeeEmail",
+          "description": "The email address of the attendee to be added."
+        }
+      ]
+    },
+    {
+      "name": "google-calendar:createEvent()",
+      "description": "Creates a new event in the specified calendar. Returns: A promise that resolves to the created event.",
+      "parameters": [
+        {
+          "name": "calendarId",
+          "description": "The ID of the calendar."
+        },
+        {
+          "name": "event",
+          "description": "The event object to be created."
+        }
+      ]
+    },
+    {
+      "name": "google-calendar:listEventsThisWeek()",
+      "description": "Retrieves a list of events occurring within the current week for the specified calendar. Returns: A promise that resolves to the list of events.",
+      "parameters": [
+        {
+          "name": "calendarId",
+          "description": "The ID of the calendar to retrieve events from."
+        }
+      ]
+    }
+  ],
+  "js": [
+    {
+      "name": "js:executeJavascriptAndCaptureImage()",
+      "description": "Executes the provided JavaScript code in a headless browser using Puppeteer and captures a screenshot of the resulting page. Returns: A promise that resolves to an object containing the captured screenshot image as a Buffer.",
+      "parameters": [
+        {
+          "name": "javascriptCode",
+          "description": "The JavaScript code to be executed in the browser."
+        }
+      ],
+      "exceptions": [
+        "If an error occurs while executing the JavaScript code and capturing the image."
+      ]
+    }
+  ],
+  "mastodon": [
+    {
+      "name": "mastodon:postStatus()",
+      "description": "Posts a status to Mastodon. Returns: A promise that resolves to the response data from Mastodon.",
+      "parameters": [
+        {
+          "name": "text",
+          "description": "The text content of the status."
+        },
+        {
+          "name": "image",
+          "description": "The ID of the image to attach to the status."
+        }
+      ],
+      "exceptions": [
+        "If an error occurs while posting to Mastodon."
+      ]
+    }
+  ],
+  "mermaid": [
+    {
+      "name": "mermaid:convertMermaidDiagram()",
+      "description": "Converts a Mermaid diagram text into an image. Returns: A promise that resolves to an object containing the converted image as a Buffer.",
+      "parameters": [
+        {
+          "name": "diagramText",
+          "description": "The Mermaid diagram text to convert."
+        }
+      ],
+      "exceptions": [
+        "If an error occurs while converting the Mermaid diagram."
+      ]
+    }
+  ],
+  "remember": [
+    {
+      "name": "remember:storeUserMemory()",
+      "description": "Stores a memory in the database Returns: ",
+      "parameters": []
+    }
+  ],
+  "schedule": [
+    {
+      "name": "schedule:auth()",
+      "description": "Google Auth object"
+    },
+    {
+      "name": "schedule:getCalendarInstance()",
+      "description": "Function to get an instance of the Google Calendar API Returns: Google Calendar API instance"
+    },
+    {
+      "name": "schedule:findPotentialMeetingTimes()",
+      "description": "Function to find potential meeting times within a specified interval Returns: Array of potential meeting times",
+      "parameters": [
+        {
+          "name": "emailString",
+          "description": "Space-separated list of emails to check for availability, escape any commas in the list"
+        },
+        {
+          "name": "timeMin",
+          "description": "Start of time interval in human readable format"
+        },
+        {
+          "name": "timeMax",
+          "description": "End of time interval in human readable format"
+        }
+      ]
+    },
+    {
+      "name": "schedule:schedule()",
+      "description": "Exports an object with a method to handle capability methods"
+    }
+  ],
+  "scratchfile": [
+    {
+      "name": "scratchfile:readScratchFile()",
+      "description": "Reads the content of the scratch file. Returns: The content of the scratch file.",
+      "exceptions": [
+        "If the file read operation fails."
+      ]
+    },
+    {
+      "name": "scratchfile:writeScratchFile()",
+      "description": "Writes content to the scratch file. Returns: A success message.",
+      "parameters": [
+        {
+          "name": "content",
+          "description": "The content to write to the scratch file."
+        }
+      ],
+      "exceptions": [
+        "If the file write operation fails."
+      ]
+    },
+    {
+      "name": "scratchfile:clearScratchFile()",
+      "description": "Clears the content of the scratch file. Returns: A success message.",
+      "exceptions": [
+        "If the file write operation fails."
+      ]
+    },
+    {
+      "name": "scratchfile:getScratchFileSize()",
+      "description": "Finds the current size of the scratch file in tokens. Returns: The size of the scratch file in tokens.",
+      "exceptions": [
+        "If the file read operation fails."
+      ]
+    }
+  ],
+  "search": [
+    {
+      "name": "search:duckDuckGoSearch()",
+      "description": "Performs a search using the DuckDuckGo API. Returns: A promise that resolves to an array of search results.",
+      "parameters": [
+        {
+          "name": "query",
+          "description": "The search query."
+        }
+      ],
+      "exceptions": [
+        "If an error occurs during the search."
+      ]
+    }
+  ],
+  "stablediffusion": [
+    {
+      "name": "stablediffusion:generateImageFromText()",
+      "description": "Generates an image from the given text using the Stable Diffusion API. Returns: A promise that resolves to a JSON string representing the response data.",
+      "parameters": [
+        {
+          "name": "args",
+          "description": "The arguments for generating the image."
+        }
+      ],
+      "exceptions": [
+        "If an error occurs during the API request."
+      ]
+    }
+  ],
+  "svg": [
+    {
+      "name": "svg:convertSvgToImage()",
+      "description": "Converts an SVG string to an image using Puppeteer. Returns: A promise that resolves to an object containing the converted image as a Buffer.",
+      "parameters": [
+        {
+          "name": "svgString",
+          "description": "The SVG string to convert."
+        }
+      ],
+      "exceptions": [
+        "If an error occurs while converting SVG to image."
+      ]
+    }
+  ],
+  "web": [
+    {
+      "name": "web:fetchAndParseURL()",
+      "description": "Fetches and parses the content of a given URL. Returns: A promise that resolves to an object containing the title and trimmed text of the page.",
+      "parameters": [
+        {
+          "name": "url",
+          "description": "The URL to fetch and parse."
+        }
+      ]
+    },
+    {
+      "name": "web:fetchAllLinks()",
+      "description": "Fetches all links on a given URL. Returns: A promise that resolves to a string containing the links.",
+      "parameters": [
+        {
+          "name": "url",
+          "description": "The URL to fetch links from."
+        }
+      ]
+    },
+    {
+      "name": "web:fetchAllVisibleImages()",
+      "description": "Fetches all visible images on a given URL. Returns: A promise that resolves to an array of image objects, each containing the source (src) and alternative text (alt) of the image.",
+      "parameters": [
+        {
+          "name": "url",
+          "description": "The URL to fetch images from."
+        }
+      ]
+    },
+    {
+      "name": "web:fetchLargestImage()",
+      "description": "Fetches the largest image from the given URL. Returns: The source URL of the largest image.",
+      "parameters": [
+        {
+          "name": "url",
+          "description": "The URL to fetch the images from."
+        }
+      ]
+    },
+    {
+      "name": "web:fetchAndSummarizeUrl()",
+      "description": "Fetches the content of a URL, generates a summary, and caches the result. Returns: The generated summary.",
+      "parameters": [
+        {
+          "name": "url",
+          "description": "The URL to fetch and summarize."
+        }
+      ]
+    }
+  ],
+  "wikipedia": [
+    {
+      "name": "wikipedia:askWikipedia()",
+      "description": "This function is used to search Wikipedia for a given query.\nIt uses the Wikipedia API to perform the search and then uses OpenAI to evaluate the search results. Returns: A promise that resolves to a string containing the evaluated search results.",
+      "parameters": [
+        {
+          "name": "args",
+          "description": "An array containing the arguments passed to the function."
+        }
+      ],
+      "exceptions": [
+        "If an error occurs while contacting Wikipedia or OpenAI."
+      ]
+    }
+  ],
+  "wolframalpha": [
+    {
+      "name": "wolframalpha:askWolframAlpha()",
+      "description": "This function gives you the ability to ask Wolfram Alpha questions and get answers. Returns: The answer from Wolfram Alpha, or an error message if an error occurred.",
+      "parameters": [
+        {
+          "name": "question",
+          "description": "The question to ask Wolfram Alpha."
+        }
+      ]
+    }
+  ]
+}

@@ -58,8 +58,8 @@ class GithubCoach {
     const response = await this.octokit.repos.createForAuthenticatedUser({
       name: repositoryName,
     });
-    console.log('create repo response')
-    return JSON.stringify(response)
+    console.log("create repo response");
+    return JSON.stringify(response);
   }
 
   /**
@@ -131,7 +131,6 @@ class GithubCoach {
 
     return projects.map((project) => project.name);
   }
-
 
   /**
    * Lists the project columns and cards of a project.
@@ -289,7 +288,6 @@ class GithubCoach {
     return `Gist created! You can access it at <${response.data.html_url}> - remember not to use markdown in your response.`;
   }
 
-
   /**
    * Edits a file in a repository.
    * @param {string} repositoryName - The name of the repository.
@@ -335,7 +333,13 @@ class GithubCoach {
    * @param {string} description - The description of the pull request.
    * @returns {Promise<Object>} The response from the Github API.
    */
-  async createPullRequest(repositoryName, title, headBranch, baseBranch, description) {
+  async createPullRequest(
+    repositoryName,
+    title,
+    headBranch,
+    baseBranch,
+    description,
+  ) {
     const response = await this.octokit.pulls.create({
       owner: process.env.GITHUB_USER,
       repo: repositoryName,
@@ -373,10 +377,10 @@ module.exports = {
     const githubCoach = new GithubCoach();
 
     const destructuredArgs = destructureArgs(args);
-    console.log("destructuredArgs", destructuredArgs);
-    // destructuredArgs [ 'coachartie/test2', 'Test issue 1', 'This is a test issue' ]  
+    // console.log("destructuredArgs", destructuredArgs);
+    // destructuredArgs [ 'coachartie/test2', 'Test issue 1', 'This is a test issue' ]
     // to pass the array off arguments to each method
-    // we need to 
+    // we need to
     // 1. destructure the array
     // 2. pass the destructured arguments to the method
 
@@ -397,11 +401,13 @@ module.exports = {
       case "listUserProjects":
         return await githubCoach.listUserProjects(...destructuredArgs);
       case "listProjectColumnsAndCards":
-        return await githubCoach.listProjectColumnsAndCards(...destructuredArgs);
+        return await githubCoach.listProjectColumnsAndCards(
+          ...destructuredArgs,
+        );
       case "addDraftIssueToProject":
         return await githubCoach.addDraftIssueToProject(...destructuredArgs);
-      case "createBranch":      
-        return await githubCoach.createBranch(...destructuredArgs);        
+      case "createBranch":
+        return await githubCoach.createBranch(...destructuredArgs);
       case "listBranches":
         return await githubCoach.listBranches(...destructuredArgs);
       case "createFile":

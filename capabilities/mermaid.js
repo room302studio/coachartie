@@ -1,7 +1,7 @@
 const axios = require("axios");
 const { createCanvas, loadImage } = require("canvas");
 const { destructureArgs } = require("../helpers");
-const puppeteer = require('puppeteer');
+const puppeteer = require("puppeteer");
 
 let mermaid;
 try {
@@ -10,6 +10,12 @@ try {
   console.error("Failed to resolve mermaid module:", error);
 }
 
+/**
+ * Converts a Mermaid diagram text into an image.
+ * @param {string} diagramText - The Mermaid diagram text to convert.
+ * @returns {Promise<{ image: Buffer }>} - A promise that resolves to an object containing the converted image as a Buffer.
+ * @throws {Error} - If an error occurs while converting the Mermaid diagram.
+ */
 const convertMermaidDiagram = async (diagramText) => {
   try {
     const browser = await puppeteer.launch();
@@ -40,10 +46,10 @@ const convertMermaidDiagram = async (diagramText) => {
       diagramText = diagramText.replace("```", "");
     }
 
-
-
     // Load the Mermaid library
-    await page.addScriptTag({path: require.resolve('mermaid/dist/mermaid.min.js')});
+    await page.addScriptTag({
+      path: require.resolve("mermaid/dist/mermaid.min.js"),
+    });
 
     // Set up the diagram
     await page.setContent(`
@@ -55,10 +61,10 @@ const convertMermaidDiagram = async (diagramText) => {
     `);
 
     // Wait for the diagram to render
-    await page.waitForSelector('svg');
+    await page.waitForSelector("svg");
 
     // Get the entire page/svg
-    const svgHandle = await page.$('svg');
+    const svgHandle = await page.$("svg");
     const svgBoundingBox = await svgHandle.boundingBox();
     const screenshot = await page.screenshot({
       // clip: {
@@ -69,14 +75,16 @@ const convertMermaidDiagram = async (diagramText) => {
       // },
       // quality: 100, // Increase the quality to 100
       fullPage: true, // Capture the full page
-      deviceScaleFactor: 4// Increase the DPI to 2x
+      deviceScaleFactor: 4, // Increase the DPI to 2x
     });
 
     await browser.close();
 
     return { image: screenshot };
   } catch (error) {
-    throw new Error(`Error occurred while converting Mermaid diagram: ${error}`);
+    throw new Error(
+      `Error occurred while converting Mermaid diagram: ${error}`,
+    );
   }
 };
 
@@ -86,9 +94,7 @@ async function handleCapabilityMethod(method, args) {
   if (method === "convertMermaidDiagram") {
     return convertMermaidDiagram(arg1);
   } else {
-    throw new Error(
-      `Method ${method} not supported by Mermaid capability.`
-    );
+    throw new Error(`Method ${method} not supported by Mermaid capability.`);
   }
 }
 

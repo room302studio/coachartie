@@ -1,6 +1,8 @@
 const { Chance } = require("chance");
 const chance = new Chance();
 const dotenv = require("dotenv");
+const fs = require("fs");
+const { google } = require("googleapis");
 const { openai } = require("./src/openai");
 const { capabilityRegex } = require("./src/capabilities.js");
 const {
@@ -17,9 +19,9 @@ const { PROMPT_SYSTEM, CAPABILITY_PROMPT_INTRO } = require("./prompts");
 const { encode, decode } = require("@nem035/gpt-3-encoder");
 
 const ERROR_MSG = `I am so sorry, there was some sort of problem. Feel free to ask me again, or try again later.`;
-const TOKEN_LIMIT = 12000;
+const TOKEN_LIMIT = 14000;
 const RESPONSE_LIMIT = 5120;
-const WARNING_BUFFER = 900;
+const WARNING_BUFFER = 1024;
 
 /**
  * Replaces the robot id with the robot name in a given string.
@@ -229,6 +231,22 @@ function doesMessageContainCapability(message) {
 }
 
 /**
+ * Finds the last message in the array with the user role.
+ *
+ * @param {Array} messagesArray - The array of messages.
+ * @returns {Object} - The last message with the user role.
+ */
+function lastUserMessage(messagesArray) {
+  // find the last message in the array with the user role
+  // return that message
+  const userMessages = messagesArray.filter((message) => {
+    return message.role === "user";
+  });
+
+  return userMessages[userMessages.length - 1].content;
+}
+
+/**
  * Checks if a message is breaking the message chain.
  * @param {string} capabilityMatch - The capability match.
  * @param {object} lastMessage - The last message.
@@ -251,7 +269,7 @@ function trimResponseIfNeeded(capabilityResponse) {
   while (isResponseExceedingLimit(capabilityResponse)) {
     capabilityResponse = trimResponseByLineCount(
       capabilityResponse,
-      countTokens(capabilityResponse)
+      countTokens(capabilityResponse),
     );
   }
   return capabilityResponse;
@@ -291,7 +309,7 @@ function generateTemperature() {
  * @returns {number} - The generated presence penalty value.
  */
 function generatePresencePenalty() {
-  return chance.floating({ min: -0.05, max: 0.05 });
+  return chance.floating({ min: -0.05, max: 0.1 });
 }
 
 /**
@@ -299,16 +317,16 @@ function generatePresencePenalty() {
  * @returns {number} - The generated frequency penalty value.
  */
 function generateFrequencyPenalty() {
-  return chance.floating({ min: 0.0, max: 0.05 });
+  return chance.floating({ min: 0.0, max: 0.1 });
 }
 
 /**
- * Trims a message chain until it's under 8000 tokens.
+ * Trims a message chain until it's under max tokens.
  * @param {Array} messages - The message chain to trim.
  * @param {number} maxTokens - The maximum number of tokens.
  * @returns {Array} - The trimmed message chain.
  */
-function trimMessageChain(messages, maxTokens = 8000) {
+function trimMessageChain(messages, maxTokens = 10000) {
   while (isMessageChainExceedingLimit(messages, maxTokens)) {
     messages = trimMessages(messages);
   }
@@ -436,7 +454,6 @@ function selectRandomLines(lines, linesToRemove) {
   return chance.pickset(lines, linesToRemove);
 }
 
-
 //  * Removes random lines from a response.
 function removeRandomLines(lines, randomLines) {
   return lines.filter((line) => {
@@ -462,6 +479,8 @@ function setTypingInterval(message) {
   return setInterval(() => message.channel.sendTyping(), 5000);
 }
 
+const MAX_OUTPUT_TOKENS = 820;
+
 async function generateAiCompletion(prompt, username, messages, config) {
   const { temperature, presence_penalty } = config;
 
@@ -473,32 +492,205 @@ async function generateAiCompletion(prompt, username, messages, config) {
   messages = await addPreambleToMessages(username, prompt, messages);
   let completion = null;
   try {
-    completion = await createChatCompletion(messages, temperature, presence_penalty);
+    completion = await createChatCompletion(
+      messages,
+      temperature,
+      presence_penalty,
+    );
   } catch (err) {
     console.log(err);
   }
-  const aiResponse = getAiResponse(completion);
+  const aiResponse = completion.data.choices[0].message.content;
   console.log("🤖 AI Response:", aiResponse);
   messages.push(aiResponse);
   return { messages, aiResponse };
 }
 
+// const completionModel = "gemini";
+const completionModel = "openai";
+
 async function createChatCompletion(messages, temperature, presence_penalty) {
-  return await openai.createChatCompletion({
-    model: "gpt-4-1106-preview",
-    temperature,
-    presence_penalty,
-    max_tokens: 820,
-    messages: messages,
-  });
+  if (completionModel === "openai") {
+    return await openai.createChatCompletion({
+      model: "gpt-4-1106-preview",
+      temperature,
+      presence_penalty,
+      max_tokens: MAX_OUTPUT_TOKENS,
+      messages: messages,
+    });
+  } else if (completionModel === "gemini") {
+    // return a gemini completion
+    return await createGeminiCompletion(
+      messages,
+      temperature,
+      presence_penalty,
+    );
+  }
 }
 
-function getAiResponse(completion) {
-  return completion.data.choices[0].message.content;
+async function createGeminiCompletion(messages, temperature, presence_penalty) {
+  const REGION = "us-east4";
+  const PROJECT_ID = "coach-artie";
+  // Define the API endpoint for the Gemini model
+  const apiEndpoint = `https://us-central1-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${REGION}/publishers/google/models/gemini-pro:streamGenerateContent`;
+
+  // we need to re-map all the roles, any role that is not "user" or "model" needs to be mapped to "user"
+  messages = messages.map((message) => {
+    if (message.role === "system") {
+      message.role = "user";
+    }
+    return message;
+  });
+
+  // we also can't have messages from the same role in a row, so we need to collapse them into one message
+  messages = messages.reduce((acc, message) => {
+    if (acc.length === 0) {
+      acc.push(message);
+    } else {
+      const lastMessage = acc[acc.length - 1];
+      if (lastMessage.role === message.role) {
+        lastMessage.content += " " + message.content;
+      } else {
+        acc.push(message);
+      }
+    }
+    return acc;
+  }, []);
+
+  // Construct the request body
+  const requestBody = {
+    contents: messages.map((message) => ({
+      role: message.role,
+      parts: [{ text: message.content }],
+    })),
+    // Include additional parameters as needed
+    generation_config: {
+      // temperature: temperature,
+      maxOutputTokens: MAX_OUTPUT_TOKENS * 2,
+    },
+  };
+
+  // Load the private key from the keyfile
+  // const privateKey = fs.readFileSync('./coachartiegithub.2023-05-02.private-key.pem', 'utf8');
+
+  // // Create a JWT client using the private key
+  // const jwtClient = new google.auth.JWT(
+  //   '131536589906-compute@developer.gserviceaccount.com',
+  //   null,
+  //   privateKey,
+  //   ['https://www.googleapis.com/auth/cloud-platform'],
+  //   null // Add this parameter to fix the issue
+  // );
+
+  // // Authorize the client
+  // try {
+  //   await jwtClient.authorize();
+  // } catch (err) {
+  //   console.error('Error authorizing JWT client:', err);
+  // }
+
+  // to get a bearer token you can run this commmand in the CLI
+  // `gcloud auth print-access-token`
+  const BEARER_TOKEN = "";
+
+  // Make the POST request to the Gemini API with the authorized client
+  const response = await fetch(apiEndpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${BEARER_TOKEN}`,
+    },
+    body: JSON.stringify(requestBody),
+  });
+  // Parse and return the JSON response
+  const json = await response.json();
+  /* response looks like this
+
+  {
+  "candidates": [
+    {
+      "content": {
+        "parts": [
+          {
+            "text": string
+          }
+        ]
+      },
+      "finishReason": enum (FinishReason),
+      "safetyRatings": [
+        {
+          "category": enum (HarmCategory),
+          "probability": enum (HarmProbability),
+          "blocked": boolean
+        }
+      ],
+      "citationMetadata": {
+        "citations": [
+          {
+            "startIndex": integer,
+            "endIndex": integer,
+            "uri": string,
+            "title": string,
+            "license": string,
+            "publicationDate": {
+              "year": integer,
+              "month": integer,
+              "day": integer
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "usageMetadata": {
+    "promptTokenCount": integer,
+    "candidatesTokenCount": integer,
+    "totalTokenCount": integer
+  }
+}
+
+and we need to return something that looks exactly like then openai response */
+  console.log("json", json);
+  // const { candidates } = json[0];
+  // we actually need to combine all the candidates into one response
+  // so lets loop through the json, which is an array of objects with candidates
+  // and combine all the candidates into one array of candidates
+  const candidates = json.reduce((acc, obj) => {
+    acc.push(...obj.candidates);
+    return acc;
+  }, []);
+
+  // console.log('candidates', candidates)
+  // const { content } = candidates[0];
+  // we actually need to combine all the content into one response
+  // so lets loop through the candidates, which is an array of objects with content
+  // and combine all the content into one array of content
+  const content = candidates.reduce((acc, obj) => {
+    acc.push(...obj.content.parts);
+    return acc;
+  }, []);
+  console.log("content", content);
+  const { parts } = content;
+  console.log("parts", parts);
+  // const aiResponse = parts.map(part => part.text).join("\n");
+  // const aiResponse = parts[0].text
+  // combine the text of all the parts into one string
+  const aiResponse = parts.map((part) => part.text).join("\n");
+  return {
+    data: {
+      choices: [
+        {
+          message: {
+            content: aiResponse,
+          },
+        },
+      ],
+    },
+  };
 }
 
 async function addPreambleToMessages(username, prompt, messages) {
-  console.log(`🔧 Adding preamble to messages for <${username}> ${prompt}`);
+  // console.log(`🔧 Adding preamble to messages for <${username}> ${prompt}`);
   const preamble = await assembleMessagePreamble(username, prompt);
   return [...preamble, ...messages.flat()];
 }
@@ -510,6 +702,7 @@ async function assembleMessagePreamble(username, prompt) {
   await addHexagramPrompt(messages);
   addSystemPrompt(messages);
   addCapabilityPromptIntro(messages);
+  addCapabilityManifestMessage(messages);
   await addUserMessages(username, messages);
   await addUserMemories(username, messages);
   return messages;
@@ -547,11 +740,38 @@ function addCapabilityPromptIntro(messages) {
   });
 }
 
-async function addUserMessages(username, messages) {
-  const userMessageCount = chance.integer({ min: 4, max: 16 });
-  console.log(`🔧 Retrieving ${userMessageCount} previous messages for ${username}`);
+function loadCapabilityManifest() {
+  const manifestPath = "./capabilities/_manifest.json";
   try {
-    const userMessages = await getUserMessageHistory(username, userMessageCount);
+    const manifestData = fs.readFileSync(manifestPath, "utf8");
+    const manifest = JSON.parse(manifestData);
+    return manifest;
+  } catch (error) {
+    console.error("Error loading capability manifest:", error);
+    return null;
+  }
+}
+
+function addCapabilityManifestMessage(messages) {
+  const manifest = loadCapabilityManifest();
+  if (manifest) {
+    messages.push({
+      role: "system",
+      content: JSON.stringify(manifest),
+    });
+  }
+}
+
+async function addUserMessages(username, messages) {
+  const userMessageCount = chance.integer({ min: 4, max: 32 });
+  console.log(
+    `🔧 Retrieving ${userMessageCount} previous messages for ${username}`,
+  );
+  try {
+    const userMessages = await getUserMessageHistory(
+      username,
+      userMessageCount,
+    );
     userMessages.reverse();
     userMessages.forEach((message) => {
       messages.push({
@@ -565,7 +785,7 @@ async function addUserMessages(username, messages) {
 }
 
 async function addUserMemories(username, messages) {
-  const userMemoryCount = chance.integer({ min: 1, max: 12 });
+  const userMemoryCount = chance.integer({ min: 4, max: 24 });
   try {
     const userMemories = await getUserMemory(username, userMemoryCount);
     console.log(`🔧 Retrieving ${userMemoryCount} memories for ${username}`);
@@ -646,7 +866,6 @@ function splitAndSendMessage(message, channel) {
     }
   }
 }
-
 
 function createTokenLimitWarning() {
   return {
@@ -736,12 +955,6 @@ function getHexagram() {
   return `${hexagramNumber}. ${hexNameMap[hexagramNumber]}`;
 }
 
-function countTokens(str) {
-  const encodedMessage = encode(str.toString());
-  const tokenCount = encodedMessage.length;
-  return tokenCount;
-}
-
 function countMessageTokens(messageArray = []) {
   let totalTokens = 0;
   // console.log("Message Array: ", messageArray);
@@ -785,4 +998,5 @@ module.exports = {
   splitAndSendMessage,
   createTokenLimitWarning,
   isExceedingTokenLimit,
+  lastUserMessage,
 };

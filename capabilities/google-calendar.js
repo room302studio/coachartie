@@ -21,11 +21,25 @@ async function accessCalendar(calendarId) {
   return calendar.calendars.get({ calendarId });
 }
 
+/**
+ * Retrieves a specific event from a Google Calendar.
+ * @param {string} calendarId - The ID of the calendar.
+ * @param {string} eventId - The ID of the event.
+ * @returns {Promise<object>} - A promise that resolves to the event object.
+ */
 async function accessEvent(calendarId, eventId) {
   const calendar = await getCalendarInstance();
   return calendar.events.get({ calendarId, eventId });
 }
 
+/**
+ * Adds a person to an event in the Google Calendar.
+ *
+ * @param {string} calendarId - The ID of the calendar.
+ * @param {string} eventId - The ID of the event.
+ * @param {string} attendeeEmail - The email address of the attendee to be added.
+ * @returns {Promise} - A promise that resolves to the updated event.
+ */
 async function addPersonToEvent(calendarId, eventId, attendeeEmail) {
   const calendar = await getCalendarInstance();
   const event = await calendar.events.get({ calendarId, eventId });
@@ -39,11 +53,22 @@ async function addPersonToEvent(calendarId, eventId, attendeeEmail) {
   });
 }
 
+/**
+ * Creates a new event in the specified calendar.
+ * @param {string} calendarId - The ID of the calendar.
+ * @param {object} event - The event object to be created.
+ * @returns {Promise<object>} - A promise that resolves to the created event.
+ */
 async function createEvent(calendarId, event) {
   const calendar = await getCalendarInstance();
   return calendar.events.insert({ calendarId, resource: event });
 }
 
+/**
+ * Retrieves a list of events occurring within the current week for the specified calendar.
+ * @param {string} calendarId - The ID of the calendar to retrieve events from.
+ * @returns {Promise<object>} - A promise that resolves to the list of events.
+ */
 async function listEventsThisWeek(calendarId) {
   const calendar = await getCalendarInstance();
   const now = new Date();
@@ -55,7 +80,7 @@ async function listEventsThisWeek(calendarId) {
     timeMin: now.toISOString(),
     timeMax: nextWeek.toISOString(),
     singleEvents: true,
-    orderBy: 'startTime',
+    orderBy: "startTime",
   });
 }
 

@@ -4,35 +4,6 @@ dotenv.config();
 
 const { destructureArgs } = require("../helpers");
 
-var options = {
-  'method': 'POST',
-  'url': 'https://stablediffusionapi.com/api/v3/text2img',
-  'headers': {
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    "key": "",
-    "prompt": "ultra realistic close up portrait ((beautiful pale cyberpunk female with heavy black eyeliner))",
-    "negative_prompt": null,
-    "width": "512",
-    "height": "512",
-    "samples": "1",
-    "num_inference_steps": "20",
-    "seed": null,
-    "guidance_scale": 7.5,
-    "safety_checker": "yes",
-    "multi_lingual": "no",
-    "panorama": "no",
-    "self_attention": "no",
-    "upscale": "no",
-    "embeddings_model": null,
-    "webhook": null,
-    "track_id": null
-  })
-};
-
-
-
 async function handleCapabilityMethod(method, args) {
   const [arg1] = destructureArgs(args);
 
@@ -40,46 +11,53 @@ async function handleCapabilityMethod(method, args) {
     return generateImageFromText(arg1);
   } else {
     throw new Error(
-      `Method ${method} not supported by Stable Diffusion capability.`
+      `Method ${method} not supported by Stable Diffusion capability.`,
     );
   }
 }
 
+/**
+ * Generates an image from the given text using the Stable Diffusion API.
+ * @param {Object} args - The arguments for generating the image.
+ * @param {string} args.prompt - The text prompt for generating the image.
+ * @returns {Promise<string>} - A promise that resolves to a JSON string representing the response data.
+ * @throws {Error} - If an error occurs during the API request.
+ */
 async function generateImageFromText(args) {
   const stableDiffusionApiKey = process.env.STABLE_DIFFUSION_API_KEY;
   const [prompt] = destructureArgs(args);
 
-  const response = axios.post('https://stablediffusionapi.com/api/v3/text2img', {
-    "key": stableDiffusionApiKey,
-    "prompt": prompt,
-    "negative_prompt": null,
-    "width": "512",
-    "height": "512",
-    "samples": "1",
-    "num_inference_steps": "20",
-    "seed": null,
-    "guidance_scale": 7.5,
-    "safety_checker": "yes",
-    "multi_lingual": "no",
-    "panorama": "no",
-    "self_attention": "no",
-    "upscale": "no",
-    "embeddings_model": null,
-    "webhook": null,
-    "track_id": null
-  })
-    .then(function (response) {
-      console.log(response.data);
-      return response.data;
-    })
-    .catch(function (error) {
-      console.log(error);
-    });
+  try {
+    const response = await axios.post(
+      "https://stablediffusionapi.com/api/v3/text2img",
+      {
+        key: stableDiffusionApiKey,
+        prompt: prompt,
+        negative_prompt: null,
+        width: "512",
+        height: "512",
+        samples: "1",
+        num_inference_steps: "20",
+        seed: null,
+        guidance_scale: 7.5,
+        safety_checker: "yes",
+        multi_lingual: "no",
+        panorama: "no",
+        self_attention: "no",
+        upscale: "no",
+        embeddings_model: null,
+        webhook: null,
+        track_id: null,
+      },
+    );
 
-  return response.output;
+    console.log(response.data);
+    return JSON.stringify(response.data);
+  } catch (error) {
+    console.log(error);
+  }
 }
 
 module.exports = {
   handleCapabilityMethod,
 };
-  

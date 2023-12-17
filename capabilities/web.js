@@ -3,14 +3,24 @@ const { Configuration, OpenAIApi } = require("openai");
 const puppeteer = require("puppeteer");
 // const { fstat } = require("fs");
 // const { fs } = require("fs");
-const { WEBPAGE_UNDERSTANDER_PROMPT } = require("../prompts");
+const {
+  WEBPAGE_UNDERSTANDER_PROMPT,
+  WEBPAGE_CHUNK_UNDERSTANDER_PROMPT,
+} = require("../prompts");
 const { encode, decode } = require("@nem035/gpt-3-encoder");
 // import chance
 const chance = require("chance").Chance();
-const { destructureArgs } = require("../helpers");
+const {
+  destructureArgs,
+  countMessageTokens,
+  lastUserMessage,
+} = require("../helpers");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
+
+// const CHUNK_TOKEN_AMOUNT = 7000
+const CHUNK_TOKEN_AMOUNT = 10952;
 
 dotenv.config();
 
@@ -20,7 +30,7 @@ const configuration = new Configuration({
 });
 const openai = new OpenAIApi(configuration);
 
-// This file will serve as a module used by the main discord bot in index.js
+// This file will serve as a module used by the main discord bot
 
 // The purpose of this file is to enable basic web browser access for the robot: given a URL, access it, parse it as JSON, and return the page contents to the main bot.
 
@@ -69,6 +79,12 @@ function sleep(ms) {
   });
 }
 
+/**
+ * Fetches and parses the content of a given URL.
+ *
+ * @param {string} url - The URL to fetch and parse.
+ * @returns {Promise<{ title: string, text: string }>} - A promise that resolves to an object containing the title and trimmed text of the page.
+ */
 async function fetchAndParseURL(url) {
   const browser = await puppeteer.launch();
   const page = await browser.newPage();
@@ -133,6 +149,12 @@ async function fetchAndParseURL(url) {
   return { title, text: trimmedText };
 }
 
+/**
+ * Fetches all links on a given URL.
+ *
+ * @param {string} url - The URL to fetch links from.
+ * @returns {Promise<string>} - A promise that resolves to a string containing the links.
+ */
 async function fetchAllLinks(url) {
   console.log("🕸️  Fetching all links on " + url);
   // navigate to a page and fetch all of the anchor tags
@@ -209,7 +231,75 @@ async function fetchAllLinks(url) {
   return `# Links on ${url}\n${linkList.join("\n")}`;
 }
 
-async function processChunks(chunks, data, limit = 2) {
+/**
+ * Fetches all visible images on a given URL.
+ *
+ * @param {string} url - The URL to fetch images from.
+ * @returns {Promise<Array<{src: string, alt: string}>>} - A promise that resolves to an array of image objects, each containing the source (src) and alternative text (alt) of the image.
+ */
+async function fetchAllVisibleImages(url) {
+  console.log("🕸️  Fetching all images on " + url);
+  // navigate to a page and fetch all of the anchor tags
+  const browser = await puppeteer.launch();
+  const page = await browser.newPage();
+  await page.setUserAgent(randomUserAgent());
+
+  // clean the URL
+  const cleanUrl = cleanUrlForPuppeteer(url);
+
+  // if the url and cleanedUrl are different, log it
+  if (url !== cleanUrl) {
+    console.log("🧹  Cleaned URL to " + cleanUrl);
+  }
+
+  await page.goto(cleanUrl);
+
+  console.log("🕸️  Navigating to " + cleanUrl);
+
+  // wait for body to load
+  await page.waitForSelector("body");
+
+  // wait 2 seconds for any JS to run
+  await sleep(2000);
+
+  // get all the links and the link text
+  const images = await page.$$eval("img", function (elements) {
+    return (
+      elements
+        .map((element) => {
+          return {
+            src: element.src,
+            alt: element.alt,
+          };
+        })
+        // filter out any links that don't have text
+        .filter((image) => image.alt.length > 0)
+    );
+  });
+
+  await browser.close();
+
+  // return the links as a newline delimited list prepared for GPT-3
+  return images;
+}
+
+/**
+ * Fetches the largest image from the given URL.
+ * @param {string} url - The URL to fetch the images from.
+ * @returns {Promise<string>} The source URL of the largest image.
+ */
+async function fetchLargestImage(url) {
+  const urlImages = await fetchAllVisibleImages(url);
+  // sort the images by size
+  urlImages.sort((a, b) => {
+    return b.width * b.height - a.width * a.height;
+  });
+
+  // return the first image
+  return urlImages[0].src;
+}
+
+async function processChunks(chunks, data, limit = 2, userPrompt = "") {
   const results = [];
   const chunkLength = chunks.length;
 
@@ -221,7 +311,7 @@ async function processChunks(chunks, data, limit = 2) {
       .slice(i, i + limit)
       .map(async (chunk, index) => {
         // sleep so we don't anger the OpenAI gods
-        await sleep(1000);
+        await sleep(500);
 
         console.log(`📝  Sending chunk ${i + index + 1} of ${chunkLength}...`);
         console.log("📝  Chunk text:", chunk);
@@ -229,21 +319,17 @@ async function processChunks(chunks, data, limit = 2) {
         const completion = await openai.createChatCompletion({
           model: "gpt-3.5-turbo-16k",
           max_tokens: 1024,
-          temperature: 0.5,
+          // temperature: 0.5,
           // presence_penalty: 0.66,
-          presence_penalty: -0.1,
+          presence_penalty: -0.05,
           // frequency_penalty: 0.1,
           messages: [
-            // {
-            //   role: "assistant",
-            //   content: pageUnderstanderPrompt,
-            // },
+            { role: "user", content: userPrompt },
             {
               role: "user",
-              content: `${WEBPAGE_UNDERSTANDER_PROMPT}
+              content: `${WEBPAGE_CHUNK_UNDERSTANDER_PROMPT}
 
-            ${chunk}      
-Remember to be as concise as possible and ignore any links or other text that isn't relevant to the main content of the page.`,
+            ${chunk}`,
             },
           ],
         });
@@ -258,7 +344,29 @@ Remember to be as concise as possible and ignore any links or other text that is
   return results;
 }
 
-async function generateSummary(url, data) {
+/**
+ * Fetches the content of a URL, generates a summary, and caches the result.
+ * @param {string} url - The URL to fetch and summarize.
+ * @returns {Promise<string>} - The generated summary.
+ */
+async function fetchAndSummarizeUrl(url, userPrompt = "") {
+  const cleanedUrl = cleanUrlForPuppeteer(url);
+  const hashedUrl = crypto.createHash("md5").update(cleanedUrl).digest("hex");
+  const cachePath = path.join(__dirname, "cache", `${hashedUrl}.json`);
+
+  // Check if the cache file exists and is less than an hour old
+  if (
+    fs.existsSync(cachePath) &&
+    (Date.now() - fs.statSync(cachePath).mtime) / 1000 < 3600
+  ) {
+    console.log(`📝  Using cached data for URL: ${cleanedUrl}`);
+    return fs.readFileSync(cachePath, "utf8");
+  }
+
+  console.log(`📝  Fetching URL: ${cleanedUrl}`);
+  const data = await fetchAndParseURL(cleanedUrl);
+  console.log(`📝  Fetched URL: ${cleanedUrl}`);
+
   console.log("📝  Generating summary...");
 
   // if data.text is longer than 4096 characters, split it into chunks of 4096 characters and send each chunk as a separate message and then combine the responses
@@ -274,10 +382,7 @@ async function generateSummary(url, data) {
   // remove multiple spaces
   text = text.replace(/ +(?= )/g, "");
 
-  // const chunkAmount = 7000
-  const chunkAmount = 12952;
-
-  // we need to refactor to use countMessageTokens instead of character count, so we split the text into chunks with chunkAmount tokens each
+  // we need to refactor to use countMessageTokens instead of character count, so we split the text into chunks with CHUNK_TOKEN_AMOUNT tokens each
   let chunks = [];
   let chunkStart = 0;
   // now we need to split the text into chunks of 13592 tokens each
@@ -285,7 +390,7 @@ async function generateSummary(url, data) {
   // we will use the countMessageTokens function to do this
   let tokenCount = countMessageTokens(text);
   console.log(`📝  Token count: ${tokenCount}`);
-  let chunkEnd = chunkAmount; // set the chunkEnd to the chunkAmount so we can start the loop
+  let chunkEnd = CHUNK_TOKEN_AMOUNT; // set the chunkEnd to the CHUNK_TOKEN_AMOUNT so we can start the loop
   while (chunkStart < tokenCount) {
     // we need to make sure that the chunkEnd is not greater than the tokenCount
     if (chunkEnd > tokenCount) {
@@ -295,12 +400,12 @@ async function generateSummary(url, data) {
     chunks.push(text.slice(chunkStart, chunkEnd));
     // now we can set the chunkStart to the chunkEnd
     chunkStart = chunkEnd;
-    // now we can set the chunkEnd to the chunkStart + chunkAmount
-    chunkEnd = chunkStart + chunkAmount;
+    // now we can set the chunkEnd to the chunkStart + CHUNK_TOKEN_AMOUNT
+    chunkEnd = chunkStart + CHUNK_TOKEN_AMOUNT;
   }
 
   console.log(`📝  Splitting text into ${chunks.length} chunks...`);
-  console.log(`📝  Chunk length: ${chunkAmount} tokens`);
+  console.log(`📝  Chunk length: ${CHUNK_TOKEN_AMOUNT} tokens`);
 
   let factList = "";
   try {
@@ -312,15 +417,15 @@ async function generateSummary(url, data) {
       chunkResponses = JSON.parse(
         fs.readFileSync(
           path.join(__dirname, `../cache/${cacheKey}.json`),
-          "utf8"
-        )
+          "utf8",
+        ),
       );
     } else {
       chunkResponses = await processChunks(chunks, data);
       // Cache the chunks
       fs.writeFileSync(
         path.join(__dirname, `../cache/${cacheKey}.json`),
-        JSON.stringify(chunkResponses)
+        JSON.stringify(chunkResponses),
       );
     }
 
@@ -338,44 +443,33 @@ async function generateSummary(url, data) {
   // use gpt-3.5-turbo-16k for the final summary
   const summaryCompletion = await openai.createChatCompletion({
     model: "gpt-3.5-turbo-16k",
-    max_tokens: 2048,
-    temperature: 0.5,
+    // max_tokens: 2048,
+    max_tokens: 3072,
+    // temperature: 0.5,
     // presence_penalty: 0.66,
-    presence_penalty: -0.1,
+    // presence_penalty: -0.1,
     // frequency_penalty: 0.1,
     messages: [
       {
         role: "user",
-        content: `${WEBPAGE_UNDERSTANDER_PROMPT}
+        content: `# User goal: ${userPrompt}
 
-${factList}
+${WEBPAGE_UNDERSTANDER_PROMPT}
 
-Remember to be as concise as possible and ignore any links or other text that isn't relevant to the main content of the page.`,
+## Facts
+${factList}`,
       },
     ],
   });
 
   const summary = summaryCompletion.data.choices[0].message.content;
+
+  console.log(`📝  Generated summary for URL: ${cleanedUrl}`, summary);
+
+  // Save the summary to the cache
+  fs.writeFileSync(cachePath, summary);
+
   return summary;
-  // return factList
-}
-
-function countMessageTokens(messageArray = []) {
-  let totalTokens = 0;
-  if (!messageArray) {
-    return totalTokens;
-  }
-  if (messageArray.length === 0) {
-    return totalTokens;
-  }
-  for (let i = 0; i < messageArray.length; i++) {
-    const message = messageArray[i];
-    // encode message.content
-    const encodedMessage = encode(JSON.stringify(message));
-    totalTokens += encodedMessage.length;
-  }
-
-  return totalTokens;
 }
 
 function randomUserAgent() {
@@ -393,63 +487,30 @@ function randomUserAgent() {
   return pickedUserAgent;
 }
 
-// without caching
-// async function fetchAndSummarizeUrl(url) {
-//   const cleanedUrl = cleanUrlForPuppeteer(url);
-//   console.log(`📝  Fetching URL: ${cleanedUrl}`);
-//   const data = await fetchAndParseURL(cleanedUrl);
-//   console.log(`📝  Fetched URL: ${cleanedUrl}`);
-//   const summary = await generateSummary(cleanedUrl, data);
-//   console.log(`📝  Generated summary for URL: ${cleanedUrl}`, summary);
-//   return summary;
-// }
-
-// with caching
-async function fetchAndSummarizeUrl(url) {
-  const cleanedUrl = cleanUrlForPuppeteer(url);
-  const hashedUrl = crypto.createHash("md5").update(cleanedUrl).digest("hex");
-  const cachePath = path.join(__dirname, "cache", `${hashedUrl}.json`);
-
-  // Check if the cache file exists and is less than an hour old
-  if (
-    fs.existsSync(cachePath) &&
-    (Date.now() - fs.statSync(cachePath).mtime) / 1000 < 3600
-  ) {
-    console.log(`📝  Using cached data for URL: ${cleanedUrl}`);
-    return fs.readFileSync(cachePath, "utf8");
-  }
-
-  console.log(`📝  Fetching URL: ${cleanedUrl}`);
-  const data = await fetchAndParseURL(cleanedUrl);
-  console.log(`📝  Fetched URL: ${cleanedUrl}`);
-  const summary = await generateSummary(cleanedUrl, data);
-  console.log(`📝  Generated summary for URL: ${cleanedUrl}`, summary);
-
-  // Save the summary to the cache
-  fs.writeFileSync(cachePath, summary);
-
-  return summary;
-}
-
-
-async function handleCapabilityMethod(method, args) {
+async function handleCapabilityMethod(method, args, messages) {
   // first we need to figure out what the method is
   // then grab the URL from the args
   // then we need to call the method with the URL
   // then we need to return the result of the method
 
+  const userPrompt = lastUserMessage(messages);
+
   const url = destructureArgs(args)[0];
   if (method === "fetchAndSummarizeUrl") {
-    const summary = await fetchAndSummarizeUrl(url);
+    const summary = await fetchAndSummarizeUrl(url, userPrompt);
     return summary;
   } else if (method === "fetchAllLinks") {
     const links = await fetchAllLinks(url);
     return links;
+  } else if (method === "fetchLargestImage") {
+    const image = await fetchLargestImage(url);
+    return image;
   }
 }
 
 module.exports = {
   fetchAndSummarizeUrl,
+  fetchLargestImage,
   fetchAllLinks,
   handleCapabilityMethod,
 };
