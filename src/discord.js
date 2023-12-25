@@ -1,3 +1,5 @@
+const express = require('express');
+const { OAuth2Client } = require('google-auth-library');
 const { Client, GatewayIntentBits, Events } = require("discord.js");
 const {
   removeMentionFromMessage,
@@ -11,6 +13,10 @@ const dotenv = require("dotenv");
 dotenv.config();
 
 let client;
+
+const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI;
 
 function onClientReady(c) {
   console.log(`⭐️ Ready! Logged in as ${c.user.username}`);
@@ -44,6 +50,12 @@ class DiscordBot {
     this.bot.on("messageCreate", this.onMessageCreate.bind(this)); // Bind the context of `this`
 
     client = this.bot;
+
+    // Initialize OAuth2 client
+    this.oauth2Client = new OAuth2Client(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
+
+    // Start OAuth callback server
+    this.startOAuthServer();
   }
 
   /**
@@ -186,6 +198,43 @@ class DiscordBot {
       clearInterval(typing);
       this.sendMessage(lastMessage.content, message.channel);
     }
+  }
+
+  /**
+   * Starts the OAuth server.
+   * @param {string[]} scopes - The scopes to request.
+   * @param {string} redirectUri - The redirect URI to use.
+   * @param {string} port - The port to listen on.
+   */
+  startOAuthServer(scopes = [], redirectUri = '', port = '3000') {
+    const app = express();
+
+    // Define the route for "/auth/google"
+    app.get('/auth/google', (req, res) => {
+      const url = this.oauth2Client.generateAuthUrl({
+        access_type: 'offline',
+        scope: scopes,
+      });
+      res.redirect(url);
+    });
+
+    // Define the OAuth 2.0 callback route
+    app.get('/oauth2callback', async (req, res) => {
+      try {
+        const { tokens } = await this.oauth2Client.getToken(req.query.code);
+        this.oauth2Client.setCredentials(tokens);
+        // Here, you'd typically store the tokens in a database and handle any post-auth logic
+        res.send('Authorization successful!');
+      } catch (error) {
+        console.error('Error retrieving OAuth tokens:', error);
+        res.status(500).send('Authentication failed');
+      }
+    });
+
+    // Start the server
+    app.listen(port, () => {
+      console.log(`OAuth Callback Server listening on port ${port}`);
+    });
   }
 
   /**
