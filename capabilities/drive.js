@@ -1,4 +1,4 @@
-const { google } = require("googleapis");
+const { google, batchUpdate} = require("googleapis");
 const { destructureArgs } = require("../helpers");
 
 const keyFile = "./auth/coach-artie-e95c8660132f.json"; // Path to JSON file
@@ -125,7 +125,61 @@ async function readFile(fileId) {
  * @returns {Promise} A promise that resolves when the text has been appended.
  */
 async function appendString(docId, text) {
+  const drive = await getDriveInstance();
 
+  // first get the current content of the doc
+  const currentContent = await readDoc(docId);
+
+  // then append the new text
+  const newContent = `${currentContent}\n${text}`;
+
+  // then update the doc with the new content
+  return new Promise((resolve, reject) => {
+    drive.files
+      .update({
+        fileId: docId,
+        media: {
+          mimeType: "text/plain",
+          body: newContent,
+        },
+      })
+      .then(() => {
+        resolve("Done appending text.");
+      })
+      .catch((error) => {
+        reject(error);
+      });
+  });
+
+  // instead of completely overwriting the doc, we can use the batchUpdate method to insert text at the end of the doc
+  // see https://developers.google.com/docs/api/how-tos/batch for more info
+  // but that is a bit more complicated
+
+}
+
+/**
+ * 
+ * @param {string} title - The title of the new document.
+ * @param {string} text - The text to use as the content of the new document.
+ */
+async function createNewDocument(title, text) {
+  const drive = await getDriveInstance();
+
+  // Create a new Google Doc
+  const docMetadata = {
+    name: title,
+    mimeType: "application/vnd.google-apps.document",
+  };
+
+  const createdDoc = await drive.files.create({
+    resource: docMetadata,
+    media: {
+      mimeType: "text/plain",
+      body: text,
+    },
+  });
+
+  return createdDoc.data;
 }
 
 module.exports = {
@@ -141,6 +195,8 @@ module.exports = {
         return await readFile(arg1);
       case "appendString":
         return await appendString(arg1, arg2);
+      case "createNewDocument":
+        return await createNewDocument(arg1, arg2);
       default:
         throw new Error(`Invalid method: ${method}`);
     }
