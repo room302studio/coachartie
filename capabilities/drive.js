@@ -1,6 +1,5 @@
 const { google } = require("googleapis");
 const { destructureArgs } = require("../helpers");
-const docs = require('googleapis').docs.v1;
 
 const keyFile = "./auth/coach-artie-e95c8660132f.json"; // Path to JSON file
 const scopes = ['https://www.googleapis.com/auth/drive','https://www.googleapis.com/auth/calendar']; 
@@ -126,13 +125,7 @@ async function readFile(fileId) {
  * @returns {Promise} A promise that resolves when the text has been appended.
  */
 async function appendString(docId, text) {
-  const doc = await docs.documents.get({ documentId: docId });
-  doc.data.body.content += `\n${text}`;
 
-  return docs.documents.update({
-    documentId: docId,
-    requestBody: { body: { content: doc.data.body.content } },
-  });
 }
 
 module.exports = {
