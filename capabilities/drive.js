@@ -1,5 +1,6 @@
 const { google } = require("googleapis");
 const { destructureArgs } = require("../helpers");
+const docs = require('googleapis').docs.v1;
 
 const keyFile = "./auth/coach-artie-e95c8660132f.json"; // Path to JSON file
 const scopes = ['https://www.googleapis.com/auth/drive','https://www.googleapis.com/auth/calendar']; 
@@ -66,26 +67,18 @@ async function listFiles() {
 async function readDoc(fileId) {
   const drive = await getDriveInstance();
   let fileContent = '';
-  let suggestions = '';
 
   return new Promise((resolve, reject) => {
     drive.files
       .export({ fileId, mimeType: "text/plain" }, { responseType: "stream" })
       .then((res) => {
+        
         res.data
           .on("data", (chunk) => {
             fileContent += chunk;
           })
           .on("end", () => {
-            fetchSuggestions()
-              .then((suggestionsData) => {
-                suggestions = formatSuggestions(suggestionsData);
-                resolve(fileContent + suggestions);
-              })
-              .catch((error) => {
-                console.error(error);
-                resolve(fileContent); // Resolve with fileContent if fetching suggestions fails
-              });
+            resolve(fileContent);
           })
           .on("error", (error) => {
             reject(error);
@@ -94,26 +87,9 @@ async function readDoc(fileId) {
       .catch((error) => {
         reject(error);
       });
+
+    return fileContent;
   });
-}
-
-/**
- * Fetch suggestions from a source.
- * @returns {Promise} A promise that resolves to the suggestions data.
- */
-async function fetchSuggestions() {
-  // Fetch suggestions from a source
-  // ...
-}
-
-/**
- * Format suggestions as a string.
- * @param {Object} suggestionsData - The suggestions data.
- * @returns {string} The formatted suggestions string.
- */
-function formatSuggestions(suggestionsData) {
-  // Format suggestions as a string
-  // ...
 }
 
 /**
