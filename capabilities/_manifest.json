@@ -1,68 +1,6 @@
 {
   "_generate-manifest": [],
   "chance": [],
-  "calendar": [
-    {
-      "name": "calendar:listAllCalendars()",
-      "description": "Retrieves a list of all calendars. Returns: A promise that resolves to an array of calendars."
-    },
-    {
-      "name": "calendar:accessEvent()",
-      "description": "Retrieves a specific event from a Google Calendar. Returns: A promise that resolves to the event object.",
-      "parameters": [
-        {
-          "name": "calendarId",
-          "description": "The ID of the calendar."
-        },
-        {
-          "name": "eventId",
-          "description": "The ID of the event."
-        }
-      ]
-    },
-    {
-      "name": "calendar:addPersonToEvent()",
-      "description": "Adds a person to an event in the Google Calendar. Returns: A promise that resolves to the updated event.",
-      "parameters": [
-        {
-          "name": "calendarId",
-          "description": "The ID of the calendar."
-        },
-        {
-          "name": "eventId",
-          "description": "The ID of the event."
-        },
-        {
-          "name": "attendeeEmail",
-          "description": "The email address of the attendee to be added."
-        }
-      ]
-    },
-    {
-      "name": "calendar:createEvent()",
-      "description": "Creates a new event in the specified calendar. Returns: A promise that resolves to the created event.",
-      "parameters": [
-        {
-          "name": "calendarId",
-          "description": "The ID of the calendar."
-        },
-        {
-          "name": "event",
-          "description": "The event object to be created."
-        }
-      ]
-    },
-    {
-      "name": "calendar:listEventsThisWeek()",
-      "description": "Retrieves a list of events occurring within the current week for the specified calendar. Returns: A promise that resolves to the list of events.",
-      "parameters": [
-        {
-          "name": "calendarId",
-          "description": "The ID of the calendar to retrieve events from."
-        }
-      ]
-    }
-  ],
   "drive": [
     {
       "name": "drive:getDriveInstance()",
@@ -103,6 +41,19 @@
         {
           "name": "text",
           "description": "The text to append."
+        }
+      ]
+    },
+    {
+      "name": "drive:createNewDocument()",
+      "parameters": [
+        {
+          "name": "title",
+          "description": "The title of the new document."
+        },
+        {
+          "name": "text",
+          "description": "The text to use as the content of the new document."
         }
       ]
     }
@@ -196,47 +147,73 @@
       ]
     }
   ],
+  "calendar": [
+    {
+      "name": "calendar:listAllCalendars()",
+      "description": "Retrieves a list of all calendars. Returns: A promise that resolves to an array of calendars."
+    },
+    {
+      "name": "calendar:accessEvent()",
+      "description": "Retrieves a specific event from a Google Calendar. Returns: A promise that resolves to the event object.",
+      "parameters": [
+        {
+          "name": "calendarId",
+          "description": "The ID of the calendar."
+        },
+        {
+          "name": "eventId",
+          "description": "The ID of the event."
+        }
+      ]
+    },
+    {
+      "name": "calendar:addPersonToEvent()",
+      "description": "Adds a person to an event in the Google Calendar. Returns: A promise that resolves to the updated event.",
+      "parameters": [
+        {
+          "name": "calendarId",
+          "description": "The ID of the calendar."
+        },
+        {
+          "name": "eventId",
+          "description": "Th e ID of the event."
+        },
+        {
+          "name": "attendeeEmail",
+          "description": "The email address of the attendee to be added."
+        }
+      ]
+    },
+    {
+      "name": "calendar:createEvent()",
+      "description": "Creates a new event in the specified calendar. Returns: A promise that resolves to the created event.",
+      "parameters": [
+        {
+          "name": "calendarId",
+          "description": "The ID of the calendar."
+        },
+        {
+          "name": "event",
+          "description": "The event object to be created."
+        }
+      ]
+    },
+    {
+      "name": "calendar:listEventsThisWeek()",
+      "description": "Retrieves a list of events occurring within the current week for the specified calendar. Returns: A promise that resolves to the list of events.",
+      "parameters": [
+        {
+          "name": "calendarId",
+          "description": "The ID of the calendar to retrieve events from."
+        }
+      ]
+    }
+  ],
   "remember": [
     {
       "name": "remember:storeUserMemory()",
       "description": "Stores a memory in the database Returns: ",
       "parameters": []
-    }
-  ],
-  "mermaid": [
-    {
-      "name": "mermaid:convertMermaidDiagram()",
-      "description": "Converts a Mermaid diagram text into an image. Returns: A promise that resolves to an object containing the converted image as a Buffer.",
-      "parameters": [
-        {
-          "name": "diagramText",
-          "description": "The Mermaid diagram text to convert."
-        }
-      ],
-      "exceptions": [
-        "If an error occurs while converting the Mermaid diagram."
-      ]
-    }
-  ],
-  "github": [
-    {
-      "name": "github:GithubCoach()",
-      "description": "This class provides methods to interact with Github."
-    }
-  ],
-  "js": [
-    {
-      "name": "js:executeJavascriptAndCaptureImage()",
-      "description": "Executes the provided JavaScript code in a headless browser using Puppeteer and captures a screenshot of the resulting page. Returns: A promise that resolves to an object containing the captured screenshot image as a Buffer.",
-      "parameters": [
-        {
-          "name": "javascriptCode",
-          "description": "The JavaScript code to be executed in the browser."
-        }
-      ],
-      "exceptions": [
-        "If an error occurs while executing the JavaScript code and capturing the image."
-      ]
     }
   ],
   "schedule": [
@@ -271,68 +248,10 @@
       "description": "Exports an object with a method to handle capability methods"
     }
   ],
-  "search": [
+  "github": [
     {
-      "name": "search:duckDuckGoSearch()",
-      "description": "Performs a search using the DuckDuckGo API. Returns: A promise that resolves to an array of search results.",
-      "parameters": [
-        {
-          "name": "query",
-          "description": "The search query."
-        }
-      ],
-      "exceptions": [
-        "If an error occurs during the search."
-      ]
-    }
-  ],
-  "mastodon": [
-    {
-      "name": "mastodon:postStatus()",
-      "description": "Posts a status to Mastodon. Returns: A promise that resolves to the response data from Mastodon.",
-      "parameters": [
-        {
-          "name": "text",
-          "description": "The text content of the status."
-        },
-        {
-          "name": "image",
-          "description": "The ID of the image to attach to the status."
-        }
-      ],
-      "exceptions": [
-        "If an error occurs while posting to Mastodon."
-      ]
-    }
-  ],
-  "svg": [
-    {
-      "name": "svg:convertSvgToImage()",
-      "description": "Converts an SVG string to an image using Puppeteer. Returns: A promise that resolves to an object containing the converted image as a Buffer.",
-      "parameters": [
-        {
-          "name": "svgString",
-          "description": "The SVG string to convert."
-        }
-      ],
-      "exceptions": [
-        "If an error occurs while converting SVG to image."
-      ]
-    }
-  ],
-  "stablediffusion": [
-    {
-      "name": "stablediffusion:generateImageFromText()",
-      "description": "Generates an image from the given text using the Stable Diffusion API. Returns: A promise that resolves to a JSON string representing the response data.",
-      "parameters": [
-        {
-          "name": "args",
-          "description": "The arguments for generating the image."
-        }
-      ],
-      "exceptions": [
-        "If an error occurs during the API request."
-      ]
+      "name": "github:GithubCoach()",
+      "description": "This class provides methods to interact with Github."
     }
   ],
   "scratchfile": [
@@ -371,18 +290,97 @@
       ]
     }
   ],
-  "wikipedia": [
+  "mermaid": [
     {
-      "name": "wikipedia:askWikipedia()",
-      "description": "This function is used to search Wikipedia for a given query.\nIt uses the Wikipedia API to perform the search and then uses OpenAI to evaluate the search results. Returns: A promise that resolves to a string containing the evaluated search results.",
+      "name": "mermaid:convertMermaidDiagram()",
+      "description": "Converts a Mermaid diagram text into an image. Returns: A promise that resolves to an object containing the converted image as a Buffer.",
       "parameters": [
         {
-          "name": "args",
-          "description": "An array containing the arguments passed to the function."
+          "name": "diagramText",
+          "description": "The Mermaid diagram text to convert."
         }
       ],
       "exceptions": [
-        "If an error occurs while contacting Wikipedia or OpenAI."
+        "If an error occurs while converting the Mermaid diagram."
+      ]
+    }
+  ],
+  "search": [
+    {
+      "name": "search:duckDuckGoSearch()",
+      "description": "Performs a search using the DuckDuckGo API. Returns: A promise that resolves to an array of search results.",
+      "parameters": [
+        {
+          "name": "query",
+          "description": "The search query."
+        }
+      ],
+      "exceptions": [
+        "If an error occurs during the search."
+      ]
+    }
+  ],
+  "stablediffusion": [
+    {
+      "name": "stablediffusion:generateImageFromText()",
+      "description": "Generates an image from the given text using the Stable Diffusion API. Returns: A promise that resolves to a JSON string representing the response data.",
+      "parameters": [
+        {
+          "name": "args",
+          "description": "The arguments for generating the image."
+        }
+      ],
+      "exceptions": [
+        "If an error occurs during the API request."
+      ]
+    }
+  ],
+  "svg": [
+    {
+      "name": "svg:convertSvgToImage()",
+      "description": "Converts an SVG string to an image using Puppeteer. Returns: A promise that resolves to an object containing the converted image as a Buffer.",
+      "parameters": [
+        {
+          "name": "svgString",
+          "description": "The SVG string to convert."
+        }
+      ],
+      "exceptions": [
+        "If an error occurs while converting SVG to image."
+      ]
+    }
+  ],
+  "mastodon": [
+    {
+      "name": "mastodon:postStatus()",
+      "description": "Posts a status to Mastodon. Returns: A promise that resolves to the response data from Mastodon.",
+      "parameters": [
+        {
+          "name": "text",
+          "description": "The text content of the status."
+        },
+        {
+          "name": "image",
+          "description": "The ID of the image to attach to the status."
+        }
+      ],
+      "exceptions": [
+        "If an error occurs while posting to Mastodon."
+      ]
+    }
+  ],
+  "js": [
+    {
+      "name": "js:executeJavascriptAndCaptureImage()",
+      "description": "Executes the provided JavaScript code in a headless browser using Puppeteer and captures a screenshot of the resulting page. Returns: A promise that resolves to an object containing the captured screenshot image as a Buffer.",
+      "parameters": [
+        {
+          "name": "javascriptCode",
+          "description": "The JavaScript code to be executed in the browser."
+        }
+      ],
+      "exceptions": [
+        "If an error occurs while executing the JavaScript code and capturing the image."
       ]
     }
   ],
@@ -435,6 +433,21 @@
           "name": "url",
           "description": "The URL to fetch and summarize."
         }
+      ]
+    }
+  ],
+  "wikipedia": [
+    {
+      "name": "wikipedia:askWikipedia()",
+      "description": "This function is used to search Wikipedia for a given query.\nIt uses the Wikipedia API to perform the search and then uses OpenAI to evaluate the search results. Returns: A promise that resolves to a string containing the evaluated search results.",
+      "parameters": [
+        {
+          "name": "args",
+          "description": "An array containing the arguments passed to the function."
+        }
+      ],
+      "exceptions": [
+        "If an error occurs while contacting Wikipedia or OpenAI."
       ]
     }
   ],

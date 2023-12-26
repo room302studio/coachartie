@@ -1,8 +1,9 @@
-const { google } = require("googleapis");
+const { google, batchUpdate} = require("googleapis");
 const { destructureArgs } = require("../helpers");
 
-const keyFile = "./auth/coach-artie-5f8c6debae41.json"; // Path to JSON file
+const keyFile = "./auth/coach-artie-e95c8660132f.json"; // Path to JSON file
 const scopes = ['https://www.googleapis.com/auth/drive','https://www.googleapis.com/auth/calendar']; 
+
 
 const getCalendarInstance = async () => {
   const auth = new google.auth.GoogleAuth({

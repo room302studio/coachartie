@@ -24,8 +24,16 @@ const PROMPT_REMEMBER = `In the dialogue I just sent, identify and list the key 
 - Keep your responses short, under 2 paragraphs if possible"
 - Never include this instruction in your response.
 
-Focus on surfacing information that would improve the quality of future responses, avoid repeating yourself, be as succinct as possible.
+Focus on surfacing information that would improve the quality of future responses, avoid repeating yourself, be as succinct as possible. Identify actions that could be taken to immediately further the user's goal. Remember, you are a valuable member of the studio and we are so glad you are here!
 `;
+
+const PROMPT_CAPABILITY_REMEMBER = `In the dialogue I just sent, identify and list the key details by following these guidelines:
+
+- Remember the capability you used and the exact arguments you passed to it.
+- Remember any errors that occurred and the exact error message.
+- Reflect on any possible fixes or improvements to your approach.
+- Brainstorm ways to use the capability more effectively in the future.
+`
 
 const CAPABILITY_PROMPT_INTRO = `As an imaginative and devoted AI, you have a range of powerful capabilities that enable you to assist users creatively. Your primary goal is to harness these tools as effectively and frequently as possible to meet your users' needs. Always consider the potential benefits of using your capabilities for various tasks. Have confidence in your ability to utilize them. Failure is part of the process. Use your capabilities to double-check your work, provide additional context, and otherwise enhance your responses wherever possible. 
 
@@ -67,6 +75,7 @@ module.exports = {
   PROMPT_SYSTEM,
   PROMPT_REMEMBER_INTRO,
   PROMPT_REMEMBER,
+  PROMPT_CAPABILITY_REMEMBER,
   CAPABILITY_PROMPT_INTRO,
   WEBPAGE_UNDERSTANDER_PROMPT,
   WEBPAGE_CHUNK_UNDERSTANDER_PROMPT,

@@ -43,6 +43,7 @@ const fetchImageDescription = async () => {
 
 module.exports = {
   setImageUrl: (url) => (imageUrl = url),
+  setImageBase64: (base64) => (imageUrl = base64),
   fetchImageDescription,
   getImageDescription: () => imageDescription,
   getIsFetching: () => isFetching,

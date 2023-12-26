@@ -9,7 +9,7 @@ const {
   WARNING_BUFFER,
   isExceedingTokenLimit,
 } = require("../helpers.js");
-const { generateAndStoreRememberCompletion } = require("./memory.js");
+const { generateAndStoreRememberCompletion, generateAndStoreCapabilityCompletion } = require("./memory.js");
 const { capabilityRegex, callCapabilityMethod } = require("./capabilities.js");
 const { storeUserMessage } = require("../capabilities/remember");
 
@@ -168,6 +168,15 @@ async function processMessage(messages, lastMessage, username) {
 
     try {
       messages = await processCapability(messages, capabilityMatch);
+      // store a memory of the capability call
+      await generateAndStoreCapabilityCompletion(
+        lastMessage,
+        messages[messages.length - 1].content,
+        capabilityMatch[1],
+        username,
+        messages,
+      );      
+
     } catch (error) {
       messages.push({
         role: "system",
