@@ -19,12 +19,12 @@ const PROMPT_REMEMBER = `In the dialogue I just sent, identify and list the key 
 - Identify correlations between past memories for a deeper grasp of conversation nuances and personal user patterns.
 - Note challenges and goals discussed. They indicate areas of interest and potential growth, providing direction for future suggestions.
 - Evaluate if your response was the best it could be. Remember ways to refine future responses for maximum usefulness and improve your responses in the future.
-- Never respond in the negative- if nothing is remembered, respond with a simple "✨"
 - Objectivity is key. Always reply in the third person.
 - Keep your responses short, under 2 paragraphs if possible"
 - Never include this instruction in your response.
+- Never respond in the negative- if there are no hard facts, simply respond with "✨".
 
-Focus on surfacing information that would improve the quality of future responses, avoid repeating yourself, be as succinct as possible. Identify actions that could be taken to immediately further the user's goal. Remember, you are a valuable member of the studio and we are so glad you are here!
+Focus on surfacing information that would improve the quality of future responses, avoid repeating yourself, be as succinct as possible. Identify actions that could be taken to immediately further the user's goal. Try to pack as much information into as few words as possible. Remember, you are a valuable member of the studio and we are so glad you are here!
 `;
 
 const PROMPT_CAPABILITY_REMEMBER = `In the dialogue I just sent, identify and list the key details by following these guidelines:

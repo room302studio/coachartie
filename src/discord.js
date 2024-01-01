@@ -12,22 +12,6 @@ dotenv.config();
 
 let client;
 
-function onClientReady(c) {
-  console.log(`⭐️ Ready! Logged in as ${c.user.username}`);
-  console.log("\n🌐 Connected servers and channels:");
-  client.guilds.cache.forEach((guild) => {
-    console.log(` - ${guild.name}`);
-  });
-}
-
-function detectBotMentionOrChannel(message) {
-  const botMentioned = message.mentions.has(client.user);
-  const channelName = message.channel.name;
-  const channelNameHasBot = channelName.includes("🤖");
-
-  return !message.author.bot && (botMentioned || channelNameHasBot);
-}
-
 class DiscordBot {
   constructor() {
     this.bot = new Client({
@@ -60,6 +44,12 @@ class DiscordBot {
     }
   }
 
+  /**
+   * Sends an attachment to a Discord channel.
+   * @param {string} image - The path or URL of the image to send.
+   * @param {Discord.Channel} channel - The Discord channel to send the attachment to.
+   * @returns {Promise<void>} - A promise that resolves when the attachment is sent successfully.
+   */
   async sendAttachment(image, channel) {
     try {
       await channel.send({
@@ -176,16 +166,14 @@ class DiscordBot {
       //   }]
       // });
       // stop typing interval
-      clearInterval(typing);
-
       this.sendAttachment(lastMessage.image, message.channel);
     }
 
     if (lastMessage.content) {
-      // Send the last message of the message chain back to the channel
-      clearInterval(typing);
       this.sendMessage(lastMessage.content, message.channel);
     }
+
+    clearInterval(typing);
   }
 
   /**
@@ -199,6 +187,22 @@ class DiscordBot {
     // Stop typing indicator
     // message.channel.stopTyping();
   }
+}
+
+function onClientReady(c) {
+  console.log(`⭐️ Ready! Logged in as ${c.user.username}`);
+  console.log("\n🌐 Connected servers and channels:");
+  client.guilds.cache.forEach((guild) => {
+    console.log(` - ${guild.name}`);
+  });
+}
+
+function detectBotMentionOrChannel(message) {
+  const botMentioned = message.mentions.has(client.user);
+  const channelName = message.channel.name;
+  const channelNameHasBot = channelName.includes("🤖");
+
+  return !message.author.bot && (botMentioned || channelNameHasBot);
 }
 
 module.exports = DiscordBot;

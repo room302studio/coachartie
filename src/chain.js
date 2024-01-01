@@ -8,10 +8,10 @@ const {
   TOKEN_LIMIT,
   WARNING_BUFFER,
   isExceedingTokenLimit,
-} = require("../helpers.js");
-const { generateAndStoreRememberCompletion, generateAndStoreCapabilityCompletion } = require("./memory.js");
-const { capabilityRegex, callCapabilityMethod } = require("./capabilities.js");
-const { storeUserMessage } = require("../capabilities/remember");
+} = require("../helpers");
+const { generateAndStoreRememberCompletion, generateAndStoreCapabilityCompletion } = require("./memory");
+const { capabilityRegex, callCapabilityMethod } = require("./capabilities");
+const { storeUserMessage } = require("./remember");
 
 const MAX_RETRY_COUNT = 3;
 const MAX_CAPABILITY_CALLS = 6;

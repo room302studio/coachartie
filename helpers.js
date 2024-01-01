@@ -2,26 +2,17 @@ const { Chance } = require("chance");
 const chance = new Chance();
 const dotenv = require("dotenv");
 const fs = require("fs");
-const { google } = require("googleapis");
 const { openai } = require("./src/openai");
 const { capabilityRegex } = require("./src/capabilities.js");
+dotenv.config();
+const { PROMPT_SYSTEM, CAPABILITY_PROMPT_INTRO } = require("./prompts");
+// 📚 GPT-3 token-encoder: our linguistic enigma machine
+const { encode, decode } = require("@nem035/gpt-3-encoder");
 const {
   getUserMemory,
   getUserMessageHistory,
-} = require("./capabilities/remember");
-dotenv.config();
+} = require("./src/remember.js");
 
-// const { generateAndStoreRememberCompletion } = require("./memory.js");
-
-const { PROMPT_SYSTEM, CAPABILITY_PROMPT_INTRO } = require("./prompts");
-
-// 📚 GPT-3 token-encoder: our linguistic enigma machine
-const { encode, decode } = require("@nem035/gpt-3-encoder");
-
-const ERROR_MSG = `I am so sorry, there was some sort of problem. Feel free to ask me again, or try again later.`;
-const TOKEN_LIMIT = 14000;
-const RESPONSE_LIMIT = 5120;
-const WARNING_BUFFER = 1024;
 
 /**
  * Replaces the robot id with the robot name in a given string.
@@ -489,6 +480,10 @@ async function generateAiCompletion(prompt, username, messages, config) {
     delete messages[messages.length - 1].image;
   }
 
+  console.log('generateAiCompletion')
+  console.log('username', username)
+  console.log('prompt', prompt)
+
   messages = await addPreambleToMessages(username, prompt, messages);
   let completion = null;
   try {
@@ -772,6 +767,10 @@ async function addUserMessages(username, messages) {
       username,
       userMessageCount,
     );
+    if (!userMessages) {
+      console.log(`No previous messages found for ${username}`);
+      return;
+    }
     userMessages.reverse();
     userMessages.forEach((message) => {
       messages.push({
@@ -977,10 +976,6 @@ function countMessageTokens(messageArray = []) {
 }
 
 module.exports = {
-  ERROR_MSG,
-  TOKEN_LIMIT,
-  RESPONSE_LIMIT,
-  WARNING_BUFFER,
   destructureArgs,
   getHexagram,
   countTokens,

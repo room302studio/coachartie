@@ -5,7 +5,7 @@ const {
   getAllMemories,
   storeUserMemory,
   getRelevantMemories,
-} = require("../capabilities/remember.js");
+} = require("./remember.js");
 const chance = require("chance").Chance();
 const vision = require("./vision.js");
 

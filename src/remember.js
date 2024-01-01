@@ -1,7 +1,7 @@
 const { createClient } = require("@supabase/supabase-js");
 const dotenv = require("dotenv");
-const { destructureArgs } = require("../helpers");
-const { openai } = require("../src/openai");
+const { MEMORIES_TABLE_NAME, MESSAGES_TABLE_NAME } = require("../config");
+const { openai } = require("./openai");
 
 dotenv.config();
 
@@ -10,27 +10,12 @@ const supabase = createClient(
   process.env.SUPABASE_API_KEY,
 );
 
-async function handleCapabilityMethod(method, args) {
-  const [arg1, arg2] = destructureArgs(args);
-
-  switch (method) {
-    case "getUserMemory":
-      return getUserMemory(arg1, arg2);
-    case "getUserMessageHistory":
-      return getUserMessageHistory(arg1, arg2);
-    case "storeUserMemory":
-      return storeUserMemory(arg1, arg2);
-    case "getAllMemories":
-      return getAllMemories(arg1);
-    case "storeUserMessage":
-      return storeUserMessage(arg1, arg2);
-    case "isRememberResponseFalsy":
-      return isRememberResponseFalsy(arg1);
-    default:
-      throw new Error(`Method ${method} not supported by Supabase capability.`);
-  }
-}
-
+/**
+ * Retrieves user memories from the database.
+ * @param {string} userId - The ID of the user.
+ * @param {number} [limit=5] - The maximum number of memories to retrieve (default: 5).
+ * @returns {Promise<Array>} - A promise that resolves to an array of user memories.
+ */
 async function getUserMemory(userId, limit = 5) {
   if (!userId) {
     console.error("No userId provided to getUserMemory");
@@ -38,7 +23,7 @@ async function getUserMemory(userId, limit = 5) {
   }
   console.log("💾 Querying database for memories related to user:", userId);
   const { data, error } = await supabase
-    .from("storage")
+    .from(MEMORIES_TABLE_NAME)
     .select("*")
     .limit(limit)
     .order("created_at", { ascending: false })
@@ -53,9 +38,15 @@ async function getUserMemory(userId, limit = 5) {
   return data;
 }
 
+/**
+ * Retrieves a specified number of memories from the database.
+ * 
+ * @param {number} [limit=5] - The maximum number of memories to retrieve. Default is 5.
+ * @returns {Promise<Array<Object>>} - A promise that resolves to an array of memory objects.
+ */
 async function getAllMemories(limit = 5) {
   const { data, error } = await supabase
-    .from("storage")
+    .from(MEMORIES_TABLE_NAME)
     .select("*")
     .limit(limit)
     .order("created_at", { ascending: false })
@@ -69,9 +60,16 @@ async function getAllMemories(limit = 5) {
   return data;
 }
 
+/**
+ * Retrieves the message history of a user.
+ * @param {string} userId - The ID of the user.
+ * @param {number} [limit=5] - The maximum number of messages to retrieve. Default is 5.
+ * @returns {Promise<Array<Object>>} - A promise that resolves to an array of message objects.
+ */
 async function getUserMessageHistory(userId, limit = 5) {
   const { data, error } = await supabase
-    .from("messages")
+    // .from("messages")
+    .from(MESSAGES_TABLE_NAME)
     .select("*")
     .limit(limit)
     .order("created_at", { ascending: false })
@@ -85,6 +83,11 @@ async function getUserMessageHistory(userId, limit = 5) {
   return data;
 }
 
+/**
+ * Converts a memory into an embedding using OpenAI's text-embedding-ada-002 model.
+ * @param {string} memory - The memory to convert into an embedding.
+ * @returns {Promise<number[]>} - The embedding representing the memory.
+ */
 async function memoryToEmbedding(memory) {
   if (!memory) {
     return console.error("No memory provided to memoryToEmbedding");
@@ -132,7 +135,10 @@ async function storeUserMemory(userId, value) {
     console.log(e.message);
   }
 
-  const { data, error } = await supabase.from("storage").insert({
+  const { data, error } = await supabase
+  // .from("storage")
+  .from(MEMORIES_TABLE_NAME)
+  .insert({
     user_id: userId,
     value,
     embedding,
@@ -143,8 +149,20 @@ async function storeUserMemory(userId, value) {
   }
 }
 
-async function storeUserMessage(userId, value) {
-  const { data, error } = await supabase.from("messages").insert({
+/**
+ * Stores a user message in the database.
+ * 
+ * @param {string} userId - The ID of the user who sent the message.
+ * @param {string} value - The content of the message.
+ * @param {string} channelId - The ID of the channel where the message was sent.
+ * @param {string} guildId - The ID of the guild where the message was sent.
+ * @returns {Promise<object>} - A promise that resolves to the stored message data.
+ */
+async function storeUserMessage(userId, value, channelId, guildId) {
+  const { data, error } = await supabase
+  // .from("messages")
+  .from(MESSAGES_TABLE_NAME)
+  .insert({    
     user_id: userId,
     value,
   });
@@ -156,6 +174,12 @@ async function storeUserMessage(userId, value) {
   return data;
 }
 
+/**
+ * Retrieves relevant memories based on a query string.
+ * @param {string} queryString - The query string to search for relevant memories.
+ * @param {number} [limit=5] - The maximum number of memories to retrieve (default: 5).
+ * @returns {Promise<Array>} - A promise that resolves to an array of relevant memories.
+ */
 async function getRelevantMemories(queryString, limit = 5) {
   console.log("QUERY STRING", queryString);
   // turn the queryString into an embedding
@@ -185,35 +209,11 @@ async function getRelevantMemories(queryString, limit = 5) {
   return data;
 }
 
-function isRememberResponseFalsy(args) {
-  const [response] = destructureArgs(args);
-
-  const lowerCaseResponse = response.toLocaleLowerCase();
-
-  if (lowerCaseResponse === "no" || lowerCaseResponse === "no.") {
-    return true;
-  }
-
-  if (
-    lowerCaseResponse.includes("no crucial") ||
-    lowerCaseResponse.includes("no important") ||
-    lowerCaseResponse.includes("✨")
-  ) {
-    return true;
-  }
-
-  if (lowerCaseResponse.includes("no key details")) {
-    return true;
-  }
-}
-
 module.exports = {
-  handleCapabilityMethod,
   getUserMemory,
   getUserMessageHistory,
   storeUserMemory,
   getAllMemories,
   storeUserMessage,
-  isRememberResponseFalsy,
   getRelevantMemories,
 };
