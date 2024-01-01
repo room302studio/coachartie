@@ -195,7 +195,7 @@ async function getRelevantMemories(queryString, limit = 5) {
   const [{ embedding }] = embeddingResponse.data.data;
 
   // query the database for the most relevant memories
-  const { data, error } = await supabase.rpc("match_documents", {
+  const { data, error } = await supabase.rpc("match_memories", {
     query_embedding: embedding,
     match_threshold: 0.78,
     match_count: limit,
