@@ -107,7 +107,7 @@ async function processCapability(messages, capabilityMatch) {
  */
 async function processMessageChain(
   messages,
-  username,
+  { username, channel, guild },
   message,
   retryCount = 0,
   capabilityCallCount = 0,
@@ -129,7 +129,7 @@ async function processMessageChain(
       logger.info(
         "Processing Message Chain: " + lastMessage.content.slice(0, 80) + "...",
       );
-      messages = await processMessage(messages, lastMessage.content, username);
+      messages = await processMessage(messages, lastMessage.content, {username, channel, guild});
       lastMessage = messages[messages.length - 1];
       if (doesMessageContainCapability(lastMessage.content)) {
         capabilityCallCount++;
@@ -162,7 +162,7 @@ async function processMessageChain(
   return messages;
 }
 
-async function processMessage(messages, lastMessage, username) {
+async function processMessage(messages, lastMessage, {username, channel, guild}) {
   if (doesMessageContainCapability(lastMessage)) {
     const capabilityMatch = lastMessage.match(capabilityRegex);
 
@@ -173,7 +173,7 @@ async function processMessage(messages, lastMessage, username) {
         lastMessage,
         messages[messages.length - 1].content,
         capabilityMatch[1],
-        username,
+        {username, channel, guild},
         messages,
       );      
 
@@ -193,7 +193,7 @@ async function processMessage(messages, lastMessage, username) {
   const lastUserMessage = messages.find((m) => m.role === "user");
   const prompt = lastUserMessage.content;
 
-  storeUserMessage(username, prompt);
+  storeUserMessage({username, channel, guild}, prompt);
 
   const { temperature, frequency_penalty } = generateAiCompletionParams();
 
@@ -212,7 +212,7 @@ async function processMessage(messages, lastMessage, username) {
     content: aiResponse,
   });
 
-  generateAndStoreRememberCompletion(prompt, aiResponse, username, messages);
+  generateAndStoreRememberCompletion(prompt, aiResponse, {username, channel, guild}, messages);
 
   return messages;
 }

@@ -109,7 +109,7 @@ async function memoryToEmbedding(memory) {
  * @param {string} value
  * @returns {Promise<void>}
  */
-async function storeUserMemory(userId, value) {
+async function storeUserMemory({userId, channel, guild}, value) {
   // first we do some checks to make sure we have the right types of data
   if (!userId) {
     return console.error("No userId provided to storeUserMemory");
@@ -140,6 +140,7 @@ async function storeUserMemory(userId, value) {
   .from(MEMORIES_TABLE_NAME)
   .insert({
     user_id: userId,
+    channel_id: channel,
     value,
     embedding,
   });
@@ -158,12 +159,14 @@ async function storeUserMemory(userId, value) {
  * @param {string} guildId - The ID of the guild where the message was sent.
  * @returns {Promise<object>} - A promise that resolves to the stored message data.
  */
-async function storeUserMessage(userId, value, channelId, guildId) {
+async function storeUserMessage({username, channel, guild}, value) {
   const { data, error } = await supabase
   // .from("messages")
   .from(MESSAGES_TABLE_NAME)
   .insert({    
-    user_id: userId,
+    user_id: username,
+    channel_id: channel,
+    guild_id: guild,
     value,
   });
 

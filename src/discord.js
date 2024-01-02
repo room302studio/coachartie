@@ -113,7 +113,8 @@ class DiscordBot {
    * @param {string} prompt - The prompt to be processed.
    * @param {string} username - The username of the message author.
    */
-  async processMessageChain(prompt, username, message) {
+  async processMessageChain(prompt, 
+    {username, channel, guild}, message) {
     return await processMessageChain(
       [
         {
@@ -121,7 +122,7 @@ class DiscordBot {
           content: prompt,
         },
       ],
-      username,
+      {username, channel, guild},
       message,
     );
   }
@@ -141,9 +142,14 @@ class DiscordBot {
 
     let prompt = await this.processPrompt(message);
     let processedPrompt = await this.processImageAttachment(message, prompt);
+
+    const username = message.author.username
+    const channel = message.channel.name;
+    const guild = message.guild.name;
+
     let messages = await this.processMessageChain(
       processedPrompt,
-      message.author.username,
+      {username, channel, guild},
       message,
     );
 
