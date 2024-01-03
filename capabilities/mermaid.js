@@ -2,12 +2,14 @@ const axios = require("axios");
 const { createCanvas, loadImage } = require("canvas");
 const { destructureArgs } = require("../helpers");
 const puppeteer = require("puppeteer");
+const logger = require("../src/logger.js")("mermaid");
+
 
 let mermaid;
 try {
   mermaid = require.resolve("mermaid");
 } catch (error) {
-  console.error("Failed to resolve mermaid module:", error);
+  logger.error("Failed to resolve mermaid module:", error);
 }
 
 /**

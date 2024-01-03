@@ -1,42 +1,32 @@
-/*
-
-We want to create a global Winston logger that we can use throughout our application.
-
-In addition, error-level logs will be sent to a supabase logging table.
-
-We will also enhance the presentation of logs when they are printed to the console when bot.js is being run in the development environment.
-
-We will export the logger with .info, .warn, and .error methods.
-
-*/
 const winston = require("winston");
-// Create a new logger instance
-const winstonLogger = winston.createLogger({
-  level: "info",
-  format: winston.format.json(),
-  defaultMeta: { service: "user-service" },
-  transports: [
-    new winston.transports.File({ filename: "capability-chain.log" }),
-  ],
-});
+const util = require("util");
+module.exports = function (serviceName) {
+  /**
+   * Logger instance for logging messages.
+   *
+   * @type {winston.Logger}
+   */
+  const winstonLogger = winston.createLogger({
+    level: "info",
+    defaultMeta: { service: serviceName || "default" },
+    transports: [
+      new winston.transports.Console({
+        format: winston.format.combine(
+          winston.format.printf((info) => {
+            const { level, message, ...meta } = info;
+            return `${level}: ${message}`;
+          })
+        ),
+      }),
+      new winston.transports.File({ filename: "coachartie.log" }),
+      new winston.transports.File({ filename: `coachartie-${serviceName}.log` }),
+    ],
+  });
 
-const logger = {
-  log: (message) => {
-    winstonLogger.log(message);
-    console.log(message);
-  },
-  info: (message) => {
-    winstonLogger.info(message);
-    console.log(`ℹ️ ${message}`);
-  },
-  warn: (message) => {
-    winstonLogger.warn(message);
-    console.log(`⚠️ ${message}`);
-  },
-  error: (message) => {
-    winstonLogger.error(message);
-    console.error(`🚨 ${message}`);
-  },
+  return {
+    log: (message) => winstonLogger.log(message),
+    info: (message) => winstonLogger.info(message),
+    warn: (message) => winstonLogger.warn(message),
+    error: (message) => winstonLogger.error(message),
+  };
 };
-
-module.exports = logger;

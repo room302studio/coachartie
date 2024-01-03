@@ -1,6 +1,6 @@
 const { google, batchUpdate} = require("googleapis");
 const { destructureArgs } = require("../helpers");
-
+const logger = require("../src/logger")
 const keyFile = "./auth/coach-artie-e95c8660132f.json"; // Path to JSON file
 const scopes = ['https://www.googleapis.com/auth/drive','https://www.googleapis.com/auth/calendar']; 
 
@@ -17,8 +17,8 @@ const getDriveInstance = async () => {
   });
 
   // console log the scopes we are authed into
-  console.log('auth.scopes are: ');
-  console.log(auth.scopes);
+  // logger.info('auth.scopes are: ');
+  // logger.info(auth.scopes);
 
 
   const client = await auth.getClient();
@@ -48,7 +48,7 @@ async function listFiles() {
       });
     });
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     if (error.code === "AUTH_ERROR") {
       throw new Error("Authentication problem.");
     } else {
@@ -118,45 +118,59 @@ async function readFile(fileId) {
   });
 }
 
-/**
- * Append a string to a Google Doc.
- * @param {string} docId - The ID of the Google Doc.
- * @param {string} text - The text to append.
- * @returns {Promise} A promise that resolves when the text has been appended.
- */
-async function appendString(docId, text) {
+async function appendString(fileId, text) {
   const drive = await getDriveInstance();
 
-  // first get the current content of the doc
-  const currentContent = await readDoc(docId);
-
-  // then append the new text
-  const newContent = `${currentContent}\n${text}`;
-
-  // then update the doc with the new content
   return new Promise((resolve, reject) => {
     drive.files
-      .update({
-        fileId: docId,
-        media: {
-          mimeType: "text/plain",
-          body: newContent,
-        },
-      })
-      .then(() => {
-        resolve("Done appending text.");
+      .export({ fileId, mimeType: "text/plain" }, { responseType: "stream" })
+      .then((res) => {
+        res.data
+          .on("end", () => {
+            resolve("Done reading file.");
+          })
+          .on("error", (error) => {
+            reject(error);
+          })
+          .pipe(process.stdout);
       })
       .catch((error) => {
         reject(error);
       });
   });
-
-  // instead of completely overwriting the doc, we can use the batchUpdate method to insert text at the end of the doc
-  // see https://developers.google.com/docs/api/how-tos/batch for more info
-  // but that is a bit more complicated
-
 }
+  
 
+async function createNewDocument(title, text) {
+  const drive = await getDriveInstance();
+
+  // Create a new Google Doc
+  const docMetadata = {
+    name: title,
+    mimeType: "application/vnd.google-apps.document",
+    writersCanShare: true, // Set writersCanShare to true to allow sharing
+  };
+
+  const createdDoc = await drive.files.create({
+    resource: docMetadata,
+    media: {
+      mimeType: "text/plain",
+      body: text,
+    },
+  });
+
+  // Share the document with everyone in the organization
+  await drive.permissions.create({
+    fileId: createdDoc.data.id,
+    requestBody: {
+      role: "writer",
+      type: "domain",
+      domain: "room302.studio", // Replace with your actual domain
+    },
+  });
+
+  return JSON.stringify(createdDoc.data);
+}
 /**
  * 
  * @param {string} title - The title of the new document.
@@ -179,7 +193,7 @@ async function createNewDocument(title, text) {
     },
   });
 
-  return createdDoc.data;
+  return JSON.stringify(createdDoc.data);
 }
 
 module.exports = {

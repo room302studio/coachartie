@@ -1,4 +1,6 @@
 const { openai } = require("./openai");
+const logger = require("../src/logger.js")("vision");
+
 
 let imageUrl = "";
 let imageDescription = "";
@@ -7,7 +9,7 @@ let error = null;
 
 const fetchImageDescription = async () => {
   isFetching = true;
-  console.log("requesgting description of image at", imageUrl);
+  logger.info("requesgting description of image at", imageUrl);
   try {
     const completion = await openai.createChatCompletion({
       model: "gpt-4-vision-preview",
@@ -32,7 +34,7 @@ const fetchImageDescription = async () => {
     });
 
     imageDescription = completion.data.choices[0].message.content;
-    console.log(imageDescription);
+    logger.info(imageDescription);
   } catch (err) {
     error = err;
   }

@@ -6,6 +6,8 @@ const {
 } = require("../helpers.js");
 const { processMessageChain } = require("./chain.js");
 const vision = require("./vision.js");
+const createLogger = require("./logger.js");
+const logger = createLogger("discord");
 
 const dotenv = require("dotenv");
 dotenv.config();
@@ -30,17 +32,36 @@ class DiscordBot {
     client = this.bot;
   }
 
+  fetchChannelById(channelId) {
+    // we need to find the channel object from the bot
+    // we can do this by iterating through the guilds
+    // and then iterating through the channels
+    // and then checking if the channel id matches
+    // if it does, we can return the channel object
+    // if it doesn't, we can return null
+    let channelObj = null;
+    client.guilds.cache.forEach((guild) => {
+      guild.channels.cache.forEach((channel) => {
+        if (channel.id === channelId) {
+          channelObj = channel;
+        }
+      });
+    });
+    return channelObj;
+  }
+
   /**
    * Sends a message to a specific channel.
    * @param {string} message - The message to be sent.
-   * @param {object} channel - The channel where the message will be sent.
+   * @param {object} channel - The Discord channel object where the message will be sent.
    */
   async sendMessage(message, channel) {
+    logger.info(`Sending message: ${message}`);
     try {
       // await channel.send(message);
       splitAndSendMessage(message, channel);
     } catch (error) {
-      console.log(error);
+      logger.info(error);
     }
   }
 
@@ -61,7 +82,7 @@ class DiscordBot {
         ],
       });
     } catch (error) {
-      console.log(error);
+      logger.info(error);
     }
   }
 
@@ -74,7 +95,7 @@ class DiscordBot {
     try {
       await channel.send({ embeds: [message] });
     } catch (error) {
-      console.log(error);
+      logger.info(error);
     }
   }
 
@@ -84,7 +105,7 @@ class DiscordBot {
    */
   async processPrompt(message) {
     const prompt = removeMentionFromMessage(message.content, "@coachartie");
-    console.log(`✉️ Message received: ${prompt}`);
+    logger.info(`✉️ Message received: ${prompt}`);
     return prompt;
   }
 
@@ -99,7 +120,7 @@ class DiscordBot {
     }
     if (message.attachments.first()) {
       const imageUrl = message.attachments.first().url;
-      console.log(imageUrl);
+      logger.info(imageUrl);
       vision.setImageUrl(imageUrl);
       const imageDescription = await vision.fetchImageDescription();
       return `${prompt}\n\nDescription of user-provided image: ${imageDescription}`;
@@ -114,7 +135,7 @@ class DiscordBot {
    * @param {string} username - The username of the message author.
    */
   async processMessageChain(prompt, 
-    {username, channel, guild}, message) {
+    {username, channel, guild}) {
     return await processMessageChain(
       [
         {
@@ -122,8 +143,7 @@ class DiscordBot {
           content: prompt,
         },
       ],
-      {username, channel, guild},
-      message,
+      {username, channel, guild}
     );
   }
 
@@ -135,7 +155,7 @@ class DiscordBot {
     const botMentionOrChannel = detectBotMentionOrChannel(message);
     const messageAuthorIsBot = message.author.bot;
     const authorIsMe = message.author.username === "coachartie";
-
+    
     if (!botMentionOrChannel || authorIsMe || messageAuthorIsBot) return;
 
     const typing = displayTypingIndicator(message);
@@ -144,13 +164,16 @@ class DiscordBot {
     let processedPrompt = await this.processImageAttachment(message, prompt);
 
     const username = message.author.username
-    const channel = message.channel.name;
+    // const channel = message.channel.name;
     const guild = message.guild.name;
+
+    // we need the channel to be the actual discord channel object
+    // so we can send messages to it
+    const channel = this.fetchChannelById(message.channel.id);
 
     let messages = await this.processMessageChain(
       processedPrompt,
-      {username, channel, guild},
-      message,
+      {username, channel, guild}
     );
 
     // Check if the last message contains an image- if so send it as a file
@@ -163,7 +186,7 @@ class DiscordBot {
     const lastMsgIsBuffer = lastMessage.image;
 
     if (lastMsgIsBuffer) {
-      console.log("last message is a buffer");
+      logger.info("last message is a buffer");
       // Send the image as an attachment
       // message.channel.send({
       //   files: [{
@@ -172,11 +195,11 @@ class DiscordBot {
       //   }]
       // });
       // stop typing interval
-      this.sendAttachment(lastMessage.image, message.channel);
+      this.sendAttachment(lastMessage.image, channel);
     }
 
     if (lastMessage.content) {
-      this.sendMessage(lastMessage.content, message.channel);
+      this.sendMessage(lastMessage.content, channel);
     }
 
     clearInterval(typing);
@@ -196,10 +219,10 @@ class DiscordBot {
 }
 
 function onClientReady(c) {
-  console.log(`⭐️ Ready! Logged in as ${c.user.username}`);
-  console.log("\n🌐 Connected servers and channels:");
+  logger.info(`⭐️ Ready! Logged in as ${c.user.username}`);
+  logger.info("\n🌐 Connected servers and channels:");
   client.guilds.cache.forEach((guild) => {
-    console.log(` - ${guild.name}`);
+    logger.info(` - ${guild.name}`);
   });
 }
 

@@ -2,8 +2,9 @@ const { google } = require("googleapis");
 const { destructureArgs } = require("../helpers");
 const { eachDayOfInterval, set, format } = require("date-fns");
 
-const keyfile = "your-keyfile.json"; // Path to JSON file
-const scopes = ["https://www.googleapis.com/auth/calendar"]; // Scope for Google Calendar
+const keyFile = "./auth/coach-artie-e95c8660132f.json"; // Path to JSON file
+const scopes = ['https://www.googleapis.com/auth/drive','https://www.googleapis.com/auth/calendar']; 
+
 
 const privatekey = require(`./${keyfile}`);
 

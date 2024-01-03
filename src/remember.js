@@ -2,6 +2,7 @@ const { createClient } = require("@supabase/supabase-js");
 const dotenv = require("dotenv");
 const { MEMORIES_TABLE_NAME, MESSAGES_TABLE_NAME } = require("../config");
 const { openai } = require("./openai");
+const logger = require("../src/logger.js")("remember");
 
 dotenv.config();
 
@@ -18,10 +19,10 @@ const supabase = createClient(
  */
 async function getUserMemory(userId, limit = 5) {
   if (!userId) {
-    console.error("No userId provided to getUserMemory");
+    logger.error("No userId provided to getUserMemory");
     return [];
   }
-  console.log("💾 Querying database for memories related to user:", userId);
+  logger.info("💾 Querying database for memories related to user:", userId);
   const { data, error } = await supabase
     .from(MEMORIES_TABLE_NAME)
     .select("*")
@@ -31,7 +32,7 @@ async function getUserMemory(userId, limit = 5) {
     .neq("value", "✨");
 
   if (error) {
-    console.error("Error fetching user memory:", error);
+    logger.error("Error fetching user memory:", error);
     return [];
   }
 
@@ -53,7 +54,7 @@ async function getAllMemories(limit = 5) {
     .neq("value", "✨");
 
   if (error) {
-    console.error("Error fetching memories:", error);
+    logger.error("Error fetching memories:", error);
     return [];
   }
 
@@ -76,7 +77,7 @@ async function getUserMessageHistory(userId, limit = 5) {
     .eq("user_id", userId);
 
   if (error) {
-    console.error("Error fetching user message:", error);
+    logger.error("Error fetching user message:", error);
     return null;
   }
 
@@ -90,7 +91,7 @@ async function getUserMessageHistory(userId, limit = 5) {
  */
 async function memoryToEmbedding(memory) {
   if (!memory) {
-    return console.error("No memory provided to memoryToEmbedding");
+    return logger.error("No memory provided to memoryToEmbedding");
   }
 
   const embeddingResponse = await openai.createEmbedding({
@@ -109,20 +110,20 @@ async function memoryToEmbedding(memory) {
  * @param {string} value
  * @returns {Promise<void>}
  */
-async function storeUserMemory({userId, channel, guild}, value) {
+async function storeUserMemory({username, channel, guild}, value) {
   // first we do some checks to make sure we have the right types of data
-  if (!userId) {
-    return console.error("No userId provided to storeUserMemory");
+  if (!username) {
+    return logger.error("No username provided to storeUserMemory");
   }
 
   // if the user id is not a string, we need to error out
-  if (typeof userId !== "string") {
-    return console.error("userId provided to storeUserMemory is not a string");
+  if (typeof username !== "string") {
+    return logger.error("username provided to storeUserMemory is not a string");
   }
 
   // if the value is not a string, we need to error out
   if (typeof value !== "string") {
-    return console.error("value provided to storeUserMemory is not a string");
+    return logger.error("value provided to storeUserMemory is not a string");
   }
 
   // TODO: We need to convert the memory into an embedding using the openai embeddings API
@@ -132,28 +133,28 @@ async function storeUserMemory({userId, channel, guild}, value) {
   try {
     embedding = await memoryToEmbedding(value);
   } catch (e) {
-    console.log(e.message);
+    logger.info(e.message);
   }
 
   const { data, error } = await supabase
   // .from("storage")
   .from(MEMORIES_TABLE_NAME)
   .insert({
-    user_id: userId,
+    user_id: username,
     channel_id: channel,
     value,
     embedding,
   });
 
   if (error) {
-    console.error("Error storing user memory:", error);
+    logger.error(`Error storing user memory: ${error.message}`);
   }
 }
 
 /**
  * Stores a user message in the database.
  * 
- * @param {string} userId - The ID of the user who sent the message.
+ * @param {string} username - The ID of the user who sent the message.
  * @param {string} value - The content of the message.
  * @param {string} channelId - The ID of the channel where the message was sent.
  * @param {string} guildId - The ID of the guild where the message was sent.
@@ -171,7 +172,7 @@ async function storeUserMessage({username, channel, guild}, value) {
   });
 
   if (error) {
-    console.error("Error storing user message:", error);
+    logger.error(`Error storing user message: ${error.message}`);
   }
 
   return data;
@@ -184,7 +185,7 @@ async function storeUserMessage({username, channel, guild}, value) {
  * @returns {Promise<Array>} - A promise that resolves to an array of relevant memories.
  */
 async function getRelevantMemories(queryString, limit = 5) {
-  console.log("QUERY STRING", queryString);
+  logger.info("QUERY STRING", queryString);
   // turn the queryString into an embedding
   if (!queryString) {
     return [];
@@ -205,7 +206,7 @@ async function getRelevantMemories(queryString, limit = 5) {
   });
 
   if (error) {
-    console.error("Error fetching relevant user memory:", error);
+    logger.error("Error fetching relevant user memory:", error);
     return null;
   }
 

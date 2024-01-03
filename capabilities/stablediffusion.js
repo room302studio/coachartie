@@ -1,6 +1,7 @@
 const axios = require("axios");
 const dotenv = require("dotenv");
 dotenv.config();
+const logger = require("../src/logger.js")("stable-diffusion");
 
 const { destructureArgs } = require("../helpers");
 
@@ -51,10 +52,10 @@ async function generateImageFromText(args) {
       },
     );
 
-    console.log(response.data);
+    logger.info(response.data);
     return JSON.stringify(response.data);
   } catch (error) {
-    console.log(error);
+    logger.info(error);
   }
 }
 

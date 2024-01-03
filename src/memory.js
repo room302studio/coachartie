@@ -8,12 +8,13 @@ const {
 } = require("./remember.js");
 const chance = require("chance").Chance();
 const vision = require("./vision.js");
+const logger = require("../src/logger.js")("memory");
+
 
 // 📜 prompts: our guidebook of conversational cues
 const prompts = require("../prompts");
-const { PROMPT_REMEMBER, PROMPT_CAPABILITY_REMEMBER, PROMPT_REMEMBER_INTRO } = prompts;
-
-const REMEMBER_MODEL = "gpt-4-1106-preview"
+const { PROMPT_REMEMBER, PROMPT_CAPABILITY_REMEMBER, PROMPT_REMEMBER_INTRO } = prompts; 
+const { REMEMBER_MODEL } = require("../config");
 
 /**
  * Generates a remember completion and stores it in the database
@@ -31,14 +32,14 @@ async function generateAndStoreRememberCompletion(
   {username = "", channel = "", guild = ""},
   conversationHistory = [],
 ) {
-  console.log("🔧 Generating and storing remember completion", username);
-  console.log("🔧 Prompt:", prompt);
-  console.log("🔧 Response:", response);
+  // logger.info("🔧 Generating and storing remember completion", username);
+  // logger.info("🔧 Prompt:", prompt);
+  // logger.info("🔧 Response:", response);
   const userMemoryCount = chance.integer({ min: 4, max: 24 });
   const memoryMessages = [];
 
   // get user memories
-  console.log(
+  logger.info(
     `🔧 Enhancing memory with ${userMemoryCount} memories from ${username}`,
   );
   const userMemories = await getUserMemory(username, userMemoryCount);
@@ -104,7 +105,7 @@ async function generateAndStoreRememberCompletion(
   });
 
   const rememberText = rememberCompletion.data.choices[0].message.content;
-  // console.log("🧠 Interaction memory", rememberText);
+  // logger.info("🧠 Interaction memory", rememberText);
 
   // if the remember text is ✨ AKA empty, we don't wanna store it
   if (rememberText === "✨") return rememberText;
@@ -133,14 +134,14 @@ async function generateAndStoreCapabilityCompletion(
   {username = "", channel = "", guild = ""},
   conversationHistory = [],
 ) {
-  console.log("🔧 Generating and storing capability usage");
-  console.log("🔧 Prompt:", prompt);
-  console.log("🔧 Response:", capabilityResponse);
+  // logger.info("🔧 Generating and storing capability usage");
+  // logger.info("🔧 Prompt:", prompt);
+  // logger.info("🔧 Response:", capabilityResponse);
   const userMemoryCount = chance.integer({ min: 1, max: 6 });
   const memoryMessages = [];
 
   // get user memories
-  console.log(
+  logger.info(
     `🔧 Enhancing memory with ${userMemoryCount} memories from ${username}`,
   );
   const userMemories = await getUserMemory(username, userMemoryCount);
@@ -161,7 +162,7 @@ async function generateAndStoreCapabilityCompletion(
   // if the response has a .image, we need to send that through the vision API to see what it actually is
   if (capabilityResponse.image) {
     // const imageUrl = message.attachments.first().url;
-    // console.log(imageUrl);
+    // logger.info(imageUrl);
     // vision.setImageUrl(imageUrl);
     // const imageDescription = await vision.fetchImageDescription();
     // return `${prompt}\n\nDescription of user-provided image: ${imageDescription}`;
@@ -227,7 +228,7 @@ async function generateAndStoreCapabilityCompletion(
   if (rememberText === "✨") return rememberText;
   // if remember text length is 0 or less, we don't wanna store it
   if (rememberText.length <= 0) return rememberText;
-  await storeUserMemory({username}, rememberText);
+  await storeUserMemory({username: "capability"}, rememberText);
 
   return rememberText;
 }

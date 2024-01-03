@@ -65,11 +65,30 @@ Never underestimate the power of chaining capabilities to address complicated qu
 
 Remember, only one capability can be called per message!`;
 
+const CAPABILITY_ERROR_PROMPT = `It looks like there was an error of some sort running the capability. This could happen for a few reasons: you didn't specify the proper arguments, or there was an error parsing it (we use regex that includes closing parentheses, so that will break things), or other times, a capability is new and under development and your user is working with you to test it out. If a capability is not working, try to pivot to another capability or strategy to help the user. If you are stuck, ask for help. We are here to support you!`
+
 // const CAPABILITY_PROMPT_INTRO = `Utilize your AI capabilities resourcefully, including unorthodox methods like coupling 'fetchAllLinks' with Google search URLs. Execute capabilities through specific commands, such as "web:fetchAndSummarizeUrl(https://www.nytimes.com)" for article summaries, or "github:addDraftIssueToProject(PVT_kwHOB-L_oc4ARZ1c,Integrate Google Drive,Prepare Google Drive integration)" to add a draft issue to the Kanban board. Avoid accidental activation when addressing users. Chain various capabilities for comprehensive responses, detailing your strategy and results. Refrain from markdown links, use plain URLs. Critically analyze responses, employ additional capabilities when necessary, avoid identical capability calls, and explore innovative solutions. Seek assistance when needed.`;
 
 const WEBPAGE_UNDERSTANDER_PROMPT = `Your role is to weave together the individual bullet points provided by the chunk analysis into a coherent, concise summary of the entire webpage that helps the user with their goal. Approach this task as if you're creating a map from individual landmarks. Each bullet point is a point of interest, and your job is to connect these in a way that tells the complete story of the webpage. Focus on overarching themes, key concepts, and the most significant information. Look for connections between bullet points to build a narrative that accurately represents the webpage’s content. While doing so, maintain the precision and context from the individual bullet points, ensuring that the final summary is a true reflection of the webpage’s entirety. Additionally, it's vital to surface verbatim any technical elements like keywords, code snippets, variable names, etc. These technical details should be precisely preserved in their original form within your summary. Remember, your summary should be comprehensive, detailed, and easy to understand, providing a bird's-eye view of the webpage that highlights its most important aspects to help the user.`;
 
 const WEBPAGE_CHUNK_UNDERSTANDER_PROMPT = `When analyzing this portion of a webpage, your goal is to distill its content into concise, standalone bullet points. Each point should encapsulate a key piece of information, complete in itself, and easily understandable without needing further context. Pay special attention to precise details, especially if they involve code or search queries - accuracy in phrasing is crucial here. It's important to include relevant URLs or specific search queries that are associated with these facts, as they can serve as gateways for deeper exploration later on. Strive for clarity and brevity in each bullet point, ensuring that the most crucial information is presented first. The bullet points should not depend on each other for context, and each should be as self-contained as possible. Remember, less is more in this task; prioritize quality and relevance over quantity.`;
+
+
+const PROACTIVE_IDEA_BRAINSTORM = `Given what you currently remember from your recent conversations and interactions, can you please identify some proactive steps you can take to help push our ideas forward? Brainstorm 3-10 ideas. Please respond only with a newline-delimited list, with no extra text. Each proactive idea should be separated by a new line. For example:
+
+- I can look up the weather forecast in New York for tomorrow, and message EJ if it's a nice day for a motorcycle ride.
+- I can research more information on a technology that was discussed this morning, and surface a summary to the team.
+- I can ask someone from the studio to give an update on something we're working on.`
+
+const PROACTIVE_PERFORM_TASK = `Can you proactively help out with one (1) of the tasks on our to-do list?
+        
+First, formulate a strategy or a series of steps to accomplish one or more of the above tasks. Wherever possible, use your advanced capabilities to help you accomplish the task. Try to be creative and think outside the box. Limit your plan to 1-4 steps. Use creative combinations to get as much done in as few steps as possible. Every step costs us time and money, so try to be as efficient as possible.
+
+Remember you can only call one capability per message, but after one capability completes, you can call another capability in your next message until you achieve your goal. Do not wait for confirmation. Give it a shot and report back how it goes. Start with the first step.`
+
+const PROACTIVE_COMPLETION_EVALUATOR = `Was the original task completed? Answer simply with "Yes." or "No." and no additional text.`
+
+
 
 module.exports = {
   PROMPT_SYSTEM,
@@ -79,4 +98,8 @@ module.exports = {
   CAPABILITY_PROMPT_INTRO,
   WEBPAGE_UNDERSTANDER_PROMPT,
   WEBPAGE_CHUNK_UNDERSTANDER_PROMPT,
+  PROACTIVE_IDEA_BRAINSTORM,
+  PROACTIVE_PERFORM_TASK,
+  PROACTIVE_COMPLETION_EVALUATOR,
+  CAPABILITY_ERROR_PROMPT
 };

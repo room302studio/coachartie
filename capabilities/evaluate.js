@@ -1,6 +1,5 @@
 const vm = require("vm");
 const sandbox = {
-  console: console, // Provide console.log, etc if needed
   // give it axios, lodash, etc
   axios: require("axios"),
   lodash: require("lodash"),
