@@ -19,7 +19,6 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const logger = require("../src/logger.js")("web");
- 
 
 // const CHUNK_TOKEN_AMOUNT = 7000
 const CHUNK_TOKEN_AMOUNT = 10952;

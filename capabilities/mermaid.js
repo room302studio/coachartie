@@ -4,7 +4,6 @@ const { destructureArgs } = require("../helpers");
 const puppeteer = require("puppeteer");
 const logger = require("../src/logger.js")("mermaid");
 
-
 let mermaid;
 try {
   mermaid = require.resolve("mermaid");

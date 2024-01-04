@@ -41,7 +41,7 @@ async function getUserMemory(userId, limit = 5) {
 
 /**
  * Retrieves a specified number of memories from the database.
- * 
+ *
  * @param {number} [limit=5] - The maximum number of memories to retrieve. Default is 5.
  * @returns {Promise<Array<Object>>} - A promise that resolves to an array of memory objects.
  */
@@ -110,7 +110,7 @@ async function memoryToEmbedding(memory) {
  * @param {string} value
  * @returns {Promise<void>}
  */
-async function storeUserMemory({username, channel, guild}, value) {
+async function storeUserMemory({ username, channel, guild }, value) {
   // first we do some checks to make sure we have the right types of data
   if (!username) {
     return logger.error("No username provided to storeUserMemory");
@@ -137,14 +137,14 @@ async function storeUserMemory({username, channel, guild}, value) {
   }
 
   const { data, error } = await supabase
-  // .from("storage")
-  .from(MEMORIES_TABLE_NAME)
-  .insert({
-    user_id: username,
-    channel_id: channel,
-    value,
-    embedding,
-  });
+    // .from("storage")
+    .from(MEMORIES_TABLE_NAME)
+    .insert({
+      user_id: username,
+      channel_id: channel,
+      value,
+      embedding,
+    });
 
   if (error) {
     logger.error(`Error storing user memory: ${error.message}`);
@@ -153,23 +153,23 @@ async function storeUserMemory({username, channel, guild}, value) {
 
 /**
  * Stores a user message in the database.
- * 
+ *
  * @param {string} username - The ID of the user who sent the message.
  * @param {string} value - The content of the message.
  * @param {string} channelId - The ID of the channel where the message was sent.
  * @param {string} guildId - The ID of the guild where the message was sent.
  * @returns {Promise<object>} - A promise that resolves to the stored message data.
  */
-async function storeUserMessage({username, channel, guild}, value) {
+async function storeUserMessage({ username, channel, guild }, value) {
   const { data, error } = await supabase
-  // .from("messages")
-  .from(MESSAGES_TABLE_NAME)
-  .insert({    
-    user_id: username,
-    channel_id: channel,
-    guild_id: guild,
-    value,
-  });
+    // .from("messages")
+    .from(MESSAGES_TABLE_NAME)
+    .insert({
+      user_id: username,
+      channel_id: channel,
+      guild_id: guild,
+      value,
+    });
 
   if (error) {
     logger.error(`Error storing user message: ${error.message}`);

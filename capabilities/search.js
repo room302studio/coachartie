@@ -1,5 +1,5 @@
 const axios = require("axios");
-const { destructureArgs } = require("../helpers")
+const { destructureArgs } = require("../helpers");
 const logger = require("../src/logger.js")("search");
 
 /**

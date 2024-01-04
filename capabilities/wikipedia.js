@@ -4,7 +4,6 @@ const dotenv = require("dotenv");
 const { destructureArgs } = require("../helpers");
 const logger = require("../src/logger.js")("wikipedia");
 
-
 dotenv.config();
 
 const configuration = new Configuration({

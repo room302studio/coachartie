@@ -3,22 +3,25 @@ const {
   doesMessageContainCapability,
   generateAiCompletionParams,
   generateAiCompletion,
-  trimResponseIfNeeded,  
+  trimResponseIfNeeded,
   isExceedingTokenLimit,
-  getUniqueEmoji
+  getUniqueEmoji,
 } = require("../helpers");
-const { generateAndStoreRememberCompletion, generateAndStoreCapabilityCompletion } = require("./memory");
+const {
+  generateAndStoreRememberCompletion,
+  generateAndStoreCapabilityCompletion,
+} = require("./memory");
 const { capabilityRegex, callCapabilityMethod } = require("./capabilities");
 const { storeUserMessage } = require("./remember");
 const { CAPABILITY_ERROR_PROMPT } = require("../prompts");
 const logger = require("../src/logger.js")("chain");
 
-const { 
+const {
   TOKEN_LIMIT,
-  WARNING_BUFFER, 
+  WARNING_BUFFER,
   MAX_CAPABILITY_CALLS,
-  MAX_RETRY_COUNT } = require("../config");
-
+  MAX_RETRY_COUNT,
+} = require("../config");
 
 /**
  * Processes a message chain.
@@ -30,7 +33,6 @@ const {
  * @param {number} [capabilityCallCount=0] - The number of capability calls.
  * @returns {Array} - The processed message chain.
  */
-
 
 // TODO: Right now, I think, we accept too many arguments. And also, we depend on there being a `message` object, which we use to send our response. But it's not always there, sometimes, like if we are being run proactively, we need to actually look up the channel and send the message that way, instead of using message.send ... so we should probably refactor this to be more flexible and accept a channel object instead of a message object, and then we can send the message using the channel object instead of the message object. But that means we need to find every place that calls processMessageChain currently and update it to pass in the channel object instead of the message object. And then we can remove the message object from the processMessageChain function signature.
 
@@ -66,11 +68,20 @@ async function processMessageChain(
 
     do {
       capabilityCallIndex++;
-      logger.info(`${chainId} - Capability Call ${capabilityCallIndex} started: ${lastMessage.content.slice(0, 40)}...`);
+      logger.info(
+        `${chainId} - Capability Call ${capabilityCallIndex} started: ${lastMessage.content.slice(
+          0,
+          40,
+        )}...`,
+      );
 
       // process the last message in the chain
       try {
-        const updatedMessages = await processMessage(messages, lastMessage.content, { username, channel, guild });
+        const updatedMessages = await processMessage(
+          messages,
+          lastMessage.content,
+          { username, channel, guild },
+        );
         messages = updatedMessages;
         lastMessage = messages[messages.length - 1];
 
@@ -79,9 +90,14 @@ async function processMessageChain(
           channel.send(lastMessage.content);
         }
 
-        chainReport += `${chainId} - Capability Call ${capabilityCallIndex}: ${lastMessage.content.slice(0, 80)}...\n`;
+        chainReport += `${chainId} - Capability Call ${capabilityCallIndex}: ${lastMessage.content.slice(
+          0,
+          80,
+        )}...\n`;
 
-        logger.info(`${chainId} - Capability Call ${capabilityCallIndex} completed`);
+        logger.info(
+          `${chainId} - Capability Call ${capabilityCallIndex} completed`,
+        );
       } catch (error) {
         logger.error(`Error processing message: ${error}`);
       }
@@ -94,7 +110,12 @@ async function processMessageChain(
     logger.info(`${chainId} - Chain Report:\n${chainReport}`);
   } catch (error) {
     if (retryCount < MAX_RETRY_COUNT) {
-      logger.warn(`Error processing message chain, retrying (${retryCount + 1}/${MAX_RETRY_COUNT})`, error);
+      logger.warn(
+        `Error processing message chain, retrying (${
+          retryCount + 1
+        }/${MAX_RETRY_COUNT})`,
+        error,
+      );
       return processMessageChain(
         messages,
         { username, channel, guild },
@@ -102,7 +123,10 @@ async function processMessageChain(
         capabilityCallCount,
       );
     } else {
-      logger.error(`${chainId} - Error processing message chain, maximum retries exceeded`, error);
+      logger.error(
+        `${chainId} - Error processing message chain, maximum retries exceeded`,
+        error,
+      );
       throw error;
     }
   }
@@ -193,7 +217,6 @@ async function processCapability(messages, capabilityMatch) {
   return messages;
 }
 
-
 /**
  * Processes a message and generates a response.
  * @param {Array} messages - The array of messages.
@@ -204,7 +227,11 @@ async function processCapability(messages, capabilityMatch) {
  * @param {string} options.guild - The guild.
  * @returns {Array} - The updated array of messages.
  */
-async function processMessage(messages, lastMessage, {username = '', channel = '', guild = ''}) {
+async function processMessage(
+  messages,
+  lastMessage,
+  { username = "", channel = "", guild = "" },
+) {
   if (doesMessageContainCapability(lastMessage)) {
     const capabilityMatch = lastMessage.match(capabilityRegex);
 
@@ -215,10 +242,9 @@ async function processMessage(messages, lastMessage, {username = '', channel = '
         lastMessage,
         messages[messages.length - 1].content,
         capabilityMatch[1],
-        {username, channel, guild},
+        { username, channel, guild },
         messages,
-      );      
-
+      );
     } catch (error) {
       messages.push({
         role: "system",
@@ -240,7 +266,7 @@ async function processMessage(messages, lastMessage, {username = '', channel = '
   const lastUserMessage = messages.find((m) => m.role === "user");
   const prompt = lastUserMessage.content;
 
-  storeUserMessage({username, channel, guild}, prompt);
+  storeUserMessage({ username, channel, guild }, prompt);
 
   const { temperature, frequency_penalty } = generateAiCompletionParams();
 
@@ -259,7 +285,12 @@ async function processMessage(messages, lastMessage, {username = '', channel = '
     content: aiResponse,
   });
 
-  generateAndStoreRememberCompletion(prompt, aiResponse, {username, channel, guild}, messages);
+  generateAndStoreRememberCompletion(
+    prompt,
+    aiResponse,
+    { username, channel, guild },
+    messages,
+  );
 
   return messages;
 }

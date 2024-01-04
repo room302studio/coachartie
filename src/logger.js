@@ -15,11 +15,13 @@ module.exports = function (serviceName) {
           winston.format.printf((info) => {
             const { level, message, ...meta } = info;
             return `${level}: ${message}`;
-          })
+          }),
         ),
       }),
       new winston.transports.File({ filename: "coachartie.log" }),
-      new winston.transports.File({ filename: `coachartie-${serviceName}.log` }),
+      new winston.transports.File({
+        filename: `coachartie-${serviceName}.log`,
+      }),
     ],
   });
 

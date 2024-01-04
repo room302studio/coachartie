@@ -9,12 +9,8 @@ const { PROMPT_SYSTEM, CAPABILITY_PROMPT_INTRO } = require("./prompts");
 // 📚 GPT-3 token-encoder: our linguistic enigma machine
 const { encode, decode } = require("@nem035/gpt-3-encoder");
 const { RESPONSE_LIMIT, TOKEN_LIMIT, MAX_OUTPUT_TOKENS } = require("./config");
-const {
-  getUserMemory,
-  getUserMessageHistory,
-} = require("./src/remember.js");
+const { getUserMemory, getUserMessageHistory } = require("./src/remember.js");
 const logger = require("./src/logger.js")("helpers");
-
 
 /**
  * Replaces the robot id with the robot name in a given string.
@@ -452,7 +448,7 @@ function removeRandomLines(lines, randomLines) {
 
 /**
  * Joins an array of trimmed lines into a single string response.
- * 
+ *
  * @param {string[]} trimmedLines - The array of trimmed lines to join.
  * @returns {string} The joined string response.
  */
@@ -488,8 +484,6 @@ function setTypingInterval(message) {
   return setInterval(() => message.channel.sendTyping(), 5000);
 }
 
-
-
 /**
  * Generates an AI completion based on the given prompt, username, messages, and config.
  * @param {string} prompt - The prompt for the AI completion.
@@ -506,7 +500,7 @@ async function generateAiCompletion(prompt, username, messages, config) {
     delete messages[messages.length - 1].image;
   }
 
-  logger.info('generateAiCompletion')
+  logger.info("generateAiCompletion");
   // logger.info('username', username)
   // logger.info('prompt', prompt)
 
@@ -995,7 +989,7 @@ function isExceedingTokenLimit(messages) {
 
 /**
  * Destructures a string of arguments into an array of trimmed arguments.
- * 
+ *
  * @param {string} args - The string of arguments to destructure.
  * @returns {Array} - An array of trimmed arguments.
  */
@@ -1106,26 +1100,140 @@ function countMessageTokens(messageArray = []) {
 }
 
 // Example array of animal emojis
-const emojis = ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯'];
+const emojis = [
+  "🐶",
+  "🐱",
+  "🐭",
+  "🐹",
+  "🐰",
+  "🦊",
+  "🐻",
+  "🐼",
+  "🐻‍❄️",
+  "🐨",
+  "🐯",
+  "🦁",
+  "🐮",
+  "🐷",
+  "🐸",
+  "🐵",
+  "🙈",
+  "🙉",
+  "🙊",
+  "🐒",
+  "🐔",
+  "🐧",
+  "🐦",
+  "🐤",
+  "🐣",
+  "🐥",
+  "🦆",
+  "🦅",
+  "🦉",
+  "🦇",
+  "🐺",
+  "🐗",
+  "🐴",
+  "🦄",
+  "🐝",
+  "🪱",
+  "🐛",
+  "🦋",
+  "🐌",
+  "🐞",
+  "🐜",
+  "🦟",
+  "🦗",
+  "🕷",
+  "🕸",
+  "🦂",
+  "🐢",
+  "🐍",
+  "🦎",
+  "🦖",
+  "🦕",
+  "🐙",
+  "🦑",
+  "🦐",
+  "🦞",
+  "🦀",
+  "🐡",
+  "🐠",
+  "🐟",
+  "🐬",
+  "🐳",
+  "🐋",
+  "🦈",
+  "🐊",
+  "🐅",
+  "🐆",
+  "🦓",
+  "🦍",
+  "🦧",
+  "🐘",
+  "🦛",
+  "🦏",
+  "🐪",
+  "🐫",
+  "🦒",
+  "🦘",
+  "🦬",
+  "🐃",
+  "🐂",
+  "🐄",
+  "🐎",
+  "🐖",
+  "🐏",
+  "🐑",
+  "🦙",
+  "🐐",
+  "🦌",
+  "🐕",
+  "🐩",
+  "🦮",
+  "🐕‍🦺",
+  "🐈",
+  "🐈‍⬛",
+  "🪶",
+  "🐓",
+  "🦃",
+  "🦤",
+  "🦚",
+  "🦜",
+  "🦢",
+  "🦩",
+  "🕊",
+  "🐇",
+  "🦝",
+  "🦨",
+  "🦡",
+  "🦫",
+  "🦦",
+  "🦥",
+  "🐁",
+  "🐀",
+  "🐿",
+  "🦔",
+];
 
 // Set to store used emojis
 const usedEmojis = new Set();
 
 // Function to get a unique emoji
 function getUniqueEmoji() {
-  if (usedEmojis.size === emojis.length) {
-    throw new Error("No more unique emojis available :(");
-  }
-
   let emoji;
   do {
     emoji = emojis[Math.floor(Math.random() * emojis.length)];
   } while (usedEmojis.has(emoji));
 
   usedEmojis.add(emoji);
+
+  if (usedEmojis.size === emojis.length) {
+    usedEmojis.clear();
+  }
+
   return emoji;
 }
-
 
 module.exports = {
   destructureArgs,
@@ -1146,5 +1254,5 @@ module.exports = {
   createTokenLimitWarning,
   isExceedingTokenLimit,
   lastUserMessage,
-  getUniqueEmoji
+  getUniqueEmoji,
 };

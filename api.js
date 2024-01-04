@@ -44,7 +44,7 @@ app.post("/api/message-image", async (req, res) => {
         image: image,
       },
     ],
-    {username},
+    { username },
   );
 
   res.json({ response: processedMessage });

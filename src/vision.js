@@ -1,7 +1,6 @@
 const { openai } = require("./openai");
 const logger = require("../src/logger.js")("vision");
 
-
 let imageUrl = "";
 let imageDescription = "";
 let isFetching = false;

@@ -1,10 +1,11 @@
-const { google, batchUpdate} = require("googleapis");
+const { google, batchUpdate } = require("googleapis");
 const { destructureArgs } = require("../helpers");
-const logger = require("../src/logger")
+const logger = require("../src/logger");
 const keyFile = "./auth/coach-artie-e95c8660132f.json"; // Path to JSON file
-const scopes = ['https://www.googleapis.com/auth/drive','https://www.googleapis.com/auth/calendar']; 
-
-
+const scopes = [
+  "https://www.googleapis.com/auth/drive",
+  "https://www.googleapis.com/auth/calendar",
+];
 
 /**
  * Get an instance of Google Drive.
@@ -19,7 +20,6 @@ const getDriveInstance = async () => {
   // console log the scopes we are authed into
   // logger.info('auth.scopes are: ');
   // logger.info(auth.scopes);
-
 
   const client = await auth.getClient();
   return google.drive({ version: "v3", auth: client });
@@ -41,7 +41,9 @@ async function listFiles() {
           if (res.data.files.length === 0) {
             reject(new Error("No files found."));
           } else {
-            const files = res.data.files.map(({ name, id }) => `${name} (${id})`);
+            const files = res.data.files.map(
+              ({ name, id }) => `${name} (${id})`,
+            );
             resolve(files);
           }
         }
@@ -65,13 +67,12 @@ async function listFiles() {
 
 async function readDoc(fileId) {
   const drive = await getDriveInstance();
-  let fileContent = '';
+  let fileContent = "";
 
   return new Promise((resolve, reject) => {
     drive.files
       .export({ fileId, mimeType: "text/plain" }, { responseType: "stream" })
       .then((res) => {
-        
         res.data
           .on("data", (chunk) => {
             fileContent += chunk;
@@ -139,7 +140,6 @@ async function appendString(fileId, text) {
       });
   });
 }
-  
 
 async function createNewDocument(title, text) {
   const drive = await getDriveInstance();
@@ -172,7 +172,7 @@ async function createNewDocument(title, text) {
   return JSON.stringify(createdDoc.data);
 }
 /**
- * 
+ *
  * @param {string} title - The title of the new document.
  * @param {string} text - The text to use as the content of the new document.
  */

@@ -10,10 +10,10 @@ const chance = require("chance").Chance();
 const vision = require("./vision.js");
 const logger = require("../src/logger.js")("memory");
 
-
 // 📜 prompts: our guidebook of conversational cues
 const prompts = require("../prompts");
-const { PROMPT_REMEMBER, PROMPT_CAPABILITY_REMEMBER, PROMPT_REMEMBER_INTRO } = prompts; 
+const { PROMPT_REMEMBER, PROMPT_CAPABILITY_REMEMBER, PROMPT_REMEMBER_INTRO } =
+  prompts;
 const { REMEMBER_MODEL } = require("../config");
 
 /**
@@ -29,7 +29,7 @@ const { REMEMBER_MODEL } = require("../config");
 async function generateAndStoreRememberCompletion(
   prompt,
   response,
-  {username = "", channel = "", guild = ""},
+  { username = "", channel = "", guild = "" },
   conversationHistory = [],
 ) {
   // logger.info("🔧 Generating and storing remember completion", username);
@@ -111,11 +111,10 @@ async function generateAndStoreRememberCompletion(
   if (rememberText === "✨") return rememberText;
   // if remember text length is 0 or less, we don't wanna store it
   if (rememberText.length <= 0) return rememberText;
-  await storeUserMemory({username}, rememberText);
+  await storeUserMemory({ username }, rememberText);
 
   return rememberText;
 }
-
 
 /**
  * Generates and stores capability completion.
@@ -131,7 +130,7 @@ async function generateAndStoreCapabilityCompletion(
   prompt,
   capabilityResponse,
   capabilityName,
-  {username = "", channel = "", guild = ""},
+  { username = "", channel = "", guild = "" },
   conversationHistory = [],
 ) {
   // logger.info("🔧 Generating and storing capability usage");
@@ -173,7 +172,6 @@ async function generateAndStoreCapabilityCompletion(
     vision.setImageBase64(base64Image);
     const imageDescription = await vision.fetchImageDescription();
     // then we need to add the description to the response
-    
   }
 
   // make sure none of the messages in conversation history have an image
@@ -222,17 +220,16 @@ async function generateAndStoreCapabilityCompletion(
     ],
   });
 
-  const rememberText = rememberCompletion.data.choices[0].message.content
+  const rememberText = rememberCompletion.data.choices[0].message.content;
 
   // if the remember text is ✨ AKA empty, we don't wanna store it
   if (rememberText === "✨") return rememberText;
   // if remember text length is 0 or less, we don't wanna store it
   if (rememberText.length <= 0) return rememberText;
-  await storeUserMemory({username: "capability"}, rememberText);
+  await storeUserMemory({ username: "capability" }, rememberText);
 
   return rememberText;
 }
-
 
 module.exports = {
   generateAndStoreRememberCompletion,

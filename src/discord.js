@@ -134,8 +134,7 @@ class DiscordBot {
    * @param {string} prompt - The prompt to be processed.
    * @param {string} username - The username of the message author.
    */
-  async processMessageChain(prompt, 
-    {username, channel, guild}) {
+  async processMessageChain(prompt, { username, channel, guild }) {
     return await processMessageChain(
       [
         {
@@ -143,7 +142,7 @@ class DiscordBot {
           content: prompt,
         },
       ],
-      {username, channel, guild}
+      { username, channel, guild },
     );
   }
 
@@ -155,7 +154,7 @@ class DiscordBot {
     const botMentionOrChannel = detectBotMentionOrChannel(message);
     const messageAuthorIsBot = message.author.bot;
     const authorIsMe = message.author.username === "coachartie";
-    
+
     if (!botMentionOrChannel || authorIsMe || messageAuthorIsBot) return;
 
     const typing = displayTypingIndicator(message);
@@ -163,7 +162,7 @@ class DiscordBot {
     let prompt = await this.processPrompt(message);
     let processedPrompt = await this.processImageAttachment(message, prompt);
 
-    const username = message.author.username
+    const username = message.author.username;
     // const channel = message.channel.name;
     const guild = message.guild.name;
 
@@ -171,10 +170,11 @@ class DiscordBot {
     // so we can send messages to it
     const channel = this.fetchChannelById(message.channel.id);
 
-    let messages = await this.processMessageChain(
-      processedPrompt,
-      {username, channel, guild}
-    );
+    let messages = await this.processMessageChain(processedPrompt, {
+      username,
+      channel,
+      guild,
+    });
 
     // Check if the last message contains an image- if so send it as a file
     const lastMessage = messages[messages.length - 1];
