@@ -10,6 +10,8 @@ const chance = require("chance").Chance();
 const vision = require("./vision.js");
 const logger = require("../src/logger.js")("memory");
 
+const preambleLogger = require("../src/logger.js")("preamble");
+
 // 📜 prompts: our guidebook of conversational cues
 const prompts = require("../prompts");
 const { PROMPT_REMEMBER, PROMPT_CAPABILITY_REMEMBER, PROMPT_REMEMBER_INTRO } =
@@ -76,32 +78,36 @@ async function generateAndStoreRememberCompletion(
     }
   });
 
+  const completeMessages = [
+    ...conversationHistory,
+    ...memoryMessages,
+    {
+      role: "system",
+      content: "---",
+    },
+    {
+      role: "system",
+      content: PROMPT_REMEMBER_INTRO,
+    },
+    {
+      role: "user",
+      content: `# User (${username}): ${prompt} \n # Robot (Artie): ${response}`,
+    },
+    {
+      role: "user",
+      content: `${PROMPT_REMEMBER}`,
+    },
+  ]
+
+  preambleLogger.info("📜 Preamble messages", completeMessages);
+
   const rememberCompletion = await openai.createChatCompletion({
     model: REMEMBER_MODEL,
     // temperature: 1.1,
     // top_p: 0.9,
     presence_penalty: 0.1,
     max_tokens: 256,
-    messages: [
-      ...conversationHistory,
-      ...memoryMessages,
-      {
-        role: "system",
-        content: "---",
-      },
-      {
-        role: "system",
-        content: PROMPT_REMEMBER_INTRO,
-      },
-      {
-        role: "user",
-        content: `# User (${username}): ${prompt} \n # Robot (Artie): ${response}`,
-      },
-      {
-        role: "user",
-        content: `${PROMPT_REMEMBER}`,
-      },
-    ],
+    messages: completeMessages,
   });
 
   const rememberText = rememberCompletion.data.choices[0].message.content;

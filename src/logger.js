@@ -12,15 +12,32 @@ module.exports = function (serviceName) {
     transports: [
       new winston.transports.Console({
         format: winston.format.combine(
+          winston.format.timestamp(),
           winston.format.printf((info) => {
-            const { level, message, ...meta } = info;
-            return `${level}: ${message}`;
+            const { level, message, timestamp, ...meta } = info;
+            return `${timestamp} ${level}: ${message}`;
           }),
         ),
       }),
-      new winston.transports.File({ filename: "coachartie.log" }),
+      new winston.transports.File({
+        filename: "coachartie.log",
+        format: winston.format.combine(
+          winston.format.timestamp(),
+          winston.format.printf((info) => {
+            const { level, message, timestamp, ...meta } = info;
+            return `${timestamp} ${level}: ${message}`;
+          }),
+        ),
+      }),
       new winston.transports.File({
         filename: `coachartie-${serviceName}.log`,
+        format: winston.format.combine(
+          winston.format.timestamp(),
+          winston.format.printf((info) => {
+            const { level, message, timestamp, ...meta } = info;
+            return `${timestamp} ${level}: ${message}`;
+          }),
+        ),
       }),
     ],
   });
