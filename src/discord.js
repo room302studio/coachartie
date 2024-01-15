@@ -22,6 +22,8 @@ class DiscordBot {
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
         GatewayIntentBits.GuildMessageReactions,
+        GatewayIntentBits.DirectMessages,
+        GatewayIntentBits.MessageContent
       ],
     });
     this.bot.login(process.env.DISCORD_BOT_TOKEN);
@@ -33,19 +35,18 @@ class DiscordBot {
   }
 
   fetchChannelById(channelId) {
-    // we need to find the channel object from the bot
-    // we can do this by iterating through the guilds
-    // and then iterating through the channels
-    // and then checking if the channel id matches
-    // if it does, we can return the channel object
-    // if it doesn't, we can return null
+    // Direct Messages have a different method to fetch channels
+    if (channelId.startsWith('DM')) {
+      return client.users.cache.get(channelId.replace('DM-', '')).createDM();
+    }
+  
+    // For guild channels, iterate through the guilds as before
     let channelObj = null;
     client.guilds.cache.forEach((guild) => {
-      guild.channels.cache.forEach((channel) => {
-        if (channel.id === channelId) {
-          channelObj = channel;
-        }
-      });
+      const channel = guild.channels.cache.get(channelId);
+      if (channel) {
+        channelObj = channel;
+      }
     });
     return channelObj;
   }
@@ -155,6 +156,8 @@ class DiscordBot {
     const messageAuthorIsBot = message.author.bot;
     const authorIsMe = message.author.username === "coachartie";
 
+    console.log('message received: ', message.content);
+
     if (!botMentionOrChannel || authorIsMe || messageAuthorIsBot) return;
 
     const typing = displayTypingIndicator(message);
@@ -168,7 +171,9 @@ class DiscordBot {
 
     // we need the channel to be the actual discord channel object
     // so we can send messages to it
-    const channel = this.fetchChannelById(message.channel.id);
+    const isDM = !message.guild;
+    const channel = isDM ? message.channel : this.fetchChannelById(message.channel.id);
+    
 
     let messages = await this.processMessageChain(processedPrompt, {
       username,
