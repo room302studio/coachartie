@@ -119,6 +119,29 @@ async function readFile(fileId) {
   });
 }
 
+async function shareFile(fileId, email) {
+  const drive = await getDriveInstance();
+
+  return new Promise((resolve, reject) => {
+    drive.permissions
+      .create({
+        fileId,
+        requestBody: {
+          role: "writer",
+          type: "user",
+          emailAddress: email,
+        },
+      })
+      .then((res) => {
+        resolve(res);
+      })
+      .catch((error) => {
+        reject(error);
+      });
+  });
+}
+
+
 async function appendString(fileId, text) {
   const drive = await getDriveInstance();
 
@@ -193,6 +216,16 @@ async function createNewDocument(title, text) {
     },
   });
 
+  // share the file with everyone in the organization
+  await drive.permissions.create({
+    fileId: createdDoc.data.id,
+    requestBody: {
+      role: "writer",
+      type: "domain",
+      domain: "room302.studio", // Replace with your actual domain
+    },
+  });
+
   return JSON.stringify(createdDoc.data);
 }
 
@@ -211,6 +244,8 @@ module.exports = {
         return await appendString(arg1, arg2);
       case "createNewDocument":
         return await createNewDocument(arg1, arg2);
+      case "shareFile":
+        return await shareFile(arg1, arg2);
       default:
         throw new Error(`Invalid method: ${method}`);
     }

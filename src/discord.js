@@ -30,6 +30,8 @@ class DiscordBot {
     this.bot.on("ready", onClientReady);
     // this.bot.on("messageCreate", this.onMessageCreate);
     this.bot.on("messageCreate", this.onMessageCreate.bind(this)); // Bind the context of `this`
+    
+    
 
     client = this.bot;
   }

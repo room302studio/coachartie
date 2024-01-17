@@ -15,7 +15,7 @@ const proactive = {
   start: async function (bot) {
     logger.info("Starting proactive.start()");
     // Schedule the task to run every hour
-    cron.schedule("0 * * * *", async () => {
+    // cron.schedule("0 * * * *", async () => {
       // Replace the logger.info statement with your desired action
       logger.info("Running proactive.start() every hour via cron");
 
@@ -33,9 +33,9 @@ const proactive = {
       }
 
       // start an interval that sends typing every 5 seconds
-      const interval = setInterval(() => {
-        channel.sendTyping();
-      }, 5000);
+      // const interval = setInterval(() => {
+      //   channel.sendTyping();
+      // }, 5000);
 
       // perform the proactive task
       const processedMessage = await this.performProactiveTask(
@@ -60,8 +60,8 @@ const proactive = {
       await bot.sendMessage(processedMessage, channel);
 
       // clear the interval
-      clearInterval(interval);
-    });
+      // clearInterval(interval);
+    // });
   },
   listPotentialTasks: async function () {
     logger.info("Listing potential tasks");

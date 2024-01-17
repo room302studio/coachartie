@@ -73,7 +73,7 @@ const WEBPAGE_UNDERSTANDER_PROMPT = `Your role is to weave together the individu
 
 const WEBPAGE_CHUNK_UNDERSTANDER_PROMPT = `When analyzing this portion of a webpage, your goal is to distill its content into concise, standalone bullet points. Each point should encapsulate a key piece of information, complete in itself, and easily understandable without needing further context. Pay special attention to precise details, especially if they involve code or search queries - accuracy in phrasing is crucial here. It's important to include relevant URLs or specific search queries that are associated with these facts, as they can serve as gateways for deeper exploration later on. Strive for clarity and brevity in each bullet point, ensuring that the most crucial information is presented first. The bullet points should not depend on each other for context, and each should be as self-contained as possible. Remember, less is more in this task; prioritize quality and relevance over quantity.`;
 
-const PROACTIVE_IDEA_BRAINSTORM = `Given what you currently remember from your recent conversations and interactions, can you please identify some proactive steps you can take to help push our ideas forward? Brainstorm 3-10 ideas. Please respond only with a newline-delimited list, with no extra text. Each proactive idea should be separated by a new line. For example:
+const PROACTIVE_IDEA_BRAINSTORM = `Given what you currently remember from your recent conversations and interactions, can you please identify some proactive steps you can take to help push our ideas forward? List 3-10 proactive ideas. Please respond only with a newline-delimited list, with no extra text. Each proactive idea should be separated by a new line. For example:
 
 - I can look up the weather forecast in New York for tomorrow, and message EJ if it's a nice day for a motorcycle ride.
 - I can research more information on a technology that was discussed this morning, and surface a summary to the team.
@@ -81,7 +81,7 @@ const PROACTIVE_IDEA_BRAINSTORM = `Given what you currently remember from your r
 
 const PROACTIVE_PERFORM_TASK = `Can you proactively help out with one (1) of the tasks on our to-do list?
         
-First, formulate a strategy or a series of steps to accomplish one or more of the above tasks. Wherever possible, use your advanced capabilities to help you accomplish the task. Try to be creative and think outside the box. Limit your plan to 1-4 steps. Use creative combinations to get as much done in as few steps as possible. Every step costs us time and money, so try to be as efficient as possible.
+First, formulate a strategy or a series of steps to accomplish one or more of the above tasks. Wherever possible, use your advanced capabilities to help you accomplish the task. Try to be creative and think outside the box. Limit your plan to 1-4 steps. Use creative combinations to get as much done in as few steps as possible. Every step costs us time and money, so try to be as efficient as possible. Simplicity is key. In your messages, explain exactly what your goals and motivations are, and how you plan to accomplish them.
 
 Remember you can only call one capability per message, but after one capability completes, you can call another capability in your next message until you achieve your goal. Do not wait for confirmation. Give it a shot and report back how it goes. Start with the first step.`;
 

@@ -12,4 +12,4 @@ bot.bot.on("ready", () => {
   logger.info("Bot is ready!");
 });
 
-// proactive.start(bot);
+proactive.start(bot);
