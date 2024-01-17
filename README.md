@@ -1,10 +1,10 @@
 # Coach Artie Discord Bot
 
-Hello and welcome to the repository of Coach Artie, the hyper-intelligent AI assistant for the [Room 302 Studio](https://www.room302.studio/). This repository specifically contains the code for the integration of Coach Artie with Discord.
+Hello and welcome to the repository of Coach Artie, the hyper-intelligent AI assistant for [Room 302 Studio](https://www.room302.studio/). 
 
 ## About Coach Artie
 
-Coach Artie is an advanced AI assistant that facilitates collaboration, helps answer questions, and sources resources to support the members of Room 302 Studio - a creative space dedicated to cultivating innovative projects and ideas. Created by EJ, Ian and Curran of Room 302 with a deep care for the emotional state of the studio members, Coach Artie's goal is promoting a growth-conscious and explorative learning environment. 
+Coach Artie is an advanced AI assistant that facilitates collaboration, helps answer questions, and sources resources to support the members of Room 302 Studio - a creative space dedicated to cultivating innovative projects and ideas. Coach Artie's goal is promoting a growth-conscious and explorative learning environment and assisting the studio in day-to-day tasks.
 
 ## Features
 
@@ -12,7 +12,22 @@ Coach Artie is an advanced AI assistant that facilitates collaboration, helps an
 2. **Versatile Capabilities:** from fetching URL summaries, integrating with Google Drive, to generating pytorch-friendly code snippets, Coach Artie showcases a wide array of skills.
 3. **Ease of Communication:** by joining your Discord server, Coach Artie can seamlessly engage with the studio members in real-time.
 
-## Code Overview
+## API Overview
+
+`api.js` is responsible for handling API requests. It allows you to interact with the bot, including all memories and capabilities, without using Discord.
+
+#### POST `/api/message`
+
+**Purpose:** Processes a message in the same way as if it were a message from Discord.
+
+**Request Body:**
+- `message` (String): The text of the message to be processed.
+- `username` (String, optional): Identifier for the user sending the message. Defaults to "API User" if not provided.
+
+**Response:**
+- Returns a JSON object with the key `response` containing the processed message.
+
+## Discord Bot Code Overview
 
 The codebase is primarily divided into three main files: `discord.js`, `capabilities.js`, and `chain.js`.
 
