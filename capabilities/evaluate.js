@@ -1,6 +1,5 @@
 const vm = require("vm");
 const sandbox = {
-  console: console, // Provide console.log, etc if needed
   // give it axios, lodash, etc
   axios: require("axios"),
   lodash: require("lodash"),
@@ -9,7 +8,7 @@ const sandbox = {
   chance: require("chance"),
 };
 
-function handleCapabilityMethod(method, args) {
+function handleCapabilityMethod(_, args) {
   const [code] = args;
 
   // Create a new VM context for running the code
@@ -21,9 +20,6 @@ function handleCapabilityMethod(method, args) {
   try {
     result = runCodeInSandbox(code, sandbox);
   } catch (err) {
-    if (err instanceof vm.Timeout) {
-      throw new Error("The script execution timed out.");
-    }
     throw err;
   }
 

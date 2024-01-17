@@ -3,6 +3,7 @@ const { graphql } = require("@octokit/graphql");
 const { createAppAuth } = require("@octokit/auth-app");
 const dotenv = require("dotenv");
 const { destructureArgs } = require("../helpers");
+const logger = require("../src/logger.js")("github");
 
 dotenv.config();
 
@@ -16,7 +17,7 @@ class GithubCoach {
    * Initializes the GithubCoach.
    */
   constructor() {
-    console.log("Initializing GithubCoach...");
+    logger.info("Initializing GithubCoach...");
     this._init();
   }
 
@@ -35,7 +36,7 @@ class GithubCoach {
           debug: () => {},
           info: () => {},
           warn: console.warn,
-          error: console.error,
+          error: logger.error,
         },
       });
 
@@ -45,7 +46,7 @@ class GithubCoach {
         },
       });
     } catch (error) {
-      console.error(error);
+      logger.error(error);
     }
   }
 
@@ -58,7 +59,7 @@ class GithubCoach {
     const response = await this.octokit.repos.createForAuthenticatedUser({
       name: repositoryName,
     });
-    console.log("create repo response");
+    logger.info("create repo response");
     return JSON.stringify(response);
   }
 
@@ -377,7 +378,7 @@ module.exports = {
     const githubCoach = new GithubCoach();
 
     const destructuredArgs = destructureArgs(args);
-    // console.log("destructuredArgs", destructuredArgs);
+    // logger.info("destructuredArgs", destructuredArgs);
     // destructuredArgs [ 'coachartie/test2', 'Test issue 1', 'This is a test issue' ]
     // to pass the array off arguments to each method
     // we need to

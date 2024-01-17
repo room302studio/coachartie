@@ -1,4 +1,5 @@
 const { GatewayIntentBits, Events } = require("discord.js");
+const logger = require("../src/logger.js")("discord-events");
 
 class DiscordEvents {
   constructor(bot, discord) {
@@ -26,10 +27,10 @@ class DiscordEvents {
         entityType: "EXTERNAL",
       });
 
-      console.log(`Scheduled event '${name}' created successfully.`);
+      logger.info(`Scheduled event '${name}' created successfully.`);
       return event;
     } catch (error) {
-      console.log(`Error creating scheduled event: ${error}`);
+      logger.info(`Error creating scheduled event: ${error}`);
     }
   }
 
@@ -39,10 +40,10 @@ class DiscordEvents {
       const guild = this.discord.guilds.cache.get(guildId);
       const events = await guild.scheduledEvents.fetch();
 
-      console.log(`Fetched ${events.size} scheduled events.`);
+      logger.info(`Fetched ${events.size} scheduled events.`);
       return events;
     } catch (error) {
-      console.log(`Error fetching scheduled events: ${error}`);
+      logger.info(`Error fetching scheduled events: ${error}`);
     }
   }
 }

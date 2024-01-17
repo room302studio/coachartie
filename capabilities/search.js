@@ -1,4 +1,6 @@
 const axios = require("axios");
+const { destructureArgs } = require("../helpers");
+const logger = require("../src/logger.js")("search");
 
 /**
  * Performs a search using the DuckDuckGo API.
@@ -18,7 +20,7 @@ async function duckDuckGoSearch(query) {
     }));
     return results;
   } catch (error) {
-    console.error(`Error: ${error.message}`);
+    logger.error(`Error: ${error.message}`);
     return error.message;
   }
 }

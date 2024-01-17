@@ -1,10 +1,11 @@
-const { google } = require("googleapis");
+const { google, batchUpdate } = require("googleapis");
 const { destructureArgs } = require("../helpers");
-
-const keyFile = "./auth/coach-artie-5f8c6debae41.json"; // Path to JSON file
-const scopes = ['https://www.googleapis.com/auth/drive','https://www.googleapis.com/auth/calendar']; 
-
-
+const logger = require("../src/logger");
+const keyFile = "./auth/coach-artie-e95c8660132f.json"; // Path to JSON file
+const scopes = [
+  "https://www.googleapis.com/auth/drive",
+  "https://www.googleapis.com/auth/calendar",
+];
 
 /**
  * Get an instance of Google Drive.
@@ -17,9 +18,8 @@ const getDriveInstance = async () => {
   });
 
   // console log the scopes we are authed into
-  console.log('auth.scopes are: ');
-  console.log(auth.scopes);
-
+  // logger.info('auth.scopes are: ');
+  // logger.info(auth.scopes);
 
   const client = await auth.getClient();
   return google.drive({ version: "v3", auth: client });
@@ -41,14 +41,16 @@ async function listFiles() {
           if (res.data.files.length === 0) {
             reject(new Error("No files found."));
           } else {
-            const files = res.data.files.map(({ name, id }) => `${name} (${id})`);
+            const files = res.data.files.map(
+              ({ name, id }) => `${name} (${id})`,
+            );
             resolve(files);
           }
         }
       });
     });
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     if (error.code === "AUTH_ERROR") {
       throw new Error("Authentication problem.");
     } else {
@@ -65,23 +67,28 @@ async function listFiles() {
 
 async function readDoc(fileId) {
   const drive = await getDriveInstance();
+  let fileContent = "";
 
   return new Promise((resolve, reject) => {
     drive.files
       .export({ fileId, mimeType: "text/plain" }, { responseType: "stream" })
       .then((res) => {
         res.data
+          .on("data", (chunk) => {
+            fileContent += chunk;
+          })
           .on("end", () => {
-            resolve("Done reading file.");
+            resolve(fileContent);
           })
           .on("error", (error) => {
             reject(error);
-          })
-          .pipe(process.stdout);
+          });
       })
       .catch((error) => {
         reject(error);
       });
+
+    return fileContent;
   });
 }
 
@@ -112,20 +119,114 @@ async function readFile(fileId) {
   });
 }
 
-/**
- * Append a string to a Google Doc.
- * @param {string} docId - The ID of the Google Doc.
- * @param {string} text - The text to append.
- * @returns {Promise} A promise that resolves when the text has been appended.
- */
-async function appendString(docId, text) {
-  const doc = await docs.documents.get({ documentId: docId });
-  doc.data.body.content += `\n${text}`;
+async function shareFile(fileId, email) {
+  const drive = await getDriveInstance();
 
-  return docs.documents.update({
-    documentId: docId,
-    requestBody: { body: { content: doc.data.body.content } },
+  return new Promise((resolve, reject) => {
+    drive.permissions
+      .create({
+        fileId,
+        requestBody: {
+          role: "writer",
+          type: "user",
+          emailAddress: email,
+        },
+      })
+      .then((res) => {
+        resolve(res);
+      })
+      .catch((error) => {
+        reject(error);
+      });
   });
+}
+
+
+async function appendString(fileId, text) {
+  const drive = await getDriveInstance();
+
+  return new Promise((resolve, reject) => {
+    drive.files
+      .export({ fileId, mimeType: "text/plain" }, { responseType: "stream" })
+      .then((res) => {
+        res.data
+          .on("end", () => {
+            resolve("Done reading file.");
+          })
+          .on("error", (error) => {
+            reject(error);
+          })
+          .pipe(process.stdout);
+      })
+      .catch((error) => {
+        reject(error);
+      });
+  });
+}
+
+async function createNewDocument(title, text) {
+  const drive = await getDriveInstance();
+
+  // Create a new Google Doc
+  const docMetadata = {
+    name: title,
+    mimeType: "application/vnd.google-apps.document",
+    writersCanShare: true, // Set writersCanShare to true to allow sharing
+  };
+
+  const createdDoc = await drive.files.create({
+    resource: docMetadata,
+    media: {
+      mimeType: "text/plain",
+      body: text,
+    },
+  });
+
+  // Share the document with everyone in the organization
+  await drive.permissions.create({
+    fileId: createdDoc.data.id,
+    requestBody: {
+      role: "writer",
+      type: "domain",
+      domain: "room302.studio", // Replace with your actual domain
+    },
+  });
+
+  return JSON.stringify(createdDoc.data);
+}
+/**
+ *
+ * @param {string} title - The title of the new document.
+ * @param {string} text - The text to use as the content of the new document.
+ */
+async function createNewDocument(title, text) {
+  const drive = await getDriveInstance();
+
+  // Create a new Google Doc
+  const docMetadata = {
+    name: title,
+    mimeType: "application/vnd.google-apps.document",
+  };
+
+  const createdDoc = await drive.files.create({
+    resource: docMetadata,
+    media: {
+      mimeType: "text/plain",
+      body: text,
+    },
+  });
+
+  // share the file with everyone in the organization
+  await drive.permissions.create({
+    fileId: createdDoc.data.id,
+    requestBody: {
+      role: "writer",
+      type: "domain",
+      domain: "room302.studio", // Replace with your actual domain
+    },
+  });
+
+  return JSON.stringify(createdDoc.data);
 }
 
 module.exports = {
@@ -141,6 +242,10 @@ module.exports = {
         return await readFile(arg1);
       case "appendString":
         return await appendString(arg1, arg2);
+      case "createNewDocument":
+        return await createNewDocument(arg1, arg2);
+      case "shareFile":
+        return await shareFile(arg1, arg2);
       default:
         throw new Error(`Invalid method: ${method}`);
     }

@@ -12,3 +12,5 @@ capabilities/cache/*.json
 /cache/*.json
  
 auth/coach-artie-5f8c6debae41.json
+auth/coach-artie-e95c8660132f.json
+auth/coach-artie-*.json
