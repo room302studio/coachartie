@@ -16,6 +16,8 @@ const proactive = {
     logger.info("Starting proactive.start()");
     // Schedule the task to run every hour
     // cron.schedule("0 * * * *", async () => {
+    // schedule to run every 8 hours, 9am-5pm
+    cron.schedule("0 9-17/8 * * *", async () => {
       // Replace the logger.info statement with your desired action
       logger.info("Running proactive.start() every hour via cron");
 
@@ -61,7 +63,7 @@ const proactive = {
 
       // clear the interval
       // clearInterval(interval);
-    // });
+    });
   },
   listPotentialTasks: async function () {
     logger.info("Listing potential tasks");
