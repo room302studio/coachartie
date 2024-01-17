@@ -18,6 +18,7 @@ const {
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
+const logger = require("../src/logger.js")("web");
 
 // const CHUNK_TOKEN_AMOUNT = 7000
 const CHUNK_TOKEN_AMOUNT = 10952;
@@ -91,7 +92,7 @@ async function fetchAndParseURL(url) {
   await page.setUserAgent(randomUserAgent());
   await page.goto(url);
 
-  console.log("🕸️  Navigating to " + url);
+  logger.info("🕸️  Navigating to " + url);
 
   // wait for body to load
   await page.waitForSelector("body");
@@ -142,7 +143,7 @@ async function fetchAndParseURL(url) {
   // trim whitespace out of the text
   const trimmedText = text.replace(/\s+/g, " ").trim();
 
-  console.log("📝  Page raw text:", trimmedText);
+  logger.info("📝  Page raw text:", trimmedText);
 
   await browser.close();
 
@@ -156,7 +157,7 @@ async function fetchAndParseURL(url) {
  * @returns {Promise<string>} - A promise that resolves to a string containing the links.
  */
 async function fetchAllLinks(url) {
-  console.log("🕸️  Fetching all links on " + url);
+  logger.info("🕸️  Fetching all links on " + url);
   // navigate to a page and fetch all of the anchor tags
   const browser = await puppeteer.launch();
   const page = await browser.newPage();
@@ -167,12 +168,12 @@ async function fetchAllLinks(url) {
 
   // if the url and cleanedUrl are different, log it
   if (url !== cleanUrl) {
-    console.log("🧹  Cleaned URL to " + cleanUrl);
+    logger.info("🧹  Cleaned URL to " + cleanUrl);
   }
 
   await page.goto(cleanUrl);
 
-  console.log("🕸️  Navigating to " + cleanUrl);
+  logger.info("🕸️  Navigating to " + cleanUrl);
 
   // check if the base cleanUrl we are navigating to is google.com
   const isGoogle = url.includes("google.com");
@@ -238,7 +239,7 @@ async function fetchAllLinks(url) {
  * @returns {Promise<Array<{src: string, alt: string}>>} - A promise that resolves to an array of image objects, each containing the source (src) and alternative text (alt) of the image.
  */
 async function fetchAllVisibleImages(url) {
-  console.log("🕸️  Fetching all images on " + url);
+  logger.info("🕸️  Fetching all images on " + url);
   // navigate to a page and fetch all of the anchor tags
   const browser = await puppeteer.launch();
   const page = await browser.newPage();
@@ -249,12 +250,12 @@ async function fetchAllVisibleImages(url) {
 
   // if the url and cleanedUrl are different, log it
   if (url !== cleanUrl) {
-    console.log("🧹  Cleaned URL to " + cleanUrl);
+    logger.info("🧹  Cleaned URL to " + cleanUrl);
   }
 
   await page.goto(cleanUrl);
 
-  console.log("🕸️  Navigating to " + cleanUrl);
+  logger.info("🕸️  Navigating to " + cleanUrl);
 
   // wait for body to load
   await page.waitForSelector("body");
@@ -313,8 +314,8 @@ async function processChunks(chunks, data, limit = 2, userPrompt = "") {
         // sleep so we don't anger the OpenAI gods
         await sleep(500);
 
-        console.log(`📝  Sending chunk ${i + index + 1} of ${chunkLength}...`);
-        console.log("📝  Chunk text:", chunk);
+        logger.info(`📝  Sending chunk ${i + index + 1} of ${chunkLength}...`);
+        logger.info("📝  Chunk text:", chunk);
 
         const completion = await openai.createChatCompletion({
           model: "gpt-3.5-turbo-16k",
@@ -359,15 +360,15 @@ async function fetchAndSummarizeUrl(url, userPrompt = "") {
     fs.existsSync(cachePath) &&
     (Date.now() - fs.statSync(cachePath).mtime) / 1000 < 3600
   ) {
-    console.log(`📝  Using cached data for URL: ${cleanedUrl}`);
+    logger.info(`📝  Using cached data for URL: ${cleanedUrl}`);
     return fs.readFileSync(cachePath, "utf8");
   }
 
-  console.log(`📝  Fetching URL: ${cleanedUrl}`);
+  logger.info(`📝  Fetching URL: ${cleanedUrl}`);
   const data = await fetchAndParseURL(cleanedUrl);
-  console.log(`📝  Fetched URL: ${cleanedUrl}`);
+  logger.info(`📝  Fetched URL: ${cleanedUrl}`);
 
-  console.log("📝  Generating summary...");
+  logger.info("📝  Generating summary...");
 
   // if data.text is longer than 4096 characters, split it into chunks of 4096 characters and send each chunk as a separate message and then combine the responses
 
@@ -389,7 +390,7 @@ async function fetchAndSummarizeUrl(url, userPrompt = "") {
   // so we need to figure out how many tokens are in the text
   // we will use the countMessageTokens function to do this
   let tokenCount = countMessageTokens(text);
-  console.log(`📝  Token count: ${tokenCount}`);
+  logger.info(`📝  Token count: ${tokenCount}`);
   let chunkEnd = CHUNK_TOKEN_AMOUNT; // set the chunkEnd to the CHUNK_TOKEN_AMOUNT so we can start the loop
   while (chunkStart < tokenCount) {
     // we need to make sure that the chunkEnd is not greater than the tokenCount
@@ -404,8 +405,8 @@ async function fetchAndSummarizeUrl(url, userPrompt = "") {
     chunkEnd = chunkStart + CHUNK_TOKEN_AMOUNT;
   }
 
-  console.log(`📝  Splitting text into ${chunks.length} chunks...`);
-  console.log(`📝  Chunk length: ${CHUNK_TOKEN_AMOUNT} tokens`);
+  logger.info(`📝  Splitting text into ${chunks.length} chunks...`);
+  logger.info(`📝  Chunk length: ${CHUNK_TOKEN_AMOUNT} tokens`);
 
   let factList = "";
   try {
@@ -413,7 +414,7 @@ async function fetchAndSummarizeUrl(url, userPrompt = "") {
     const cacheKey = crypto.createHash("md5").update(url).digest("hex");
     let chunkResponses;
     if (fs.existsSync(path.join(__dirname, `../cache/${cacheKey}.json`))) {
-      console.log("📝  Using cached chunks...");
+      logger.info("📝  Using cached chunks...");
       chunkResponses = JSON.parse(
         fs.readFileSync(
           path.join(__dirname, `../cache/${cacheKey}.json`),
@@ -433,12 +434,12 @@ async function fetchAndSummarizeUrl(url, userPrompt = "") {
 
     // return chunkResponses;
   } catch (error) {
-    console.log(error);
+    logger.info(error);
     return error;
   }
 
-  console.log(`📝  Generated ${factList.split("\n").length} fact summary.`);
-  console.log(`📝  Generating summary of: ${factList}`);
+  logger.info(`📝  Generated ${factList.split("\n").length} fact summary.`);
+  logger.info(`📝  Generating summary of: ${factList}`);
 
   // use gpt-3.5-turbo-16k for the final summary
   const summaryCompletion = await openai.createChatCompletion({
@@ -464,7 +465,7 @@ ${factList}`,
 
   const summary = summaryCompletion.data.choices[0].message.content;
 
-  console.log(`📝  Generated summary for URL: ${cleanedUrl}`, summary);
+  logger.info(`📝  Generated summary for URL: ${cleanedUrl}`, summary);
 
   // Save the summary to the cache
   fs.writeFileSync(cachePath, summary);
@@ -481,7 +482,7 @@ function randomUserAgent() {
   ];
 
   const pickedUserAgent = chance.pickone(potentialUserAgents);
-  console.log("📝  Picked User Agent: ", pickedUserAgent);
+  logger.info("📝  Picked User Agent: ", pickedUserAgent);
 
   // use chance.choose to pick a random user agent
   return pickedUserAgent;

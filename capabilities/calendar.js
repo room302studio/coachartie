@@ -1,9 +1,12 @@
-const { google, batchUpdate} = require("googleapis");
+const { google, batchUpdate } = require("googleapis");
 const { destructureArgs } = require("../helpers");
+const logger = require("../src/logger");
 
 const keyFile = "./auth/coach-artie-e95c8660132f.json"; // Path to JSON file
-const scopes = ['https://www.googleapis.com/auth/drive','https://www.googleapis.com/auth/calendar']; 
-
+const scopes = [
+  "https://www.googleapis.com/auth/drive",
+  "https://www.googleapis.com/auth/calendar",
+];
 
 const getCalendarInstance = async () => {
   const auth = new google.auth.GoogleAuth({
@@ -18,30 +21,28 @@ const getCalendarInstance = async () => {
 async function accessCalendar(calendarId) {
   const calendar = await getCalendarInstance();
   // log the calendar object to see what methods are available
-  console.log(calendar);
+  logger.info(calendar);
   return calendar.calendars.get({ calendarId });
 }
 
-/**
- * Retrieves a list of all calendars.
- * @returns {Promise<Array>} A promise that resolves to an array of calendars.
- */
 async function listAllCalendars() {
-  const calendar = await getCalendarInstance();
-  
-  // return calendar.calendarList.list();
-  // we want a human-readable list of calendars and their IDs, not the raw API response
-  const response = await calendar.calendarList.list();
-  console.log('\n\n');
-  console.log(response);
-  console.log('\n\n');
-  if(!(response.data.items.length > 0)) throw new Error('No calendars found');
-  const calendars = response.data.items.map(({ summary, id }) => `${summary} (${id})`);
+  try {
+    const calendar = await getCalendarInstance();
+    const response = await calendar.calendarList.list();
 
-  return calendars;
+    if (!(response.data.items.length > 0)) {
+      throw new Error("No calendars found");
+    }
+
+    const calendars = response.data.items.map(
+      ({ summary, id }) => `${summary} (${id})`,
+    );
+    return calendars;
+  } catch (error) {
+    logger.error("Error occurred while listing calendars:", error);
+    throw error;
+  }
 }
-
-
 
 /**
  * Retrieves a specific event from a Google Calendar.
@@ -74,8 +75,6 @@ async function addPersonToEvent(calendarId, eventId, attendeeEmail) {
     resource: event.data,
   });
 }
-
-
 
 /**
  * Creates a new event in the specified calendar.

@@ -2,26 +2,15 @@ const { Chance } = require("chance");
 const chance = new Chance();
 const dotenv = require("dotenv");
 const fs = require("fs");
-const { google } = require("googleapis");
 const { openai } = require("./src/openai");
 const { capabilityRegex } = require("./src/capabilities.js");
-const {
-  getUserMemory,
-  getUserMessageHistory,
-} = require("./capabilities/remember");
 dotenv.config();
-
-// const { generateAndStoreRememberCompletion } = require("./memory.js");
-
 const { PROMPT_SYSTEM, CAPABILITY_PROMPT_INTRO } = require("./prompts");
-
 // 📚 GPT-3 token-encoder: our linguistic enigma machine
 const { encode, decode } = require("@nem035/gpt-3-encoder");
-
-const ERROR_MSG = `I am so sorry, there was some sort of problem. Feel free to ask me again, or try again later.`;
-const TOKEN_LIMIT = 14000;
-const RESPONSE_LIMIT = 5120;
-const WARNING_BUFFER = 1024;
+const { RESPONSE_LIMIT, TOKEN_LIMIT, MAX_OUTPUT_TOKENS } = require("./config");
+const { getUserMemory, getUserMessageHistory } = require("./src/remember.js");
+const logger = require("./src/logger.js")("helpers");
 
 /**
  * Replaces the robot id with the robot name in a given string.
@@ -62,15 +51,6 @@ function getCoachArtieName(client) {
  */
 function replaceStringWithId(string, id, name) {
   return string.replace(`<@!${id}>`, name);
-}
-
-/**
- * Splits a string into an array of arguments.
- * @param {string} args - The string to split into arguments.
- * @returns {Array} - The array of arguments.
- */
-function splitArgs(args) {
-  return args.split(",").map((arg) => arg.trim());
 }
 
 /**
@@ -330,7 +310,7 @@ function trimMessageChain(messages, maxTokens = 10000) {
   while (isMessageChainExceedingLimit(messages, maxTokens)) {
     messages = trimMessages(messages);
   }
-  console.log("Message chain trimmed.");
+  logger.info("Message chain trimmed.");
   return messages;
 }
 
@@ -357,7 +337,7 @@ function trimMessages(messages) {
     messages = removeEmptyMessage(messages, messageToRemove);
   }
   if (isMessagesEmpty(messages)) {
-    return console.error("All messages are empty.");
+    return logger.warn("All messages are empty.");
   }
   return messages;
 }
@@ -454,33 +434,64 @@ function selectRandomLines(lines, linesToRemove) {
   return chance.pickset(lines, linesToRemove);
 }
 
-//  * Removes random lines from a response.
+/**
+ * Removes random lines from an array of lines.
+ * @param {string[]} lines - The array of lines.
+ * @param {string[]} randomLines - The array of random lines to be removed.
+ * @returns {string[]} - The filtered array of lines.
+ */
 function removeRandomLines(lines, randomLines) {
   return lines.filter((line) => {
     return !randomLines.includes(line);
   });
 }
 
+/**
+ * Joins an array of trimmed lines into a single string response.
+ *
+ * @param {string[]} trimmedLines - The array of trimmed lines to join.
+ * @returns {string} The joined string response.
+ */
 function joinLinesIntoResponse(trimmedLines) {
   return trimmedLines.join("\n");
 }
 
+/**
+ * Displays a typing indicator for the given message.
+ * @param {string} message - The message to display the typing indicator for.
+ * @returns {number} - The interval ID for the typing indicator.
+ */
 function displayTypingIndicator(message) {
   startTypingIndicator(message);
   const typingInterval = setTypingInterval(message);
   return typingInterval; // To allow for clearing the interval outside of this function
 }
 
+/**
+ * Starts the typing indicator in the specified message's channel.
+ * @param {Message} message - The message object.
+ */
 function startTypingIndicator(message) {
   message.channel.sendTyping();
 }
 
+/**
+ * Sets an interval to send typing indicator in a channel.
+ * @param {Message} message - The message object.
+ * @returns {number} - The ID of the interval.
+ */
 function setTypingInterval(message) {
   return setInterval(() => message.channel.sendTyping(), 5000);
 }
 
-const MAX_OUTPUT_TOKENS = 820;
-
+/**
+ * Generates an AI completion based on the given prompt, username, messages, and config.
+ * @param {string} prompt - The prompt for the AI completion.
+ * @param {string} username - The username associated with the AI completion.
+ * @param {Array<Object>} messages - The array of messages.
+ * @param {Object} config - The configuration object containing temperature and presence_penalty.
+ * @returns {Object} - An object containing the updated messages array and the AI response.
+ */
 async function generateAiCompletion(prompt, username, messages, config) {
   const { temperature, presence_penalty } = config;
 
@@ -488,6 +499,10 @@ async function generateAiCompletion(prompt, username, messages, config) {
   if (messages[messages.length - 1].image) {
     delete messages[messages.length - 1].image;
   }
+
+  logger.info("generateAiCompletion");
+  // logger.info('username', username)
+  // logger.info('prompt', prompt)
 
   messages = await addPreambleToMessages(username, prompt, messages);
   let completion = null;
@@ -498,10 +513,10 @@ async function generateAiCompletion(prompt, username, messages, config) {
       presence_penalty,
     );
   } catch (err) {
-    console.log(err);
+    logger.info(err);
   }
   const aiResponse = completion.data.choices[0].message.content;
-  console.log("🤖 AI Response:", aiResponse);
+  logger.info("🤖 AI Response:", aiResponse);
   messages.push(aiResponse);
   return { messages, aiResponse };
 }
@@ -509,6 +524,13 @@ async function generateAiCompletion(prompt, username, messages, config) {
 // const completionModel = "gemini";
 const completionModel = "openai";
 
+/**
+ * Creates a chat completion using the specified messages, temperature, and presence penalty.
+ * @param {Array} messages - The array of messages in the chat.
+ * @param {number} temperature - The temperature value for generating diverse completions.
+ * @param {number} presence_penalty - The presence penalty value for controlling response length.
+ * @returns {Promise} - A promise that resolves to the chat completion result.
+ */
 async function createChatCompletion(messages, temperature, presence_penalty) {
   if (completionModel === "openai") {
     return await openai.createChatCompletion({
@@ -586,7 +608,7 @@ async function createGeminiCompletion(messages, temperature, presence_penalty) {
   // try {
   //   await jwtClient.authorize();
   // } catch (err) {
-  //   console.error('Error authorizing JWT client:', err);
+  //   logger.error('Error authorizing JWT client:', err);
   // }
 
   // to get a bearer token you can run this commmand in the CLI
@@ -650,7 +672,7 @@ async function createGeminiCompletion(messages, temperature, presence_penalty) {
 }
 
 and we need to return something that looks exactly like then openai response */
-  console.log("json", json);
+  logger.info("json", json);
   // const { candidates } = json[0];
   // we actually need to combine all the candidates into one response
   // so lets loop through the json, which is an array of objects with candidates
@@ -660,7 +682,7 @@ and we need to return something that looks exactly like then openai response */
     return acc;
   }, []);
 
-  // console.log('candidates', candidates)
+  // logger.info('candidates', candidates)
   // const { content } = candidates[0];
   // we actually need to combine all the content into one response
   // so lets loop through the candidates, which is an array of objects with content
@@ -669,9 +691,9 @@ and we need to return something that looks exactly like then openai response */
     acc.push(...obj.content.parts);
     return acc;
   }, []);
-  console.log("content", content);
+  logger.info("content", content);
   const { parts } = content;
-  console.log("parts", parts);
+  logger.info("parts", parts);
   // const aiResponse = parts.map(part => part.text).join("\n");
   // const aiResponse = parts[0].text
   // combine the text of all the parts into one string
@@ -689,14 +711,26 @@ and we need to return something that looks exactly like then openai response */
   };
 }
 
+/**
+ * Adds a preamble to an array of messages.
+ * @param {string} username - The username.
+ * @param {string} prompt - The prompt.
+ * @param {Array<Array<string>>} messages - The array of messages.
+ * @returns {Array<string>} - The array of messages with the preamble added.
+ */
 async function addPreambleToMessages(username, prompt, messages) {
-  // console.log(`🔧 Adding preamble to messages for <${username}> ${prompt}`);
+  // logger.info(`🔧 Adding preamble to messages for <${username}> ${prompt}`);
   const preamble = await assembleMessagePreamble(username, prompt);
   return [...preamble, ...messages.flat()];
 }
 
-async function assembleMessagePreamble(username, prompt) {
-  console.log(`🔧 Assembling message preamble for <${username}> ${prompt}`);
+/**
+ * Assembles the message preamble for a given username.
+ * @param {string} username - The username for which the message preamble is being assembled.
+ * @returns {Promise<Array<string>>} - A promise that resolves to an array of messages representing the preamble.
+ */
+async function assembleMessagePreamble(username) {
+  logger.info(`🔧 Assembling message preamble for <${username}> message`);
   const messages = [];
   addCurrentDateTime(messages);
   await addHexagramPrompt(messages);
@@ -708,6 +742,11 @@ async function assembleMessagePreamble(username, prompt) {
   return messages;
 }
 
+/**
+ * Adds the current date and time to the messages array.
+ * @param {Array} messages - The array of messages.
+ * @returns {void}
+ */
 function addCurrentDateTime(messages) {
   messages.push({
     role: "system",
@@ -715,10 +754,15 @@ function addCurrentDateTime(messages) {
   });
 }
 
+/**
+ * Adds a hexagram prompt to the messages array.
+ * @param {Array} messages - The array of messages.
+ * @returns {Promise<void>} - A promise that resolves when the hexagram prompt is added.
+ */
 async function addHexagramPrompt(messages) {
   if (chance.bool({ likelihood: 50 })) {
     const hexagramPrompt = `Let this hexagram from the I Ching guide this interaction: ${generateHexagram()}`;
-    console.log(`🔧 Adding hexagram prompt to message ${hexagramPrompt}`);
+    logger.info(`🔧 Adding hexagram prompt to message ${hexagramPrompt}`);
     messages.push({
       role: "system",
       content: hexagramPrompt,
@@ -726,6 +770,10 @@ async function addHexagramPrompt(messages) {
   }
 }
 
+/**
+ * Adds a system prompt to the given array of messages.
+ * @param {Array} messages - The array of messages to add the system prompt to.
+ */
 function addSystemPrompt(messages) {
   messages.push({
     role: "user",
@@ -733,6 +781,10 @@ function addSystemPrompt(messages) {
   });
 }
 
+/**
+ * Adds a capability prompt introduction message to the given array of messages.
+ * @param {Array} messages - The array of messages to add the capability prompt introduction to.
+ */
 function addCapabilityPromptIntro(messages) {
   messages.push({
     role: "system",
@@ -740,6 +792,10 @@ function addCapabilityPromptIntro(messages) {
   });
 }
 
+/**
+ * Loads the capability manifest from the specified file path.
+ * @returns {Object|null} The capability manifest object, or null if an error occurred.
+ */
 function loadCapabilityManifest() {
   const manifestPath = "./capabilities/_manifest.json";
   try {
@@ -747,11 +803,16 @@ function loadCapabilityManifest() {
     const manifest = JSON.parse(manifestData);
     return manifest;
   } catch (error) {
-    console.error("Error loading capability manifest:", error);
+    logger.error("Error loading capability manifest:", error);
     return null;
   }
 }
 
+/**
+ * Adds a capability manifest message to the given array of messages.
+ * @param {Array} messages - The array of messages to add the capability manifest message to.
+ * @returns {Array} - The updated array of messages.
+ */
 function addCapabilityManifestMessage(messages) {
   const manifest = loadCapabilityManifest();
   if (manifest) {
@@ -760,11 +821,18 @@ function addCapabilityManifestMessage(messages) {
       content: JSON.stringify(manifest),
     });
   }
+  return messages;
 }
 
+/**
+ * Retrieves previous messages for a user and adds them to the messages array.
+ * @param {string} username - The username of the user.
+ * @param {Array} messages - The array to which the user messages will be added.
+ * @returns {Promise<void>} - A promise that resolves when the user messages have been added to the array.
+ */
 async function addUserMessages(username, messages) {
   const userMessageCount = chance.integer({ min: 4, max: 32 });
-  console.log(
+  logger.info(
     `🔧 Retrieving ${userMessageCount} previous messages for ${username}`,
   );
   try {
@@ -772,6 +840,10 @@ async function addUserMessages(username, messages) {
       username,
       userMessageCount,
     );
+    if (!userMessages) {
+      logger.info(`No previous messages found for ${username}`);
+      return;
+    }
     userMessages.reverse();
     userMessages.forEach((message) => {
       messages.push({
@@ -780,15 +852,21 @@ async function addUserMessages(username, messages) {
       });
     });
   } catch (error) {
-    console.error("Error getting previous user messages:", error);
+    logger.error("Error getting previous user messages:", error);
   }
 }
 
+/**
+ * Adds user memories to the messages array.
+ * @param {string} username - The username of the user.
+ * @param {Array} messages - The array of messages to add user memories to.
+ * @returns {Promise<void>} - A promise that resolves when the user memories are added to the messages array.
+ */
 async function addUserMemories(username, messages) {
   const userMemoryCount = chance.integer({ min: 4, max: 24 });
   try {
     const userMemories = await getUserMemory(username, userMemoryCount);
-    console.log(`🔧 Retrieving ${userMemoryCount} memories for ${username}`);
+    logger.info(`🔧 Retrieving ${userMemoryCount} memories for ${username}`);
     userMemories.forEach((memory) => {
       messages.push({
         role: "system",
@@ -796,23 +874,38 @@ async function addUserMemories(username, messages) {
       });
     });
   } catch (err) {
-    console.log(err);
+    logger.info(err);
   }
 }
 
+/**
+ * Splits a message string into chunks.
+ * @param {string} messageString - The message string to be split.
+ * @returns {Array<Array<string>>} - An array of arrays containing the chunks of the message.
+ */
 function splitMessageIntoChunks(messageString) {
   if (typeof messageString !== "string") {
-    console.error("splitMessageIntoChunks: messageString is not a string");
+    logger.error("splitMessageIntoChunks: messageString is not a string");
     return;
   }
   const messageArray = splitMessageIntoArray(messageString);
   return splitArrayIntoChunks(messageArray);
 }
 
+/**
+ * Splits a message string into an array of words.
+ * @param {string} messageString - The message string to be split.
+ * @returns {string[]} - An array of words from the message string.
+ */
 function splitMessageIntoArray(messageString) {
   return messageString.split(" ");
 }
 
+/**
+ * Splits an array of messages into chunks based on a maximum chunk size.
+ * @param {string[]} messageArray - The array of messages to be split into chunks.
+ * @returns {string[]} - The array of message chunks.
+ */
 function splitArrayIntoChunks(messageArray) {
   const messageChunks = [];
   let currentChunk = "";
@@ -829,6 +922,12 @@ function splitArrayIntoChunks(messageArray) {
   return messageChunks;
 }
 
+/**
+ * Checks if the current chunk size is acceptable for adding a word.
+ * @param {string} currentChunk - The current chunk of text.
+ * @param {string} word - The word to be added to the chunk.
+ * @returns {boolean} - Returns true if the chunk size is acceptable, false otherwise.
+ */
 function isChunkSizeAcceptable(currentChunk, word) {
   return currentChunk.length + word.length < 2000;
 }
@@ -842,18 +941,18 @@ function isChunkSizeAcceptable(currentChunk, word) {
  */
 function splitAndSendMessage(message, channel) {
   if (!channel) {
-    console.error("splitAndSendMessage: messageObject is null or undefined");
+    logger.error("splitAndSendMessage: messageObject is null or undefined");
     return;
   }
   if (typeof message !== "string") {
-    console.error("splitAndSendMessage: message is not a string");
+    logger.error("splitAndSendMessage: message is not a string");
     return;
   }
   if (message.length < 2000) {
     try {
       channel.send(message);
     } catch (e) {
-      console.error(e);
+      logger.error(e);
     }
   } else {
     const messageChunks = splitMessageIntoChunks(message);
@@ -861,12 +960,16 @@ function splitAndSendMessage(message, channel) {
       try {
         channel.send(messageChunks[i]);
       } catch (error) {
-        console.error(error);
+        logger.error(error);
       }
     }
   }
 }
 
+/**
+ * Creates a token limit warning object in OpenAI chat message format
+ * @returns {Object} An object in OpenAI chat message format with a token limit warning as the content
+ */
 function createTokenLimitWarning() {
   return {
     role: "user",
@@ -875,14 +978,29 @@ function createTokenLimitWarning() {
   };
 }
 
+/**
+ * Checks if the total number of tokens in the given messages exceeds the token limit.
+ * @param {Array<string>} messages - The array of messages to count tokens from.
+ * @returns {boolean} - True if the total number of tokens exceeds the token limit, false otherwise.
+ */
 function isExceedingTokenLimit(messages) {
   return countMessageTokens(messages) > TOKEN_LIMIT;
 }
 
+/**
+ * Destructures a string of arguments into an array of trimmed arguments.
+ *
+ * @param {string} args - The string of arguments to destructure.
+ * @returns {Array} - An array of trimmed arguments.
+ */
 function destructureArgs(args) {
   return args.split(",").map((arg) => arg.trim());
 }
 
+/**
+ * Generates a random hexagram number and returns its name.
+ * @returns {string} The hexagram number and its corresponding name.
+ */
 function getHexagram() {
   const hexagramNumber = chance.integer({ min: 1, max: 64 });
   const hexNameMap = {
@@ -955,9 +1073,14 @@ function getHexagram() {
   return `${hexagramNumber}. ${hexNameMap[hexagramNumber]}`;
 }
 
+/**
+ * Counts the number of tokens in an array of messages.
+ * @param {Array} messageArray - The array of messages to count tokens from.
+ * @returns {number} - The total number of tokens.
+ */
 function countMessageTokens(messageArray = []) {
   let totalTokens = 0;
-  // console.log("Message Array: ", messageArray);
+  // logger.info("Message Array: ", messageArray);
   if (!messageArray) {
     return totalTokens;
   }
@@ -976,11 +1099,143 @@ function countMessageTokens(messageArray = []) {
   return totalTokens;
 }
 
+// Example array of animal emojis
+const emojis = [
+  "🐶",
+  "🐱",
+  "🐭",
+  "🐹",
+  "🐰",
+  "🦊",
+  "🐻",
+  "🐼",
+  "🐻‍❄️",
+  "🐨",
+  "🐯",
+  "🦁",
+  "🐮",
+  "🐷",
+  "🐸",
+  "🐵",
+  "🙈",
+  "🙉",
+  "🙊",
+  "🐒",
+  "🐔",
+  "🐧",
+  "🐦",
+  "🐤",
+  "🐣",
+  "🐥",
+  "🦆",
+  "🦅",
+  "🦉",
+  "🦇",
+  "🐺",
+  "🐗",
+  "🐴",
+  "🦄",
+  "🐝",
+  "🪱",
+  "🐛",
+  "🦋",
+  "🐌",
+  "🐞",
+  "🐜",
+  "🦟",
+  "🦗",
+  "🕷",
+  "🕸",
+  "🦂",
+  "🐢",
+  "🐍",
+  "🦎",
+  "🦖",
+  "🦕",
+  "🐙",
+  "🦑",
+  "🦐",
+  "🦞",
+  "🦀",
+  "🐡",
+  "🐠",
+  "🐟",
+  "🐬",
+  "🐳",
+  "🐋",
+  "🦈",
+  "🐊",
+  "🐅",
+  "🐆",
+  "🦓",
+  "🦍",
+  "🦧",
+  "🐘",
+  "🦛",
+  "🦏",
+  "🐪",
+  "🐫",
+  "🦒",
+  "🦘",
+  "🦬",
+  "🐃",
+  "🐂",
+  "🐄",
+  "🐎",
+  "🐖",
+  "🐏",
+  "🐑",
+  "🦙",
+  "🐐",
+  "🦌",
+  "🐕",
+  "🐩",
+  "🦮",
+  "🐕‍🦺",
+  "🐈",
+  "🐈‍⬛",
+  "🪶",
+  "🐓",
+  "🦃",
+  "🦤",
+  "🦚",
+  "🦜",
+  "🦢",
+  "🦩",
+  "🕊",
+  "🐇",
+  "🦝",
+  "🦨",
+  "🦡",
+  "🦫",
+  "🦦",
+  "🦥",
+  "🐁",
+  "🐀",
+  "🐿",
+  "🦔",
+];
+
+// Set to store used emojis
+const usedEmojis = new Set();
+
+// Function to get a unique emoji
+function getUniqueEmoji() {
+  let emoji;
+  do {
+    emoji = emojis[Math.floor(Math.random() * emojis.length)];
+  } while (usedEmojis.has(emoji));
+
+  usedEmojis.add(emoji);
+
+  if (usedEmojis.size === emojis.length) {
+    usedEmojis.clear();
+  }
+
+  return emoji;
+}
+
 module.exports = {
-  ERROR_MSG,
-  TOKEN_LIMIT,
-  RESPONSE_LIMIT,
-  WARNING_BUFFER,
   destructureArgs,
   getHexagram,
   countTokens,
@@ -999,4 +1254,5 @@ module.exports = {
   createTokenLimitWarning,
   isExceedingTokenLimit,
   lastUserMessage,
+  getUniqueEmoji,
 };

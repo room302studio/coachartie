@@ -2,6 +2,9 @@ const prompts = require("../prompts");
 const fs = require("fs");
 const path = require("path");
 const { CAPABILITY_PROMPT_INTRO } = prompts;
+const winston = require("winston");
+
+const logger = require("../src/logger.js")("capabilities");
 
 const capabilityRegex = /(\w+):(\w+)\(([^]*?)\)/; // captures newlines in the  third argument
 
@@ -59,7 +62,7 @@ async function callCapabilityMethod(
   args,
   messages,
 ) {
-  console.log(
+  logger.info(
     `⚡️ Calling capability method: ${capabilitySlug}.${methodName} with args: ${args}`,
   );
 
@@ -80,14 +83,14 @@ async function callCapabilityMethod(
         `Capability ${capabilitySlug} did not return a response.`,
       );
     }
-    console.log(`⚡️ Capability response: ${capabilityResponse}`);
+
     if (capabilityResponse.image) {
-      console.log(`⚡️ Capability response is an image`);
+      logger.info(`⚡️ Capability response is an image`);
       return capabilityResponse;
     }
     return capabilityResponse;
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     return `Error: ${error.message}`;
   }
 }

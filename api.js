@@ -2,6 +2,7 @@ const express = require("express");
 const app = express();
 const { processMessageChain } = require("./src/chain");
 // const net = require('net');
+const logger = require("./src/logger.js")("api");
 
 app.use(express.json());
 
@@ -43,7 +44,7 @@ app.post("/api/message-image", async (req, res) => {
         image: image,
       },
     ],
-    username,
+    { username },
   );
 
   res.json({ response: processedMessage });
@@ -51,12 +52,12 @@ app.post("/api/message-image", async (req, res) => {
 
 let port = 8080;
 const server = app.listen(port, "0.0.0.0", () => {
-  console.log(`Server is running on port ${port}`);
+  logger.info(`Server is running on port ${port}`);
 });
 
 server.on("error", (err) => {
   if (err.code === "EADDRINUSE") {
-    console.log(`Port ${port} is in use, trying with port ${++port}`);
+    logger.info(`Port ${port} is in use, trying with port ${++port}`);
     server.close();
     server.listen(port);
   }

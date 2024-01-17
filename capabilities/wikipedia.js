@@ -2,6 +2,7 @@ const axios = require("axios");
 const { Configuration, OpenAIApi } = require("openai");
 const dotenv = require("dotenv");
 const { destructureArgs } = require("../helpers");
+const logger = require("../src/logger.js")("wikipedia");
 
 dotenv.config();
 
@@ -45,9 +46,9 @@ async function askWikipedia(args) {
     srlimit: 32,
   };
 
-  console.log("Searching Wikipedia for:", query);
-  console.log("Encoded query:", searchParams.srsearch);
-  console.log(
+  logger.info("Searching Wikipedia for:", query);
+  logger.info("Encoded query:", searchParams.srsearch);
+  logger.info(
     "Full URL:",
     `${wikipediaApiUrl}?${new URLSearchParams(searchParams).toString()}`,
   );
@@ -58,7 +59,7 @@ async function askWikipedia(args) {
     });
 
     if (searchResponse.data.query.search.length === 0) {
-      console.log("No Wikipedia articles found for the given query.");
+      logger.info("No Wikipedia articles found for the given query.");
       return "No Wikipedia articles found for the given query.";
     }
 
@@ -82,7 +83,7 @@ async function askWikipedia(args) {
 
     return searchEvaluation.data.choices[0].message.content;
   } catch (error) {
-    console.log("error", error);
+    logger.info("error", error);
     return "Error occurred while contacting Wikipedia. Please try again later.";
   }
 }
