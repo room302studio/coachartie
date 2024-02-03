@@ -23,25 +23,98 @@ class DiscordBot {
         GatewayIntentBits.MessageContent,
         GatewayIntentBits.GuildMessageReactions,
         GatewayIntentBits.DirectMessages,
-        GatewayIntentBits.MessageContent
+        GatewayIntentBits.MessageContent,
       ],
     });
     this.bot.login(process.env.DISCORD_BOT_TOKEN);
     this.bot.on("ready", onClientReady);
-    // this.bot.on("messageCreate", this.onMessageCreate);
-    this.bot.on("messageCreate", this.onMessageCreate.bind(this)); // Bind the context of `this`
-    
-    
+    this.bot.on("messageCreate", this.respondToMessage.bind(this)); // Bind the context of `this`
 
     client = this.bot;
   }
 
+  /**
+   * Responds to a message if it mentions the bot or is in a bot channel, and is not from the bot itself.
+   * @param {object} message - The message to respond to.
+   */
+  async respondToMessage(message) {
+    const botMentionOrChannel = detectBotMentionOrChannel(message);
+    const messageAuthorIsBot = message.author.bot;
+    const authorIsMe = message.author.username === "coachartie";
+    if (!botMentionOrChannel || authorIsMe || messageAuthorIsBot) return;
+
+    console.log("message received: ", message.content);
+
+    const typing = displayTypingIndicator(message);
+
+    let prompt = await this.processPrompt(message);
+    let processedPrompt = await this.processImageAttachment(message, prompt);
+
+    const username = message.author.username;
+    const guild = message.guild.name;
+
+    // if a DM, we need the channel to be the actual discord channel object
+    const isDM = !message.guild;
+    const channel = isDM
+      ? message.channel
+      : this.fetchChannelById(message.channel.id);
+
+    let messages = await processMessageChain(
+      [
+        {
+          role: "user",
+          content: processedPrompt,
+        },
+      ],
+      {
+        username,
+        channel,
+        guild,
+        isDM,
+      }
+    );
+
+    // Check if the last message contains an image- if so send it as a file
+    const lastMessage = messages[messages.length - 1];
+
+    // we need to make a better check of whether it is an image or not
+    // if it is, we are going to be receiving a buffer from the processMessageChain function
+    // if it isn't, it'll be a string
+    // so we check if the last message is a buffer
+    const lastMsgIsBuffer = lastMessage.image;
+
+    if (lastMsgIsBuffer) {
+      logger.info("last message is a buffer");
+      // Send the image as an attachment
+      // message.channel.send({
+      //   files: [{
+      //     attachment: lastMessage.image,
+      //     name: 'image.png'
+      //   }]
+      // });
+      // stop typing interval
+      this.sendAttachment(lastMessage.image, channel);
+    }
+
+    if (lastMessage.content) {
+      this.sendMessage(lastMessage.content, channel);
+    }
+
+    clearInterval(typing);
+  }
+
+  /**
+   * Fetches a channel by its ID.
+   *
+   * @param {string} channelId - The ID of the channel to fetch.
+   * @returns {Channel|null} - The fetched channel object, or null if not found.
+   */
   fetchChannelById(channelId) {
     // Direct Messages have a different method to fetch channels
-    if (channelId.startsWith('DM')) {
-      return client.users.cache.get(channelId.replace('DM-', '')).createDM();
+    if (channelId.startsWith("DM")) {
+      return client.users.cache.get(channelId.replace("DM-", "")).createDM();
     }
-  
+
     // For guild channels, iterate through the guilds as before
     let channelObj = null;
     client.guilds.cache.forEach((guild) => {
@@ -90,19 +163,6 @@ class DiscordBot {
   }
 
   /**
-   * Sends an embedded message to a specific channel.
-   * @param {string} message - The message to be embedded and sent.
-   * @param {object} channel - The channel where the message will be sent.
-   */
-  async sendEmbedMessage(message, channel) {
-    try {
-      await channel.send({ embeds: [message] });
-    } catch (error) {
-      logger.info(error);
-    }
-  }
-
-  /**
    * Processes the prompt from the message content.
    * @param {object} message - The message object containing the content.
    */
@@ -130,98 +190,6 @@ class DiscordBot {
     } else {
       return prompt;
     }
-  }
-
-  /**
-   * Processes the message chain with the given prompt and username.
-   * @param {string} prompt - The prompt to be processed.
-   * @param {string} username - The username of the message author.
-   */
-  async processMessageChain(prompt, { username, channel, guild }) {
-    return await processMessageChain(
-      [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      { username, channel, guild },
-    );
-  }
-
-  /**
-   * Responds to a message if it mentions the bot or is in a bot channel, and is not from the bot itself.
-   * @param {object} message - The message to respond to.
-   */
-  async respondToMessage(message) {
-    const botMentionOrChannel = detectBotMentionOrChannel(message);
-    const messageAuthorIsBot = message.author.bot;
-    const authorIsMe = message.author.username === "coachartie";
-
-    console.log('message received: ', message.content);
-
-    if (!botMentionOrChannel || authorIsMe || messageAuthorIsBot) return;
-
-    const typing = displayTypingIndicator(message);
-
-    let prompt = await this.processPrompt(message);
-    let processedPrompt = await this.processImageAttachment(message, prompt);
-
-    const username = message.author.username;
-    // const channel = message.channel.name;
-    const guild = message.guild.name;
-
-    // we need the channel to be the actual discord channel object
-    // so we can send messages to it
-    const isDM = !message.guild;
-    const channel = isDM ? message.channel : this.fetchChannelById(message.channel.id);
-    
-
-    let messages = await this.processMessageChain(processedPrompt, {
-      username,
-      channel,
-      guild,
-    });
-
-    // Check if the last message contains an image- if so send it as a file
-    const lastMessage = messages[messages.length - 1];
-
-    // we need to make a better check of whether it is an image or not
-    // if it is, we are going to be receiving a buffer from the processMessageChain function
-    // if it isn't, it'll be a string
-    // so we check if the last message is a buffer
-    const lastMsgIsBuffer = lastMessage.image;
-
-    if (lastMsgIsBuffer) {
-      logger.info("last message is a buffer");
-      // Send the image as an attachment
-      // message.channel.send({
-      //   files: [{
-      //     attachment: lastMessage.image,
-      //     name: 'image.png'
-      //   }]
-      // });
-      // stop typing interval
-      this.sendAttachment(lastMessage.image, channel);
-    }
-
-    if (lastMessage.content) {
-      this.sendMessage(lastMessage.content, channel);
-    }
-
-    clearInterval(typing);
-  }
-
-  /**
-   * Handles the creation of a message, including displaying a typing indicator and responding to the message.
-   * @param {object} message - The message to be created.
-   */
-  async onMessageCreate(message) {
-    // Display typing indicator
-    // message.channel.sendTyping();
-    await this.respondToMessage(message);
-    // Stop typing indicator
-    // message.channel.stopTyping();
   }
 }
 

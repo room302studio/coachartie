@@ -16,7 +16,7 @@ module.exports = function (serviceName) {
           winston.format.printf((info) => {
             const { level, message, timestamp, ...meta } = info;
             return `${timestamp} ${level}: ${message}`;
-          }),
+          })
         ),
       }),
       new winston.transports.File({
@@ -25,8 +25,8 @@ module.exports = function (serviceName) {
           winston.format.timestamp(),
           winston.format.printf((info) => {
             const { level, message, timestamp, ...meta } = info;
-            return `${timestamp} ${level}: ${message}`;
-          }),
+            return `${serviceName} ${timestamp} ${level}: ${message}`;
+          })
         ),
       }),
       new winston.transports.File({
@@ -35,16 +35,18 @@ module.exports = function (serviceName) {
           winston.format.timestamp(),
           winston.format.printf((info) => {
             const { level, message, timestamp, ...meta } = info;
-            return `${timestamp} ${level}: ${message}`;
-          }),
+            return `${serviceName} ${timestamp} ${level}: ${message}`;
+          })
         ),
       }),
     ],
   });
 
   return {
-    log: (message) => winstonLogger.log(message),
-    info: (message) => winstonLogger.info(message),
+    log: (message, object) =>
+      winstonLogger.info(`${message} ${object ? util.inspect(object) : ""}`),
+    info: (message, object) =>
+      winstonLogger.info(`${message} ${object ? util.inspect(object) : ""}`),
     warn: (message) => winstonLogger.warn(message),
     error: (message) => winstonLogger.error(message),
   };

@@ -8,7 +8,7 @@ dotenv.config();
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
-  process.env.SUPABASE_API_KEY,
+  process.env.SUPABASE_API_KEY
 );
 
 /**
@@ -184,7 +184,7 @@ async function storeUserMessage({ username, channel, guild }, value) {
  * @param {number} [limit=5] - The maximum number of memories to retrieve (default: 5).
  * @returns {Promise<Array>} - A promise that resolves to an array of relevant memories.
  */
-async function getRelevantMemories(queryString, limit = 5) {
+async function getRelevantMemories(queryString, limit = 5, threshold = 0.79) {
   logger.info("QUERY STRING", queryString);
   // turn the queryString into an embedding
   if (!queryString) {
@@ -201,7 +201,7 @@ async function getRelevantMemories(queryString, limit = 5) {
   // query the database for the most relevant memories
   const { data, error } = await supabase.rpc("match_memories", {
     query_embedding: embedding,
-    match_threshold: 0.78,
+    match_threshold: threshold,
     match_count: limit,
   });
 

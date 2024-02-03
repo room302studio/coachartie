@@ -14,6 +14,7 @@ const {
   destructureArgs,
   countMessageTokens,
   lastUserMessage,
+  createChatCompletion
 } = require("../helpers");
 const fs = require("fs");
 const path = require("path");
@@ -317,22 +318,15 @@ async function processChunks(chunks, data, limit = 2, userPrompt = "") {
         logger.info(`📝  Sending chunk ${i + index + 1} of ${chunkLength}...`);
         logger.info("📝  Chunk text:", chunk);
 
-        const completion = await openai.createChatCompletion({
-          model: "gpt-3.5-turbo-16k",
-          max_tokens: 1024,
-          // temperature: 0.5,
-          // presence_penalty: 0.66,
-          presence_penalty: -0.05,
-          // frequency_penalty: 0.1,
-          messages: [
+        const completion = await createChatCompletion([
             { role: "user", content: userPrompt },
             {
               role: "user",
               content: `${WEBPAGE_CHUNK_UNDERSTANDER_PROMPT}
 
             ${chunk}`,
-            },
-          ],
+            }
+          ]
         });
 
         return completion.data.choices[0].message.content;
@@ -442,15 +436,7 @@ async function fetchAndSummarizeUrl(url, userPrompt = "") {
   logger.info(`📝  Generating summary of: ${factList}`);
 
   // use gpt-3.5-turbo-16k for the final summary
-  const summaryCompletion = await openai.createChatCompletion({
-    model: "gpt-3.5-turbo-16k",
-    // max_tokens: 2048,
-    max_tokens: 3072,
-    // temperature: 0.5,
-    // presence_penalty: 0.66,
-    // presence_penalty: -0.1,
-    // frequency_penalty: 0.1,
-    messages: [
+  const summaryCompletion = await createChatCompletion([
       {
         role: "user",
         content: `# User goal: ${userPrompt}
@@ -461,7 +447,7 @@ ${WEBPAGE_UNDERSTANDER_PROMPT}
 ${factList}`,
       },
     ],
-  });
+  );
 
   const summary = summaryCompletion.data.choices[0].message.content;
 

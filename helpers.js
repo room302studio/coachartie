@@ -249,7 +249,7 @@ function trimResponseIfNeeded(capabilityResponse) {
   while (isResponseExceedingLimit(capabilityResponse)) {
     capabilityResponse = trimResponseByLineCount(
       capabilityResponse,
-      countTokens(capabilityResponse),
+      countTokens(capabilityResponse)
     );
   }
   return capabilityResponse;
@@ -484,41 +484,41 @@ function setTypingInterval(message) {
   return setInterval(() => message.channel.sendTyping(), 5000);
 }
 
-/**
- * Generates an AI completion based on the given prompt, username, messages, and config.
- * @param {string} prompt - The prompt for the AI completion.
- * @param {string} username - The username associated with the AI completion.
- * @param {Array<Object>} messages - The array of messages.
- * @param {Object} config - The configuration object containing temperature and presence_penalty.
- * @returns {Object} - An object containing the updated messages array and the AI response.
- */
-async function generateAiCompletion(prompt, username, messages, config) {
-  const { temperature, presence_penalty } = config;
-
-  // if the last message has .image, delete it that property off it
-  if (messages[messages.length - 1].image) {
-    delete messages[messages.length - 1].image;
+// Make sure the messages array is valid
+function validateMessagesArray(messages) {
+  // first make sure messages is an array
+  if (!Array.isArray(messages)) {
+    return false;
   }
 
-  logger.info("generateAiCompletion");
-  // logger.info('username', username)
-  // logger.info('prompt', prompt)
+  // next make sure messages is not empty
+  if (messages.length === 0) {
+    return false;
+  }
 
-  messages = await addPreambleToMessages(username, prompt, messages);
-  let completion = null;
-  try {
-    completion = await createChatCompletion(
-      messages,
-      temperature,
-      presence_penalty,
+  // make sure that all the messages have a role and content
+  const messagesHaveRoleAndContent = messages.every((message) => {
+    return message.role && message.content;
+  });
+
+  if (!messagesHaveRoleAndContent) {
+    return false;
+  }
+
+  // make sure that all the messages have a role of "user" or "system", or "assistant"
+  const messagesHaveValidRole = messages.every((message) => {
+    return (
+      message.role === "user" ||
+      message.role === "system" ||
+      message.role === "assistant"
     );
-  } catch (err) {
-    logger.info(err);
+  });
+
+  if (!messagesHaveValidRole) {
+    return false;
   }
-  const aiResponse = completion.data.choices[0].message.content;
-  logger.info("🤖 AI Response:", aiResponse);
-  messages.push(aiResponse);
-  return { messages, aiResponse };
+
+  return true;
 }
 
 // const completionModel = "gemini";
@@ -531,7 +531,16 @@ const completionModel = "openai";
  * @param {number} presence_penalty - The presence penalty value for controlling response length.
  * @returns {Promise} - A promise that resolves to the chat completion result.
  */
-async function createChatCompletion(messages, temperature, presence_penalty) {
+async function createChatCompletion(
+  messages,
+  temperature = 0.9,
+  presence_penalty = 0.05
+) {
+  // we need to do some basic checks to make sure everything is formatted correctly
+  if (!validateMessagesArray(messages)) {
+    return logger.error("messages array is not valid");
+  }
+
   if (completionModel === "openai") {
     return await openai.createChatCompletion({
       model: "gpt-4-1106-preview",
@@ -545,7 +554,7 @@ async function createChatCompletion(messages, temperature, presence_penalty) {
     return await createGeminiCompletion(
       messages,
       temperature,
-      presence_penalty,
+      presence_penalty
     );
   }
 }
@@ -718,11 +727,11 @@ and we need to return something that looks exactly like then openai response */
  * @param {Array<Array<string>>} messages - The array of messages.
  * @returns {Array<string>} - The array of messages with the preamble added.
  */
-async function addPreambleToMessages(username, prompt, messages) {
-  // logger.info(`🔧 Adding preamble to messages for <${username}> ${prompt}`);
-  const preamble = await assembleMessagePreamble(username, prompt);
-  return [...preamble, ...messages.flat()];
-}
+// async function addPreambleToMessages(username, prompt, messages) {
+//   // logger.info(`🔧 Adding preamble to messages for <${username}> ${prompt}`);
+//   const preamble = await assembleMessagePreamble(username, prompt);
+//   return [...preamble, ...messages.flat()];
+// }
 
 /**
  * Assembles the message preamble for a given username.
@@ -833,12 +842,12 @@ function addCapabilityManifestMessage(messages) {
 async function addUserMessages(username, messages) {
   const userMessageCount = chance.integer({ min: 4, max: 32 });
   logger.info(
-    `🔧 Retrieving ${userMessageCount} previous messages for ${username}`,
+    `🔧 Retrieving ${userMessageCount} previous messages for ${username}`
   );
   try {
     const userMessages = await getUserMessageHistory(
       username,
-      userMessageCount,
+      userMessageCount
     );
     if (!userMessages) {
       logger.info(`No previous messages found for ${username}`);
@@ -1247,7 +1256,6 @@ module.exports = {
   trimResponseIfNeeded,
   generateAiCompletionParams,
   displayTypingIndicator,
-  generateAiCompletion,
   assembleMessagePreamble,
   splitMessageIntoChunks,
   splitAndSendMessage,
@@ -1255,4 +1263,5 @@ module.exports = {
   isExceedingTokenLimit,
   lastUserMessage,
   getUniqueEmoji,
+  createChatCompletion,
 };
