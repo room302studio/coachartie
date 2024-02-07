@@ -38,6 +38,10 @@ async function generateAndStoreRememberCompletion(
   logger.info("🔧 Prompt:", prompt);
   logger.info("🔧 Response:", response);
 
+  if (!response) {
+    return "✨";
+  }
+
   const memoryMin = 4;
   const memoryMax = 24;
   const memoryMessages = [];
@@ -79,7 +83,7 @@ async function generateAndStoreRememberCompletion(
   });
 
   // if the response has a .image, delete that
-  if (response.image) {
+  if (response?.image) {
     delete response.image;
   }
 

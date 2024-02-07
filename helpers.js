@@ -521,9 +521,6 @@ function validateMessagesArray(messages) {
   return true;
 }
 
-// const completionModel = "gemini";
-const completionModel = "openai";
-
 /**
  * Creates a chat completion using the specified messages, temperature, and presence penalty.
  * @param {Array} messages - The array of messages in the chat.
@@ -1244,6 +1241,63 @@ function getUniqueEmoji() {
   return emoji;
 }
 
+async function generateAiCompletion(prompt, username, messages, config) {
+  const { temperature, presence_penalty } = config;
+
+  // if the last message has .image, delete it that property off it
+  if (messages[messages.length - 1].image) {
+    delete messages[messages.length - 1].image;
+  }
+
+  logger.info("generateAiCompletion");
+  // logger.info('username', username)
+  // logger.info('prompt', prompt)
+
+  messages = await addPreambleToMessages(username, prompt, messages);
+  let completion = null;
+  try {
+    completion = await createChatCompletion(
+      messages,
+      temperature,
+      presence_penalty
+    );
+  } catch (err) {
+    logger.info(err);
+  }
+  const aiResponse = completion.data.choices[0].message.content;
+  logger.info("🤖 AI Response:", aiResponse);
+  messages.push(aiResponse);
+  return { messages, aiResponse };
+}
+
+const completionModel = "openai";
+
+/**
+ * Creates a chat completion using the specified messages, temperature, and presence penalty.
+ * @param {Array} messages - The array of messages in the chat.
+ * @param {number} temperature - The temperature value for generating diverse completions.
+ * @param {number} presence_penalty - The presence penalty value for controlling response length.
+ * @returns {Promise} - A promise that resolves to the chat completion result.
+ */
+async function createChatCompletion(messages, temperature, presence_penalty) {
+  if (completionModel === "openai") {
+    return await openai.createChatCompletion({
+      model: "gpt-4-1106-preview",
+      temperature,
+      presence_penalty,
+      max_tokens: MAX_OUTPUT_TOKENS,
+      messages: messages,
+    });
+  } else if (completionModel === "gemini") {
+    // return a gemini completion
+    return await createGeminiCompletion(
+      messages,
+      temperature,
+      presence_penalty
+    );
+  }
+}
+
 module.exports = {
   destructureArgs,
   getHexagram,
@@ -1264,4 +1318,5 @@ module.exports = {
   lastUserMessage,
   getUniqueEmoji,
   createChatCompletion,
+  generateAiCompletion,
 };

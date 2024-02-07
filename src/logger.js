@@ -15,7 +15,7 @@ module.exports = function (serviceName) {
           winston.format.timestamp(),
           winston.format.printf((info) => {
             const { level, message, timestamp, ...meta } = info;
-            return `${timestamp} ${level}: ${message}`;
+            return `${timestamp} ${level} ${serviceName}: ${message}`;
           })
         ),
       }),

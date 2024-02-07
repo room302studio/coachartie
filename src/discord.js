@@ -43,8 +43,6 @@ class DiscordBot {
     const authorIsMe = message.author.username === "coachartie";
     if (!botMentionOrChannel || authorIsMe || messageAuthorIsBot) return;
 
-    console.log("message received: ", message.content);
-
     const typing = displayTypingIndicator(message);
 
     let prompt = await this.processPrompt(message);
