@@ -6,22 +6,18 @@ const keyFile = "./auth/coach-artie-e95c8660132f.json"; // Path to JSON file
 const scopes = [
   "https://www.googleapis.com/auth/drive",
   "https://www.googleapis.com/auth/calendar",
+  "https://www.googleapis.com/auth/calendar.events",
+  "https://www.googleapis.com/auth/calendar.readonly",
 ];
-
-const privatekey = require(`./${keyfile}`);
 
 /**
  * Google Auth object
  */
 const auth = new google.auth.GoogleAuth({
-  keyFile: keyfile,
+  keyFile,
   scopes,
 });
 
-/**
- * Function to get an instance of the Google Calendar API
- * @returns {Promise} Google Calendar API instance
- */
 const getCalendarInstance = async () => {
   const client = await auth.getClient();
   return google.calendar({ version: "v3", auth: client });
@@ -32,6 +28,7 @@ const getCalendarInstance = async () => {
  * @param {String} emailString - Space-separated list of emails to check for availability, escape any commas in the list
  * @param {String} timeMin - Start of time interval in human readable format
  * @param {String} timeMax - End of time interval in human readable format
+ * @description This function uses the Google Calendar API to find potential meeting times within the specified interval
  * @returns {Promise} Array of potential meeting times
  */
 async function findPotentialMeetingTimes(emailString, timeMin, timeMax) {
@@ -75,7 +72,7 @@ async function findPotentialMeetingTimes(emailString, timeMin, timeMax) {
       // If none of the busy times overlap with the potential time, add it to the potential times array
       if (
         !busyTimes.some(
-          (time) => time.start <= formattedTime && time.end >= formattedTime,
+          (time) => time.start <= formattedTime && time.end >= formattedTime
         )
       ) {
         potentialTimes.push(formattedTime);

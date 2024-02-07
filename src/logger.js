@@ -14,9 +14,12 @@ module.exports = function (serviceName) {
         format: winston.format.combine(
           winston.format.timestamp(),
           winston.format.printf((info) => {
+            const lineNumber = info.stack
+              ? info.stack.split("\n")[2].trim()
+              : "";
             const { level, message, timestamp, ...meta } = info;
-            return `${timestamp} ${level}: ${message}`;
-          }),
+            return `${timestamp} ${serviceName} ${lineNumber} : ${message}`;
+          })
         ),
       }),
       new winston.transports.File({
@@ -26,7 +29,7 @@ module.exports = function (serviceName) {
           winston.format.printf((info) => {
             const { level, message, timestamp, ...meta } = info;
             return `${timestamp} ${level}: ${message}`;
-          }),
+          })
         ),
       }),
       new winston.transports.File({
@@ -35,8 +38,9 @@ module.exports = function (serviceName) {
           winston.format.timestamp(),
           winston.format.printf((info) => {
             const { level, message, timestamp, ...meta } = info;
+
             return `${timestamp} ${level}: ${message}`;
-          }),
+          })
         ),
       }),
     ],
@@ -46,6 +50,6 @@ module.exports = function (serviceName) {
     log: (message) => winstonLogger.log(message),
     info: (message) => winstonLogger.info(message),
     warn: (message) => winstonLogger.warn(message),
-    error: (message) => winstonLogger.error(message),
+    error: (message) => winstonLogger.info("🚨 " + message),
   };
 };

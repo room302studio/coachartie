@@ -1,11 +1,18 @@
 const { google, batchUpdate } = require("googleapis");
 const { destructureArgs } = require("../helpers");
-const logger = require("../src/logger");
+const logger = require("../src/logger.js")("capabilities");
+const dotenv = require("dotenv");
+dotenv.config();
+
+const calendarId =
+  "c_68a9d315e0cf3fb511a20865664e0be79980781571c78e39eb05c7f2f10e4180@group.calendar.google.com";
 
 const keyFile = "./auth/coach-artie-e95c8660132f.json"; // Path to JSON file
 const scopes = [
   "https://www.googleapis.com/auth/drive",
   "https://www.googleapis.com/auth/calendar",
+  "https://www.googleapis.com/auth/calendar.events",
+  "https://www.googleapis.com/auth/calendar.readonly",
 ];
 
 const getCalendarInstance = async () => {
@@ -15,7 +22,11 @@ const getCalendarInstance = async () => {
   });
 
   const client = await auth.getClient();
-  return google.calendar({ version: "v3", auth: client });
+  return google.calendar({
+    version: "v3",
+    auth: client,
+    project: process.env.GOOGLE_PROJECT_NUMBER,
+  });
 };
 
 async function accessCalendar(calendarId) {
@@ -25,21 +36,29 @@ async function accessCalendar(calendarId) {
   return calendar.calendars.get({ calendarId });
 }
 
+/**
+ * Retrieves a list of all calendars.
+ * @returns {Promise<string[]>} An array of calendar summaries and IDs.
+ * @description This function uses the Google Calendar API to retrieve a list of all calendars available to the authenticated user.
+ * @throws {Error} If no calendars are found or an error occurs.
+ */
 async function listAllCalendars() {
   try {
     const calendar = await getCalendarInstance();
+    logger.info("Calendar instance:", calendar);
     const response = await calendar.calendarList.list();
+    logger.info("Response from listAllCalendars:" + JSON.stringify(response));
 
     if (!(response.data.items.length > 0)) {
-      throw new Error("No calendars found");
+      throw new Error("No calendars found", response.data);
     }
 
     const calendars = response.data.items.map(
-      ({ summary, id }) => `${summary} (${id})`,
+      ({ summary, id }) => `${summary} (${id})`
     );
     return calendars;
   } catch (error) {
-    logger.error("Error occurred while listing calendars:", error);
+    logger.info("Error occurred while listing calendars:" + error);
     throw error;
   }
 }
@@ -84,7 +103,26 @@ async function addPersonToEvent(calendarId, eventId, attendeeEmail) {
  */
 async function createEvent(calendarId, event) {
   const calendar = await getCalendarInstance();
-  return calendar.events.insert({ calendarId, resource: event });
+  const insert = calendar.events.insert({ calendarId, resource: event });
+
+  // share the event with everyone @room302.studio
+  const batch = calendar.newBatch();
+  batch.add(
+    calendar.acl.insert({
+      calendarId,
+      requestBody: {
+        role: "reader",
+        scope: {
+          type: "group",
+          value: "room302.studio",
+        },
+      },
+    })
+  );
+
+  await batch.execute();
+
+  return insert;
 }
 
 /**
@@ -98,13 +136,14 @@ async function listEventsThisWeek(calendarId) {
   const nextWeek = new Date();
   nextWeek.setDate(now.getDate() + 7);
 
-  return calendar.events.list({
+  const response = await calendar.events.list({
     calendarId,
     timeMin: now.toISOString(),
     timeMax: nextWeek.toISOString(),
     singleEvents: true,
     orderBy: "startTime",
   });
+  return JSON.stringify(response);
 }
 
 module.exports = {

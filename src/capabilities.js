@@ -12,7 +12,7 @@ const capabilityRegex = /(\w+):(\w+)\(([^]*?)\)/; // captures newlines in the  t
 const callSomething = "callSomething:callSomething()";
 
 const capabilityFile = fs.readFileSync(
-  path.join(__dirname, "../capabilities/_manifest.json"),
+  path.join(__dirname, "../capabilities/_manifest.json")
 );
 
 // parse the json
@@ -60,11 +60,13 @@ async function callCapabilityMethod(
   capabilitySlug,
   methodName,
   args,
-  messages,
+  messages
 ) {
-  logger.info(
-    `⚡️ Calling capability method: ${capabilitySlug}.${methodName} with args: ${args}`,
-  );
+  logger.info(`⚡️ Calling capability method: ${capabilitySlug}.${methodName}`);
+
+  if (args) {
+    logger.info(`⚡️ With arguments: ${args}`);
+  }
 
   try {
     // get the capability from the capabilities folder
@@ -76,11 +78,11 @@ async function callCapabilityMethod(
     const capabilityResponse = await capability.handleCapabilityMethod(
       methodName,
       args,
-      messages,
+      messages
     );
     if (!capabilityResponse) {
       throw new Error(
-        `Capability ${capabilitySlug} did not return a response.`,
+        `Capability ${capabilitySlug} did not return a response.`
       );
     }
 
@@ -90,7 +92,7 @@ async function callCapabilityMethod(
     }
     return capabilityResponse;
   } catch (error) {
-    logger.error(error);
+    logger.info(`Error running ${capabilitySlug}.${methodName}: ${error}`);
     return `Error: ${error.message}`;
   }
 }

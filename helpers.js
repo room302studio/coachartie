@@ -249,7 +249,7 @@ function trimResponseIfNeeded(capabilityResponse) {
   while (isResponseExceedingLimit(capabilityResponse)) {
     capabilityResponse = trimResponseByLineCount(
       capabilityResponse,
-      countTokens(capabilityResponse),
+      countTokens(capabilityResponse)
     );
   }
   return capabilityResponse;
@@ -510,7 +510,7 @@ async function generateAiCompletion(prompt, username, messages, config) {
     completion = await createChatCompletion(
       messages,
       temperature,
-      presence_penalty,
+      presence_penalty
     );
   } catch (err) {
     logger.info(err);
@@ -545,7 +545,7 @@ async function createChatCompletion(messages, temperature, presence_penalty) {
     return await createGeminiCompletion(
       messages,
       temperature,
-      presence_penalty,
+      presence_penalty
     );
   }
 }
@@ -608,7 +608,7 @@ async function createGeminiCompletion(messages, temperature, presence_penalty) {
   // try {
   //   await jwtClient.authorize();
   // } catch (err) {
-  //   logger.error('Error authorizing JWT client:', err);
+  //   logger.info('Error authorizing JWT client:', err);
   // }
 
   // to get a bearer token you can run this commmand in the CLI
@@ -803,7 +803,7 @@ function loadCapabilityManifest() {
     const manifest = JSON.parse(manifestData);
     return manifest;
   } catch (error) {
-    logger.error("Error loading capability manifest:", error);
+    logger.info("Error loading capability manifest:", error);
     return null;
   }
 }
@@ -833,12 +833,12 @@ function addCapabilityManifestMessage(messages) {
 async function addUserMessages(username, messages) {
   const userMessageCount = chance.integer({ min: 4, max: 32 });
   logger.info(
-    `🔧 Retrieving ${userMessageCount} previous messages for ${username}`,
+    `🔧 Retrieving ${userMessageCount} previous messages for ${username}`
   );
   try {
     const userMessages = await getUserMessageHistory(
       username,
-      userMessageCount,
+      userMessageCount
     );
     if (!userMessages) {
       logger.info(`No previous messages found for ${username}`);
@@ -852,7 +852,7 @@ async function addUserMessages(username, messages) {
       });
     });
   } catch (error) {
-    logger.error("Error getting previous user messages:", error);
+    logger.info("Error getting previous user messages:", error);
   }
 }
 
@@ -885,7 +885,7 @@ async function addUserMemories(username, messages) {
  */
 function splitMessageIntoChunks(messageString) {
   if (typeof messageString !== "string") {
-    logger.error("splitMessageIntoChunks: messageString is not a string");
+    logger.info("splitMessageIntoChunks: messageString is not a string");
     return;
   }
   const messageArray = splitMessageIntoArray(messageString);
@@ -941,18 +941,18 @@ function isChunkSizeAcceptable(currentChunk, word) {
  */
 function splitAndSendMessage(message, channel) {
   if (!channel) {
-    logger.error("splitAndSendMessage: messageObject is null or undefined");
+    logger.info("splitAndSendMessage: messageObject is null or undefined");
     return;
   }
   if (typeof message !== "string") {
-    logger.error("splitAndSendMessage: message is not a string");
+    logger.info("splitAndSendMessage: message is not a string");
     return;
   }
   if (message.length < 2000) {
     try {
       channel.send(message);
     } catch (e) {
-      logger.error(e);
+      logger.info(e);
     }
   } else {
     const messageChunks = splitMessageIntoChunks(message);
@@ -960,7 +960,7 @@ function splitAndSendMessage(message, channel) {
       try {
         channel.send(messageChunks[i]);
       } catch (error) {
-        logger.error(error);
+        logger.info(error);
       }
     }
   }

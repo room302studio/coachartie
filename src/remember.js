@@ -8,7 +8,7 @@ dotenv.config();
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
-  process.env.SUPABASE_API_KEY,
+  process.env.SUPABASE_API_KEY
 );
 
 /**
@@ -19,7 +19,7 @@ const supabase = createClient(
  */
 async function getUserMemory(userId, limit = 5) {
   if (!userId) {
-    logger.error("No userId provided to getUserMemory");
+    logger.info("No userId provided to getUserMemory");
     return [];
   }
   logger.info("💾 Querying database for memories related to user:", userId);
@@ -32,7 +32,7 @@ async function getUserMemory(userId, limit = 5) {
     .neq("value", "✨");
 
   if (error) {
-    logger.error("Error fetching user memory:", error);
+    logger.info("Error fetching user memory:", error);
     return [];
   }
 
@@ -54,7 +54,7 @@ async function getAllMemories(limit = 5) {
     .neq("value", "✨");
 
   if (error) {
-    logger.error("Error fetching memories:", error);
+    logger.info("Error fetching memories:", error);
     return [];
   }
 
@@ -77,7 +77,7 @@ async function getUserMessageHistory(userId, limit = 5) {
     .eq("user_id", userId);
 
   if (error) {
-    logger.error("Error fetching user message:", error);
+    logger.info("Error fetching user message:", error);
     return null;
   }
 
@@ -91,7 +91,7 @@ async function getUserMessageHistory(userId, limit = 5) {
  */
 async function memoryToEmbedding(memory) {
   if (!memory) {
-    return logger.error("No memory provided to memoryToEmbedding");
+    return logger.info("No memory provided to memoryToEmbedding");
   }
 
   const embeddingResponse = await openai.createEmbedding({
@@ -113,17 +113,17 @@ async function memoryToEmbedding(memory) {
 async function storeUserMemory({ username, channel, guild }, value) {
   // first we do some checks to make sure we have the right types of data
   if (!username) {
-    return logger.error("No username provided to storeUserMemory");
+    return logger.info("No username provided to storeUserMemory");
   }
 
   // if the user id is not a string, we need to error out
   if (typeof username !== "string") {
-    return logger.error("username provided to storeUserMemory is not a string");
+    return logger.info("username provided to storeUserMemory is not a string");
   }
 
   // if the value is not a string, we need to error out
   if (typeof value !== "string") {
-    return logger.error("value provided to storeUserMemory is not a string");
+    return logger.info("value provided to storeUserMemory is not a string");
   }
 
   // TODO: We need to convert the memory into an embedding using the openai embeddings API
@@ -147,7 +147,7 @@ async function storeUserMemory({ username, channel, guild }, value) {
     });
 
   if (error) {
-    logger.error(`Error storing user memory: ${error.message}`);
+    logger.info(`Error storing user memory: ${error.message}`);
   }
 }
 
@@ -172,7 +172,7 @@ async function storeUserMessage({ username, channel, guild }, value) {
     });
 
   if (error) {
-    logger.error(`Error storing user message: ${error.message}`);
+    logger.info(`Error storing user message: ${error.message}`);
   }
 
   return data;
@@ -206,7 +206,7 @@ async function getRelevantMemories(queryString, limit = 5) {
   });
 
   if (error) {
-    logger.error("Error fetching relevant user memory:", error);
+    logger.info("Error fetching relevant user memory:", error);
     return null;
   }
 

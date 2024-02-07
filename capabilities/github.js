@@ -7,24 +7,12 @@ const logger = require("../src/logger.js")("github");
 
 dotenv.config();
 
-/**
- * This class provides methods to interact with Github.
- * @class GithubCoach
- */
 class GithubCoach {
-  /**
-   * Constructor for GithubCoach class.
-   * Initializes the GithubCoach.
-   */
   constructor() {
     logger.info("Initializing GithubCoach...");
     this._init();
   }
 
-  /**
-   * Initializes the GithubCoach.
-   * @private
-   */
   async _init() {
     try {
       this.octokit = new Octokit({
@@ -36,7 +24,7 @@ class GithubCoach {
           debug: () => {},
           info: () => {},
           warn: console.warn,
-          error: logger.error,
+          error: logger.info,
         },
       });
 
@@ -46,7 +34,7 @@ class GithubCoach {
         },
       });
     } catch (error) {
-      logger.error(error);
+      logger.info(error);
     }
   }
 
@@ -68,7 +56,21 @@ class GithubCoach {
    * @param {string} repositoryUrl - The URL of the repository.
    */
   async cloneRepo(repositoryUrl) {
-    // implement clone repository functionality
+    // execute the shell command to clone the repository
+    // and return the result
+    const { exec } = require("child_process");
+    exec(`git clone ${repositoryUrl}`, (error, stdout, stderr) => {
+      if (error) {
+        logger.info(`error: ${error.message}`);
+        return;
+      }
+      if (stderr) {
+        logger.info(`stderr: ${stderr}`);
+        return;
+      }
+      logger.info(`stdout: ${stdout}`);
+      return stdout;
+    });
   }
 
   /**
@@ -339,7 +341,7 @@ class GithubCoach {
     title,
     headBranch,
     baseBranch,
-    description,
+    description
   ) {
     const response = await this.octokit.pulls.create({
       owner: process.env.GITHUB_USER,
@@ -403,7 +405,7 @@ module.exports = {
         return await githubCoach.listUserProjects(...destructuredArgs);
       case "listProjectColumnsAndCards":
         return await githubCoach.listProjectColumnsAndCards(
-          ...destructuredArgs,
+          ...destructuredArgs
         );
       case "addDraftIssueToProject":
         return await githubCoach.addDraftIssueToProject(...destructuredArgs);

@@ -8,7 +8,7 @@ let mermaid;
 try {
   mermaid = require.resolve("mermaid");
 } catch (error) {
-  logger.error("Failed to resolve mermaid module:", error);
+  logger.info("Failed to resolve mermaid module:", error);
 }
 
 /**
@@ -84,7 +84,7 @@ const convertMermaidDiagram = async (diagramText) => {
     return { image: screenshot };
   } catch (error) {
     throw new Error(
-      `Error occurred while converting Mermaid diagram: ${error}`,
+      `Error occurred while converting Mermaid diagram: ${error}`
     );
   }
 };

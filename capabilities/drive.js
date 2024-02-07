@@ -42,7 +42,7 @@ async function listFiles() {
             reject(new Error("No files found."));
           } else {
             const files = res.data.files.map(
-              ({ name, id }) => `${name} (${id})`,
+              ({ name, id }) => `${name} (${id})`
             );
             resolve(files);
           }
@@ -50,7 +50,7 @@ async function listFiles() {
       });
     });
   } catch (error) {
-    logger.error(error);
+    logger.info(error);
     if (error.code === "AUTH_ERROR") {
       throw new Error("Authentication problem.");
     } else {
@@ -141,7 +141,6 @@ async function shareFile(fileId, email) {
   });
 }
 
-
 async function appendString(fileId, text) {
   const drive = await getDriveInstance();
 
@@ -164,36 +163,6 @@ async function appendString(fileId, text) {
   });
 }
 
-async function createNewDocument(title, text) {
-  const drive = await getDriveInstance();
-
-  // Create a new Google Doc
-  const docMetadata = {
-    name: title,
-    mimeType: "application/vnd.google-apps.document",
-    writersCanShare: true, // Set writersCanShare to true to allow sharing
-  };
-
-  const createdDoc = await drive.files.create({
-    resource: docMetadata,
-    media: {
-      mimeType: "text/plain",
-      body: text,
-    },
-  });
-
-  // Share the document with everyone in the organization
-  await drive.permissions.create({
-    fileId: createdDoc.data.id,
-    requestBody: {
-      role: "writer",
-      type: "domain",
-      domain: "room302.studio", // Replace with your actual domain
-    },
-  });
-
-  return JSON.stringify(createdDoc.data);
-}
 /**
  *
  * @param {string} title - The title of the new document.

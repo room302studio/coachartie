@@ -32,7 +32,7 @@ async function generateAndStoreRememberCompletion(
   prompt,
   response,
   { username = "", channel = "", guild = "" },
-  conversationHistory = [],
+  conversationHistory = []
 ) {
   // logger.info("🔧 Generating and storing remember completion", username);
   // logger.info("🔧 Prompt:", prompt);
@@ -41,12 +41,18 @@ async function generateAndStoreRememberCompletion(
   const memoryMessages = [];
 
   // get user memories
-  logger.info(
-    `🔧 Enhancing memory with ${userMemoryCount} memories from ${username}`,
-  );
+
   const userMemories = await getUserMemory(username, userMemoryCount);
 
+  logger.info(
+    `🔧 Enhancing memory with ${userMemoryCount} memories from ${username}`
+  );
+
   const generalMemories = await getAllMemories(userMemoryCount);
+
+  logger.info(
+    `🔧 Enhancing memory with ${generalMemories.length} memories from all users`
+  );
 
   // de-dupe memories
   const memories = [...userMemories, ...generalMemories];
@@ -97,7 +103,7 @@ async function generateAndStoreRememberCompletion(
       role: "user",
       content: `${PROMPT_REMEMBER}`,
     },
-  ]
+  ];
 
   preambleLogger.info("📜 Preamble messages", completeMessages);
 
@@ -137,7 +143,7 @@ async function generateAndStoreCapabilityCompletion(
   capabilityResponse,
   capabilityName,
   { username = "", channel = "", guild = "" },
-  conversationHistory = [],
+  conversationHistory = []
 ) {
   // logger.info("🔧 Generating and storing capability usage");
   // logger.info("🔧 Prompt:", prompt);
@@ -147,11 +153,13 @@ async function generateAndStoreCapabilityCompletion(
 
   // get user memories
   logger.info(
-    `🔧 Enhancing memory with ${userMemoryCount} memories from ${username}`,
+    `🔧 Enhancing memory with ${userMemoryCount} memories from ${username}`
   );
   const userMemories = await getUserMemory(username, userMemoryCount);
 
   const generalMemories = await getAllMemories(userMemoryCount);
+
+  const relevantMemories = await getRelevantMemories(capabilityName);
 
   // de-dupe memories
   const memories = [...userMemories, ...generalMemories];

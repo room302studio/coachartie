@@ -40,7 +40,7 @@ async function processMessageChain(
   messages,
   { username, channel, guild },
   retryCount = 0,
-  capabilityCallCount = 0,
+  capabilityCallCount = 0
 ) {
   const chainId = getUniqueEmoji();
 
@@ -71,8 +71,8 @@ async function processMessageChain(
       logger.info(
         `${chainId} - Capability Call ${capabilityCallIndex} started: ${lastMessage.content.slice(
           0,
-          40,
-        )}...`,
+          2400
+        )}...`
       );
 
       // process the last message in the chain
@@ -80,7 +80,7 @@ async function processMessageChain(
         const updatedMessages = await processMessage(
           messages,
           lastMessage.content,
-          { username, channel, guild },
+          { username, channel, guild }
         );
         messages = updatedMessages;
         lastMessage = messages[messages.length - 1];
@@ -92,14 +92,14 @@ async function processMessageChain(
 
         chainReport += `${chainId} - Capability Call ${capabilityCallIndex}: ${lastMessage.content.slice(
           0,
-          80,
+          80
         )}...\n`;
 
         logger.info(
-          `${chainId} - Capability Call ${capabilityCallIndex} completed`,
+          `${chainId} - Capability Call ${capabilityCallIndex} completed`
         );
       } catch (error) {
-        logger.error(`Error processing message: ${error}`);
+        logger.info(`Error processing message: ${error}`);
       }
     } while (
       doesMessageContainCapability(lastMessage.content) &&
@@ -114,18 +114,18 @@ async function processMessageChain(
         `Error processing message chain, retrying (${
           retryCount + 1
         }/${MAX_RETRY_COUNT})`,
-        error,
+        error
       );
       return processMessageChain(
         messages,
         { username, channel, guild },
         retryCount + 1,
-        capabilityCallCount,
+        capabilityCallCount
       );
     } else {
-      logger.error(
+      logger.info(
         `${chainId} - Error processing message chain, maximum retries exceeded`,
-        error,
+        error
       );
       throw error;
     }
@@ -151,11 +151,11 @@ async function getCapabilityResponse(capSlug, capMethod, capArgs, messages) {
       capSlug,
       capMethod,
       capArgs,
-      messages,
+      messages
     );
   } catch (e) {
     capabilityResponse = `${capSlug}:${capMethod} failed with error: ${e}`;
-    logger.error("Capability Failed: " + capabilityResponse);
+    logger.info("Capability Failed: " + capabilityResponse);
   }
 
   if (capabilityResponse.image) {
@@ -188,7 +188,7 @@ async function processCapability(messages, capabilityMatch) {
     capSlug,
     capMethod,
     capArgs,
-    messages,
+    messages
   );
 
   if (capabilityResponse.image) {
@@ -230,7 +230,7 @@ async function processCapability(messages, capabilityMatch) {
 async function processMessage(
   messages,
   lastMessage,
-  { username = "", channel = "", guild = "" },
+  { username = "", channel = "", guild = "" }
 ) {
   if (doesMessageContainCapability(lastMessage)) {
     const capabilityMatch = lastMessage.match(capabilityRegex);
@@ -243,7 +243,7 @@ async function processMessage(
         messages[messages.length - 1].content,
         capabilityMatch[1],
         { username, channel, guild },
-        messages,
+        messages
       );
     } catch (error) {
       messages.push({
@@ -277,7 +277,7 @@ async function processMessage(
     {
       temperature,
       frequency_penalty,
-    },
+    }
   );
 
   messages.push({
@@ -289,7 +289,7 @@ async function processMessage(
     prompt,
     aiResponse,
     { username, channel, guild },
-    messages,
+    messages
   );
 
   return messages;

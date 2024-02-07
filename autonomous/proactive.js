@@ -14,12 +14,11 @@ const PROACTIVE_OUTPUT_CHANNEL_ID = "1086329744762622023";
 const proactive = {
   start: async function (bot) {
     logger.info("Starting proactive.start()");
-    // Schedule the task to run every hour
-    // cron.schedule("0 * * * *", async () => {
-    // schedule to run every 8 hours, 9am-5pm
-    cron.schedule("0 9-17/8 * * *", async () => {
-      // Replace the logger.info statement with your desired action
-      logger.info("Running proactive.start() every hour via cron");
+    cron.schedule("0 9-16/4 * * 3-5", async () => {
+      if (chance.bool({ likelihood: 25 })) {
+        logger.info("Skipping proactive task");
+        return;
+      }
 
       // list the potential tasks
       const potentialTasks = await this.listPotentialTasks();
@@ -28,41 +27,16 @@ const proactive = {
       this.channel = channel;
 
       if (!channel) {
-        logger.error(
-          `Channel with ID ${PROACTIVE_OUTPUT_CHANNEL_ID} not found`,
-        );
+        logger.info(`Channel with ID ${PROACTIVE_OUTPUT_CHANNEL_ID} not found`);
         return;
       }
-
-      // start an interval that sends typing every 5 seconds
-      // const interval = setInterval(() => {
-      //   channel.sendTyping();
-      // }, 5000);
 
       // perform the proactive task
       const processedMessage = await this.performProactiveTask(
-        potentialTasks.join("\n"),
+        potentialTasks.join("\n")
       );
 
-      // evaluate the proactive task completion
-      // const taskCompleted = await this.evaluateProactiveTaskCompletion(processedMessage);
-
-      // if (taskCompleted) {
-      //   logger.info("Task completed!");
-      // }
-
-      // Check if the channel exists
-      if (!channel) {
-        logger.error(
-          `Channel with ID ${PROACTIVE_OUTPUT_CHANNEL_ID} not found`,
-        );
-        return;
-      }
-
       await bot.sendMessage(processedMessage, channel);
-
-      // clear the interval
-      // clearInterval(interval);
     });
   },
   listPotentialTasks: async function () {
@@ -77,15 +51,12 @@ const proactive = {
           content: PROACTIVE_IDEA_BRAINSTORM,
         },
       ],
-      { username: "proactive-cron-job", channel },
+      { username: "proactive-cron-job", channel }
     );
-
-    logger.info("listPotentialTasks processedMessages", processedMessages);
 
     // then we take the processed messsage and split it by newline
     const potentialTaskArray =
       processedMessages[processedMessages.length - 1].content.split("\n");
-    logger.info("potentialTaskArray", potentialTaskArray);
 
     return potentialTaskArray;
   },
@@ -107,32 +78,10 @@ const proactive = {
           content: `# Brainstormed Task To-do List\n${proactiveTask}\n${PROACTIVE_PERFORM_TASK}`,
         },
       ],
-      { username: "proactive-cron-job", channel },
+      { username: "proactive-cron-job", channel }
     );
 
     return processedMessages[processedMessages.length - 1].content;
-  },
-  evaluateProactiveTaskCompletion: async function (finalMessage) {
-    const channel = this.channel;
-    logger.info("Evaluating proactive task completion", finalMessage);
-    // Evaluate the proactive task completion
-    // If the task is complete, send the final message to the user
-    // If the task is not complete, start over
-    const processedMessages = await processMessageChain(
-      [
-        {
-          role: "user",
-          content: finalMessage + "\n" + PROACTIVE_COMPLETION_EVALUATOR,
-        },
-      ],
-      { username: "proactive-cron-job", channel },
-    );
-
-    const completionText =
-      processedMessages[processedMessages.length - 1].content;
-
-    // if the completion text, when lowercased, contains "yes" then return true
-    return completionText.toLowerCase().includes("yes");
   },
 };
 

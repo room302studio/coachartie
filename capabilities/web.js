@@ -80,12 +80,6 @@ function sleep(ms) {
   });
 }
 
-/**
- * Fetches and parses the content of a given URL.
- *
- * @param {string} url - The URL to fetch and parse.
- * @returns {Promise<{ title: string, text: string }>} - A promise that resolves to an object containing the title and trimmed text of the page.
- */
 async function fetchAndParseURL(url) {
   const browser = await puppeteer.launch();
   const page = await browser.newPage();
@@ -418,15 +412,15 @@ async function fetchAndSummarizeUrl(url, userPrompt = "") {
       chunkResponses = JSON.parse(
         fs.readFileSync(
           path.join(__dirname, `../cache/${cacheKey}.json`),
-          "utf8",
-        ),
+          "utf8"
+        )
       );
     } else {
       chunkResponses = await processChunks(chunks, data);
       // Cache the chunks
       fs.writeFileSync(
         path.join(__dirname, `../cache/${cacheKey}.json`),
-        JSON.stringify(chunkResponses),
+        JSON.stringify(chunkResponses)
       );
     }
 
