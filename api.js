@@ -10,13 +10,13 @@ const apiKey = process.env.MISSIVE_API_KEY;
 
 app.use(express.json());
 
-const basicAuth = require("express-basic-auth");
-app.use(
-  basicAuth({
-    users: { admin: "supersecret" },
-    challenge: true,
-  })
-);
+// const basicAuth = require("express-basic-auth");
+// app.use(
+//   basicAuth({
+//     users: { admin: "supersecret" },
+//     challenge: true,
+//   })
+// );
 
 /* Basic, simple Coach Artie messaging */
 
