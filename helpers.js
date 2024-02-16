@@ -534,7 +534,7 @@ const completionModel = "openai";
 async function createChatCompletion(messages, temperature, presence_penalty) {
   if (completionModel === "openai") {
     return await openai.createChatCompletion({
-      model: "gpt-4-1106-preview",
+      model: "gpt-4-turbo-preview",
       temperature,
       presence_penalty,
       max_tokens: MAX_OUTPUT_TOKENS,
