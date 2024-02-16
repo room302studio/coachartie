@@ -73,7 +73,7 @@ server.on("error", (err) => {
 
 Then we will also have a second endpoint that does all of the above, and then gets the message ID and uses POST to send the response to the location the webhook came from */
 
-// app.post("/missive-read", async (req, res) => {
+// app.post("/api/missive-read", async (req, res) => {
 //   const username = req.body.username || "API User";
 
 //   const body = req.body;
@@ -94,7 +94,7 @@ Then we will also have a second endpoint that does all of the above, and then ge
 //   res.status(200).end();
 // });
 
-app.post("/missive-reply", async (req, res) => {
+app.post("/api/missive-reply", async (req, res) => {
   const body = req.body;
   const webhookDescription = `${body?.rule?.description}`;
   // const message = req.body.message;
