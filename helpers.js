@@ -9,7 +9,11 @@ const { PROMPT_SYSTEM, CAPABILITY_PROMPT_INTRO } = require("./prompts");
 // 📚 GPT-3 token-encoder: our linguistic enigma machine
 const { encode, decode } = require("@nem035/gpt-3-encoder");
 const { RESPONSE_LIMIT, TOKEN_LIMIT, MAX_OUTPUT_TOKENS } = require("./config");
-const { getUserMemory, getUserMessageHistory } = require("./src/remember.js");
+const {
+  getUserMemory,
+  getRelevantMemories,
+  getUserMessageHistory,
+} = require("./src/remember.js");
 const logger = require("./src/logger.js")("helpers");
 
 /**
@@ -739,6 +743,7 @@ async function assembleMessagePreamble(username) {
   addCapabilityManifestMessage(messages);
   await addUserMessages(username, messages);
   await addUserMemories(username, messages);
+  await addRelevantMemories(messages);
   return messages;
 }
 
@@ -876,6 +881,23 @@ async function addUserMemories(username, messages) {
   } catch (err) {
     logger.info(err);
   }
+}
+
+async function addRelevantMemories(messages) {
+  // Get the user prompt from the last message
+  const userPrompt = lastUserMessage(messages);
+  // Get the relevant memories for the user prompt
+  const relevantMemories = await getRelevantMemories(userPrompt);
+
+  logger.info(`🔧 Retrieving ${relevantMemories.length} relevant memories`);
+
+  // Add the relevant memories to the messages array
+  relevantMemories.forEach((memory) => {
+    messages.push({
+      role: "system",
+      content: `You remember from a previous interaction on ${memory.created_at}: ${memory.value}`,
+    });
+  });
 }
 
 /**

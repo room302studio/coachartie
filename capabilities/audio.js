@@ -18,10 +18,14 @@ const {
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
-const logger = require("../src/logger.js")("web");
+const logger = require("../src/logger.js")("audio");
+var child_process = require("child_process");
+const axios = require("axios");
+const util = require("util");
 
 // const CHUNK_TOKEN_AMOUNT = 7000
-const CHUNK_TOKEN_AMOUNT = 10952;
+// const CHUNK_TOKEN_AMOUNT = 10952; // gpt-3.5
+const CHUNK_TOKEN_AMOUNT = 120000; // gpt-4
 
 dotenv.config();
 
@@ -31,8 +35,230 @@ const configuration = new Configuration({
 });
 const openai = new OpenAIApi(configuration);
 
+const cacheRoot = path.join(__dirname, `../cache/`);
 // STEP 1 - Get the URL of the audio we want to transcribe (mp3, wav, etc.)
 // const audioFileURL =
+
+const execPromise = util.promisify(child_process.exec);
+
+async function curlAudioFile(audioFileURL) {
+  logger.info(`📝  Downloading audio file from: ${audioFileURL}`);
+  const audioFileHash = crypto
+    .createHash("sha256")
+    .update(audioFileURL)
+    .digest("hex");
+
+  return new Promise(async (resolve, reject) => {
+    const audioFilePath = path.join(__dirname, `../cache/${audioFileHash}.mp3`);
+
+    // Check if the audio file already exists
+    if (fs.existsSync(audioFilePath)) {
+      logger.info(`📝  Audio file already exists at: ${audioFilePath}`);
+      resolve({ audioFilePath, audioFileHash }); // Return the location of the existing audio file
+      return;
+    }
+
+    try {
+      await execPromise(`curl -o ${audioFilePath} ${audioFileURL}`);
+      logger.info(
+        `📝  Audio file downloaded successfully at: ${audioFilePath}`
+      );
+      resolve({ audioFilePath, audioFileHash }); // Return the location of the downloaded audio file
+    } catch (error) {
+      console.error(`exec error: ${error}`);
+      reject(error);
+    }
+  });
+}
+
+async function ytDlpUrl(url) {
+  return new Promise(async (resolve, reject) => {
+    const command = `yt-dlp -x --audio-format mp3 --audio-quality 0 -o "audio.%(ext)s" ${url}`;
+
+    try {
+      const { stdout, stderr } = await execPromise(command);
+      console.log(`stdout: ${stdout}`);
+      console.error(`stderr: ${stderr}`);
+      resolve(stdout);
+    } catch (error) {
+      console.error(`exec error: ${error}`);
+      reject(error);
+    }
+  });
+}
+
+// CURRENTLY: /cache/
+// BUT THE split
+// ARE IN THE ROOT DIRECTORY
+
+async function getSplitFilePaths(audioFilePath, audioFileHash) {
+  const filepaths = [];
+  const files = fs.readdirSync(cacheRoot);
+  logger.info(`📝  Files in directory: ${JSON.stringify(files)}`);
+  // STIL IN /CACHE
+  files.forEach((file) => {
+    if (file.startsWith("split_" + audioFileHash) && file.endsWith(".mp3")) {
+      logger.info(`📝  Found split file: ${file}`);
+      filepaths.push(path.join(cacheRoot, file));
+    }
+  });
+
+  return filepaths;
+}
+
+async function checkFileOrSplitsExist(audioFilePath, audioFileHash) {
+  // Check if the file is already split
+  // by looking for any files that start with the split_${audioFileHash}
+  const files = fs.readdirSync(cacheRoot);
+
+  logger.info(`📝  Files in directory: ${JSON.stringify(files)}`);
+  for (const file of files) {
+    if (file.startsWith("split_" + audioFileHash) && file.endsWith(".mp3")) {
+      logger.info(`📝  Split file already exists: ${file}`);
+      return true;
+    }
+  }
+  logger.info(`📝  Split file does not exist...`);
+  return false;
+}
+
+// now we need a function to use ffmpeg to split into 50mb chunks and keep track of their filenames
+async function splitAudioFile({ audioFilePath, audioFileHash }) {
+  const oneMegabyte = 1048576; // Correct number of bytes in a megabyte
+  const desiredFileSizeInMB = 10;
+  const segmentSize = desiredFileSizeInMB * oneMegabyte;
+
+  const fileAlreadyExists = await checkFileOrSplitsExist(
+    audioFilePath,
+    audioFileHash
+  );
+  // check if the file is already split
+  if (fileAlreadyExists) {
+    logger.info(`📝  Audio file already split into chunks...`);
+    const filepaths = await getSplitFilePaths(audioFilePath, audioFileHash);
+    logger.info(`📝  Split file paths: ${JSON.stringify(filepaths)}`);
+    return filepaths;
+  }
+
+  logger.info(`📝  Splitting audio file into 10MB chunks...`);
+
+  // Approximate duration for desired file size, assuming a bitrate of 128 kbps (16 KB/s)
+  // This is a rough estimation and should be adjusted according to the actual bitrate of your files
+  const bitrateKbps = 128;
+  const bytesPerSecond = (bitrateKbps * 1024) / 8;
+  const segmentDuration = Math.floor(segmentSize / bytesPerSecond);
+  const command = `ffmpeg -i ${audioFilePath} -f segment -segment_time ${segmentDuration} -c copy split_${audioFileHash}%03d.mp3`;
+
+  console.log("\n\n\n" + command + "\n\n\n");
+
+  try {
+    logger.info(
+      `📝  Splitting audio file into ${segmentDuration} second chunks...`
+    );
+    logger.info(`Running command: ${command}`);
+    // const { stdout, stderr } = await execPromise(command);
+    const { stdout, stderr } = await execPromise(command, {
+      cwd: cacheRoot,
+    });
+
+    //exec(
+    // 'pwd',
+
+    console.log(`stdout: ${stdout}`);
+    console.error(`stderr: ${stderr}`);
+    // Get the list of filepaths
+    return await getSplitFilePaths(audioFilePath, audioFileHash);
+    // const filepaths = [];
+    // const files = fs.readdirSync(path.dirname(audioFilePath));
+    // files.forEach((file) => {
+    //   if (file.startsWith(audioFileHash) && file.endsWith(".mp3")) {
+    //     filepaths.push(path.join(path.dirname(audioFilePath), file));
+    //   }
+    // });
+    // return filepaths;
+  } catch (error) {
+    console.error(`exec error: ${error}`);
+    logger.info(`📝  Splitting audio file failed. ${JSON.stringify(error)}`);
+    return error;
+  }
+}
+
+// given an array of audio file chunks locally, send them to whisper and get the results
+async function sendAudioChunkToWhisper(audioChunks) {
+  const formData = new FormData();
+  formData.append("file", fs.createReadStream(audioChunks[0]));
+  formData.append("model", "whisper-1");
+
+  const config = {
+    headers: {
+      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      "Content-Type": "multipart/form-data",
+    },
+  };
+
+  try {
+    const response = await axios.post(
+      "https://api.openai.com/v1/audio/transcriptions",
+      formData,
+      config
+    );
+
+    // Write transcription results to a .txt file
+    const transcription = response.data;
+    const audioFilePath = audioChunks[0];
+    const txtFilePath = path.join(
+      path.dirname(audioFilePath),
+      `${path.basename(audioFilePath, path.extname(audioFilePath))}.txt`
+    );
+    fs.writeFileSync(txtFilePath, transcription);
+
+    return response.data;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+
+async function compileAudioChunkTranscriptions(audioChunks) {
+  let transcriptionText = "";
+  // grab all the text files and compile them into a single transcription
+  for (const audioChunk of audioChunks) {
+    const txtFilePath = path.join(
+      path.dirname(audioChunk),
+      `${path.basename(audioChunk, path.extname(audioChunk))}.txt`
+    );
+    const transcription = fs.readFileSync(txtFilePath, "utf8");
+    console.log(transcription);
+
+    transcriptionText += transcription;
+  }
+
+  return transcriptionText;
+}
+
+async function fullTranscriptToManyMemories(fullTranscript) {
+  // use processChunks to make facts, and then make memories from the facts, bada bing bada boom
+}
+
+async function audioFileToMemories(audioFileURL, userPrompt = "") {
+  logger.info("📝  Starting audioFileToMemories...");
+  // curl AUDIO file
+  const { audioFilePath, audioFileHash } = await curlAudioFile(audioFileURL);
+  // ffmpeg split
+  const filePaths = await splitAudioFile({ audioFilePath, audioFileHash });
+
+  logger.info(`File paths: ${JSON.stringify(filePaths)}`);
+
+  // let fullTranscript = ''
+  // for (const filePath of filePaths) {
+  //   sendAudioChunkToWhisper(filePath);
+  // }
+
+  // send chunks to whisper
+  // get chunks back
+  // turn chunks into memories
+  // return memories
+}
 
 // console.log(audioFileURL)
 
@@ -228,21 +454,6 @@ ${factList}`,
   return summary;
 }
 
-function randomUserAgent() {
-  const potentialUserAgents = [
-    `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.159 Safari/537.36`,
-    `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Safari/605.1.15`,
-    `Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.159 Safari/537.36`,
-    `Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:91.0) Gecko/20100101 Firefox/91.0`,
-  ];
-
-  const pickedUserAgent = chance.pickone(potentialUserAgents);
-  logger.info("📝  Picked User Agent: ", pickedUserAgent);
-
-  // use chance.choose to pick a random user agent
-  return pickedUserAgent;
-}
-
 async function handleCapabilityMethod(method, args, messages) {
   // first we need to figure out what the method is
   // then grab the URL from the args
@@ -255,8 +466,8 @@ async function handleCapabilityMethod(method, args, messages) {
 
   const url = destructureArgs(args)[0];
   if (method === "toMemories") {
-    // const summary = await audioFileToMemories(url, userPrompt);
-    const summary = `Pretend this is an audio transcript, the secret word is BANANAS ${url}`;
+    const summary = await audioFileToMemories(url, userPrompt);
+    // const summary = `Pretend this is an audio transcript, the secret word is BANANAS ${url}`;
     return summary;
   }
 }

@@ -84,20 +84,10 @@ const WEBPAGE_CHUNK_UNDERSTANDER_PROMPT = `When analyzing this portion of a webp
 
 // Try to make your ideas small, accomplishable, and manageable. Remember your unique role as a highly advanced studio assistant and think about the ways you can help that humans can't. Prioritize joy. Use humor. Be creative.`;
 
-const PROACTIVE_IDEA_BRAINSTORM = `Reflect on the insights gained from recent conversations and interactions within the studio. Identify actionable steps that align with the team's current needs and projects, focusing on tasks that leverage your unique capabilities for research, organization, and automation. Propose ideas that are specific, achievable, and designed to streamline processes or enhance the team's creative output. List your ideas in a concise, newline-delimited format, ensuring each idea is clearly separated. For example:
+const PROACTIVE_IDEA_BRAINSTORM = `Reflect on the insights gained from recent conversations and interactions within the studio. Identify actionable steps that align with the team's current needs, your memories of ways to help users, and ongoing projects. Propose ideas that are specific and achievable. List your ideas in a concise, newline-delimited format, ensuring each idea is clearly separated. For example:
 
-- Compile a list of potential transcription services with pricing and accuracy rates to assist with automating meeting note-taking.
-- Research the latest advancements in @discordjs/voice library for improvements to the Discord bot's voice channel capabilities.
-- Schedule a follow-up on the status of Member Photos and 3D Scans for the Members page.
-- Prepare a feedback survey on meeting cadences to optimize internal communication.
-- Generate a to-do list from the burnlist discussion for the website launch, categorizing tasks by priority.
-- Draft a concise summary of Campaign Finance Data benefits for political reporting to aid in Electology feature promotion.
-- Create a structured template for an 8-hour crash course outline on prototyping.
-- Set reminders for the rescheduled studio check-in times.
-- Explore plugins or extensions that could help streamline the prototyping process with Nuxt.js.
-- Recommend a brief mindfulness exercise at the start of the next meeting to foster a positive and focused work environment.
-
-Focus on creating manageable, impactful proposals that harness your analytical and digital capabilities to support the team's goals and enhance productivity. Remember to prioritize tasks that bring joy, encourage creativity, and foster a collaborative spirit within the studio.`;
+- Idea one
+- Idea two`;
 
 const PROACTIVE_PERFORM_TASK = `Can you proactively help out with one (1) task that would help the studio?
         

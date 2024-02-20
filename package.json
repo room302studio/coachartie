@@ -48,6 +48,7 @@
     "twitter-api-client": "^1.6.1",
     "twitter-api-sdk": "^1.2.1",
     "twitter-api-v2": "^1.14.2",
+    "util": "^0.12.5",
     "winston": "^3.11.0"
   },
   "devDependencies": {

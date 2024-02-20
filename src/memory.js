@@ -37,7 +37,7 @@ async function generateAndStoreRememberCompletion(
   // logger.info("🔧 Generating and storing remember completion", username);
   // logger.info("🔧 Prompt:", prompt);
   // logger.info("🔧 Response:", response);
-  const userMemoryCount = chance.integer({ min: 4, max: 24 });
+  const userMemoryCount = chance.integer({ min: 8, max: 32 });
   const memoryMessages = [];
 
   // get user memories
@@ -54,8 +54,10 @@ async function generateAndStoreRememberCompletion(
     `🔧 Enhancing memory with ${generalMemories.length} memories from all users`
   );
 
+  const relevantMemories = await getRelevantMemories(prompt);
+
   // de-dupe memories
-  const memories = [...userMemories, ...generalMemories];
+  const memories = [...userMemories, ...generalMemories, ...relevantMemories];
 
   // turn user memories into chatbot messages
   memories.forEach((memory) => {
@@ -149,20 +151,28 @@ async function generateAndStoreCapabilityCompletion(
   // logger.info("🔧 Prompt:", prompt);
   // logger.info("🔧 Response:", capabilityResponse);
   const userMemoryCount = chance.integer({ min: 1, max: 6 });
+  const generalMemoryCount = chance.integer({ min: 4, max: 12 });
   const memoryMessages = [];
 
   // get user memories
+  const userMemories = await getUserMemory(username, userMemoryCount);
   logger.info(
     `🔧 Enhancing memory with ${userMemoryCount} memories from ${username}`
   );
-  const userMemories = await getUserMemory(username, userMemoryCount);
 
-  const generalMemories = await getAllMemories(userMemoryCount);
+  const generalMemories = await getAllMemories(generalMemoryCount);
+  logger.info(
+    `🔧 Enhancing memory with ${generalMemories.length} memories from all users`
+  );
 
   const relevantMemories = await getRelevantMemories(capabilityName);
+  logger.info(
+    `🔧 Enhancing memory with ${relevantMemories.length} relevant memories`
+  );
 
   // de-dupe memories
-  const memories = [...userMemories, ...generalMemories];
+  const memories = [...userMemories, ...generalMemories, ...relevantMemories];
+  logger.info(`🔧 Total memories: ${memories.length}`);
 
   // turn user memories into chatbot messages
   memories.forEach((memory) => {

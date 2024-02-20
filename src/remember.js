@@ -185,9 +185,10 @@ async function storeUserMessage({ username, channel, guild }, value) {
  * @returns {Promise<Array>} - A promise that resolves to an array of relevant memories.
  */
 async function getRelevantMemories(queryString, limit = 5) {
-  logger.info("QUERY STRING", queryString);
+  // logger.info("QUERY STRING", queryString);
   // turn the queryString into an embedding
   if (!queryString) {
+    console.error(`Trying to get relevant memories with no query string`);
     return [];
   }
 
@@ -198,10 +199,20 @@ async function getRelevantMemories(queryString, limit = 5) {
 
   const [{ embedding }] = embeddingResponse.data.data;
 
+  if (!embedding) {
+    console.error(
+      `Error creating embedding for query string: ${queryString} ${JSON.stringify(
+        embeddingResponse
+      )}`
+    );
+    return [];
+  }
+
   // query the database for the most relevant memories
   const { data, error } = await supabase.rpc("match_memories", {
     query_embedding: embedding,
-    match_threshold: 0.78,
+    // match_threshold: 0.78,
+    match_threshold: 0.66,
     match_count: limit,
   });
 

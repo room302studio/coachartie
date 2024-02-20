@@ -361,13 +361,20 @@ class GithubCoach {
    * @returns {Promise<Object>} The response from the Github API.
    */
   async readFileContents(repositoryName, filePath) {
-    const response = await this.octokit.repos.getContent({
-      owner: process.env.GITHUB_USER,
-      repo: repositoryName,
-      path: filePath,
-    });
-    return response.data;
-  }
+    try {
+      const response = await this.octokit.repos.getContent({
+        owner: process.env.GITHUB_USER,
+        repo: repositoryName,
+        path: filePath,
+      });
+      // Assuming you want to return the file content, decode from base64
+      const content = Buffer.from(response.data.content, 'base64').toString('utf-8');
+      return content;
+    } catch (error) {
+      console.error('Failed to read file contents:', error);
+      throw error; // Rethrow or handle as appropriate 
+    }
+        
 }
 
 module.exports = {
