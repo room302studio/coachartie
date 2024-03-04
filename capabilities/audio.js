@@ -249,6 +249,8 @@ async function audioFileToMemories(audioFileURL, userPrompt = "") {
 
   logger.info(`File paths: ${JSON.stringify(filePaths)}`);
 
+  // TODO: Now that we have our file paths, we need to await sending all of them to whisper 
+
   // let fullTranscript = ''
   // for (const filePath of filePaths) {
   //   sendAudioChunkToWhisper(filePath);
