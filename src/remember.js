@@ -4,6 +4,8 @@ const { MEMORIES_TABLE_NAME, MESSAGES_TABLE_NAME } = require("../config");
 const { openai } = require("./openai");
 const logger = require("../src/logger.js")("remember");
 
+const port = process.env.EXPRESS_PORT;
+
 dotenv.config();
 
 const supabase = createClient(
