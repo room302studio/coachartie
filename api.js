@@ -7,6 +7,7 @@ require("dotenv").config();
 
 const apiFront = "https://public.missiveapp.com/v1";
 const apiKey = process.env.MISSIVE_API_KEY;
+const webApiPrefix = process.env.EXPRESS_API_PREFIX;
 
 app.use(express.json());
 
@@ -20,7 +21,7 @@ app.use(express.json());
 
 /* Basic, simple Coach Artie messaging */
 
-app.post("/api/message", async (req, res) => {
+app.post(`/api/${webApiPrefix}/message`, async (req, res) => {
   const message = req.body.message;
   const username = req.body.username || "API User";
 
@@ -37,7 +38,7 @@ app.post("/api/message", async (req, res) => {
   res.json({ response: processedMessage });
 });
 
-app.post("/api/message-image", async (req, res) => {
+app.post(`/api/${webApiPrefix}/message-image`, async (req, res) => {
   const message = req.body.message;
   const image = req.body.image;
   const username = req.body.username || "API User";
@@ -94,7 +95,7 @@ Then we will also have a second endpoint that does all of the above, and then ge
 //   res.status(200).end();
 // });
 
-app.post("/api/missive-reply", async (req, res) => {
+app.post(`/api/${webApiPrefix}/missive-reply`, async (req, res) => {
   const body = req.body;
   const webhookDescription = `${body?.rule?.description}`;
   // const message = req.body.message;
