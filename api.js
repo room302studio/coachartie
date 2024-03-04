@@ -8,6 +8,8 @@ require("dotenv").config();
 const apiFront = "https://public.missiveapp.com/v1";
 const apiKey = process.env.MISSIVE_API_KEY;
 
+const port = process.env.EXPRESS_PORT;
+
 app.use(express.json());
 
 // const basicAuth = require("express-basic-auth");
@@ -56,7 +58,6 @@ app.post("/api/message-image", async (req, res) => {
   res.json({ response: processedMessage });
 });
 
-let port = 8080;
 const server = app.listen(port, "0.0.0.0", () => {
   logger.info(`Server is running on port ${port}`);
 });
