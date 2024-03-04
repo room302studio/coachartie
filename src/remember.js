@@ -130,6 +130,11 @@ async function storeUserMemory({ username, channel, guild }, value) {
   // and include that in the database entry
   let embedding = null;
 
+  // TODO: Check .env for any non-openAI embedding models
+  // Cohere, Voyage, etc
+
+  // If the API keys are defined in the .env, then we should get embeddings from them and store those as well
+
   try {
     embedding = await memoryToEmbedding(value);
   } catch (e) {
