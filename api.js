@@ -95,6 +95,24 @@ Then we will also have a second endpoint that does all of the above, and then ge
 //   res.status(200).end();
 // });
 
+async function listMessages(emailMessageId) {
+  let url = `${apiFront}/conversations/${emailMessageId}/messages`;
+
+  const options = {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+  };
+
+  const response = await fetch(url, options);
+  const data = await response.json();
+  // add a 1ms delay to avoid rate limiting
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+  return data;
+}
+
 app.post("/api/missive-reply", async (req, res) => {
   const body = req.body;
   const webhookDescription = `${body?.rule?.description}`;
@@ -102,13 +120,24 @@ app.post("/api/missive-reply", async (req, res) => {
   const username = req.body.username || "API User";
   const conversationId = req.body.conversation.id;
 
+  const messages = listMessages(conversationId);
+
+  // TODO: We need to take the list of conversation messages from missive and turn them into a format that works for a message chain
+
+  const formattedMessages = messages.map((m) => {
+    return {
+      role: "user",
+      content: m.body,
+    };
+  });
+
+  formattedMessages.push({
+    role: "user",
+    content: `New data received from webhook: ${webhookDescription} \n ${req.body.message}`,
+  });
+
   const processedMessage = await processMessageChain(
-    [
-      {
-        role: "user",
-        content: `New data received from webhook: ${webhookDescription} \n ${req.body.message}`,
-      },
-    ],
+    formattedMessages,
     username
   );
 
