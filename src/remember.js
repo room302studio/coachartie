@@ -4,6 +4,8 @@ const { MEMORIES_TABLE_NAME, MESSAGES_TABLE_NAME } = require("../config");
 const { openai } = require("./openai");
 const logger = require("../src/logger.js")("remember");
 
+const port = process.env.EXPRESS_PORT;
+
 dotenv.config();
 
 const supabase = createClient(
@@ -129,6 +131,11 @@ async function storeUserMemory({ username, channel, guild }, value) {
   // TODO: We need to convert the memory into an embedding using the openai embeddings API
   // and include that in the database entry
   let embedding = null;
+
+  // TODO: Check .env for any non-openAI embedding models
+  // Cohere, Voyage, etc
+
+  // If the API keys are defined in the .env, then we should get embeddings from them and store those as well
 
   try {
     embedding = await memoryToEmbedding(value);
