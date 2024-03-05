@@ -106,7 +106,7 @@ app.post("/api/missive-reply", async (req, res) => {
     [
       {
         role: "user",
-        content: `New data received from webhook: ${webhookDescription} \n ${req.body.message}`,
+        content: `New user interaction through webhook: ${webhookDescription} \n ${req.body.comment.message}`,
       },
     ],
     username
