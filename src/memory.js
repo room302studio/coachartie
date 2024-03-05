@@ -61,7 +61,7 @@ async function generateAndStoreRememberCompletion(
   memories.forEach((memory) => {
     memoryMessages.push({
       role: "system",
-      content: `You remember from a previous interaction at ${memory.created_at}: ${memory.value}  `,
+      content: `${memory.created_at}: ${memory.value}  `,
     });
   });
 
@@ -162,13 +162,13 @@ async function generateAndStoreCapabilityCompletion(
   const relevantMemories = await getRelevantMemories(capabilityName);
 
   // de-dupe memories
-  const memories = [...userMemories, ...generalMemories];
+  const memories = [...userMemories, ...generalMemories, ...relevantMemories];
 
   // turn user memories into chatbot messages
   memories.forEach((memory) => {
     memoryMessages.push({
       role: "system",
-      content: `You remember from a previous interaction at ${memory.created_at}: ${memory.value}  `,
+      content: `${memory.created_at}: ${memory.value}  `,
     });
   });
 
@@ -213,11 +213,11 @@ async function generateAndStoreCapabilityCompletion(
       ...memoryMessages,
       {
         role: "system",
-        content: "---",
+        content: "Take a deep breath and take things step by step.",
       },
       {
         role: "system",
-        content: `You remember from a previous interaction: ${capabilityName} ${capabilityResponse}`,
+        content: `You previously ran the capability: ${capabilityName} and got the response: ${capabilityResponse}`,
       },
       {
         role: "user",
