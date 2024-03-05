@@ -102,11 +102,22 @@ app.post("/api/missive-reply", async (req, res) => {
   const username = req.body.username || "API User";
   const conversationId = req.body.conversation.id;
 
+  let userMessage;
+  // the user message might be in body.comment.message
+  // or it might be in body.comment.body
+  if (body.comment.message) {
+    userMessage = body.comment.message;
+  } else if (body.comment.body) {
+    userMessage = body.comment.body;
+  } else {
+    userMessage = JSON.stringify(body);
+  }
+
   const processedMessage = await processMessageChain(
     [
       {
         role: "user",
-        content: `New user interaction through webhook: ${webhookDescription} \n ${req.body.comment.message}`,
+        content: `New user interaction through webhook: ${webhookDescription} \n ${userMessage}`,
       },
     ],
     username
