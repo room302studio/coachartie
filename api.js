@@ -140,15 +140,16 @@ app.post("/api/missive-reply", async (req, res) => {
   });
 
   // if the response post was successful, we can return a 200 response, otherwise we send back the error
+  res.status(200).end();
 
-  if (responsePost.status === 200) {
-    res.status(200).end();
-  } else {
-    // we need to parse the error and send it back
-    const error = await responsePost.json();
-    res
-      .status(500)
-      .send(`Error sending response to Missive: ${JSON.stringify(error)}`)
-      .end();
-  }
+  // if (responsePost.status === 200) {
+  //   res.status(200).end();
+  // } else {
+  //   // we need to parse the error and send it back
+  //   const error = await responsePost.json();
+  //   res
+  //     .status(500)
+  //     .send(`Error sending response to Missive: ${JSON.stringify(error)}`)
+  //     .end();
+  // }
 });
