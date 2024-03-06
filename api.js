@@ -2,6 +2,7 @@ const express = require("express");
 const app = express();
 const { processMessageChain } = require("./src/chain");
 // const net = require('net');
+const { createHmac } = require("crypto");
 const logger = require("./src/logger.js")("api");
 require("dotenv").config();
 
@@ -96,11 +97,25 @@ Then we will also have a second endpoint that does all of the above, and then ge
 // });
 
 app.post("/api/missive-reply", async (req, res) => {
+  const passphrase = process.env.WEBHOOK_PASSPHRASE; // Assuming PASSPHRASE is the environment variable name
   const body = req.body;
   const webhookDescription = `${body?.rule?.description}`;
-  // const message = req.body.message;
   const username = req.body.username || "API User";
   const conversationId = req.body.conversation.id;
+
+  // Generate HMAC hash of the request body to verify authenticity
+  const hmac = createHmac("sha256", passphrase);
+  const reqBodyString = JSON.stringify(req.body);
+  hmac.update(reqBodyString);
+  const hash = hmac.digest("hex");
+
+  // Assuming the hash is sent in a header named X-Webhook-Signature
+  const signature = req.headers["x-webhook-signature"];
+
+  // Compare our hash with the signature provided in the request
+  if (hash !== signature) {
+    return res.status(401).send("Unauthorized request");
+  }
 
   let userMessage;
   // the user message might be in body.comment.message
@@ -137,11 +152,8 @@ app.post("/api/missive-reply", async (req, res) => {
     body: JSON.stringify({
       posts: {
         conversation: conversationId,
-        // body: processedMessage,
         notification: {
           title: "Coach Artie",
-          // body: lastMessage.content,
-          // body: "Hello from Coach Artie!",
           body: lastMessage.content,
         },
         text: lastMessage.content,
@@ -152,15 +164,4 @@ app.post("/api/missive-reply", async (req, res) => {
 
   // if the response post was successful, we can return a 200 response, otherwise we send back the error
   res.status(200).end();
-
-  // if (responsePost.status === 200) {
-  //   res.status(200).end();
-  // } else {
-  //   // we need to parse the error and send it back
-  //   const error = await responsePost.json();
-  //   res
-  //     .status(500)
-  //     .send(`Error sending response to Missive: ${JSON.stringify(error)}`)
-  //     .end();
-  // }
 });
