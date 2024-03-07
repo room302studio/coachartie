@@ -293,22 +293,15 @@ async function memoryToEmbedding(memory) {
  * @returns {Promise<Array>} - A promise that resolves to an array of relevant memories.
  */
 async function getRelevantMemories(queryString, limit = 5) {
-  logger.info("QUERY STRING", queryString);
+  logger.info(`Querying ${limit} relevant memories for: ${queryString}`);
   // turn the queryString into an embedding
   if (!queryString) {
     return [];
   }
 
-  // const embeddingResponse = await openai.createEmbedding({
-  //   model: "text-embedding-ada-002",
-  //   input: queryString,
-  // });
-
-  // const [{ embedding }] = embeddingResponse.data.data;
-
   const { embedding1: embedding } = await stringToEmbedding(queryString);
 
-  // query the database for the most relevant memories
+  // query the database for the most relevant memories, currently this is only supported on the openai embeddings
   const { data, error } = await supabase.rpc("match_memories", {
     query_embedding: embedding,
     match_threshold: 0.78,
