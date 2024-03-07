@@ -121,8 +121,8 @@ app.post("/api/missive-reply", async (req, res) => {
   const body = req.body;
   const webhookDescription = `${body?.rule?.description}`;
   // const message = req.body.message;
-  const username = req.body.username || "API User";
-  const conversationId = req.body.conversation.id;
+  const username = body.comment.author.email || "API User";
+  const conversationId = body.conversation.id;
 
   // We need to store every message we receive along with the conversation ID
   // So that when we see another webhook with this conversationId
@@ -156,7 +156,7 @@ app.post("/api/missive-reply", async (req, res) => {
 
   formattedMessages.push({
     role: "user",
-    content: `New data received from webhook: ${webhookDescription} \n ${req.body.message}`,
+    content: `${webhookDescription}: <${username}> \n ${userMessage}`,
   });
 
   let processedMessage;
