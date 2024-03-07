@@ -199,10 +199,10 @@ async function getChannelMessageHistory(channelId, limit = 5) {
 /**
  * Embeds a string using the Voyage AI API.
  * @param {string} string - The input string to embed.
- * @param {string} [model="voyage-2"] - The model to use for embedding (default: "voyage-2").
+ * @param {string} [model="voyage-large-2"] - The model to use for embedding (default: "voyage-large-2").
  * @returns {Promise<object>} - A promise that resolves to the response data from the API.
  */
-async function voyageEmbedding(string, model = "voyage-2") {
+async function voyageEmbedding(string, model = "voyage-large-2") {
   const response = await axios.post(
     "https://api.voyageai.com/v1/embeddings",
     {
@@ -239,7 +239,7 @@ async function stringToEmbedding(string) {
       const embed = await Cohere.embed({
         texts: [memory],
         model: "embed-english-v3.0",
-        inputType: "classification",
+        inputType: "search_document",
       });
       embedding2 = embed.embeddings;
     }
@@ -250,7 +250,7 @@ async function stringToEmbedding(string) {
   let embedding3 = null;
   try {
     if (process.env.VOYAGE_API_KEY) {
-      const embed = await voyageEmbedding(memory, "voyage-2");
+      const embed = await voyageEmbedding(memory, "voyage-large-2");
       embedding3 = embed.embedding;
     }
   } catch (error) {
