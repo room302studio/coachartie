@@ -1,6 +1,7 @@
 const express = require("express");
 const app = express();
 const { processMessageChain } = require("./src/chain");
+const { getChannelMessageHistory } = require("./src/remember.js");
 // const net = require('net');
 const logger = require("./src/logger.js")("api");
 require("dotenv").config();
@@ -120,14 +121,22 @@ app.post("/api/missive-reply", async (req, res) => {
   const username = req.body.username || "API User";
   const conversationId = req.body.conversation.id;
 
-  const messages = listMessages(conversationId);
+  // TODO: We need to store every message we receive along with the conversation ID
+  // So that when we see another webhook with this conversationId
+  // we can pull all the previous messages for context
+  await storeUserMessage(
+    { username, channel: conversationId, guild: "missive" },
+    req.body.message
+  );
+
+  const contextMessages = await getChannelMessageHistory(conversationId);
 
   // TODO: We need to take the list of conversation messages from missive and turn them into a format that works for a message chain
 
-  const formattedMessages = messages.map((m) => {
+  const formattedMessages = contextMessages.map((m) => {
     return {
       role: "user",
-      content: m.body,
+      content: m.value,
     };
   });
 

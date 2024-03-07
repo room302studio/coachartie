@@ -148,7 +148,7 @@ GET /v1/messages?email_message_id=Message-ID
 Fetch messages matching an email Message-ID.
 */
 
-async function listMessages(emailMessageId) {
+async function listConversationMessages(emailMessageId) {
   let url = `${apiFront}/conversations/${emailMessageId}/messages`;
 
   const options = {
@@ -166,28 +166,11 @@ async function listMessages(emailMessageId) {
   return data;
 }
 
-async function fetchConversationsWithMessages() {
-  try {
-    const response = await listConversations();
-    const conversations = response.conversations;
-    const promises = conversations.map((conversation) => {
-      // console.log(conversation);
-      return listMessages(conversation.id);
-    });
-    const messageResponses = await Promise.allSettled(promises);
+const conversationId = "2939b050-496f-4128-a249-61576f897720";
 
-    const messages = messageResponses.map((response) => {
-      return response.value.messages;
-    });
-
-    // console.log(messages);
-    return messages;
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-fetchConversationsWithMessages();
+const messages = listConversationMessages(conversationId).then((data) => {
+  console.log(data);
+});
 
 /*
 GET /v1/messages/id
@@ -321,7 +304,6 @@ async function getMessage(messageId) {
 }
 
 /*
-
 GET /v1/shared_labels
 
 List shared labels in organizations the authenticated user is part of.
@@ -337,9 +319,7 @@ List shared labels in organizations the authenticated user is part of.
     }
   ]
 }
-
 */
-
 async function listSharedLabels() {
   const url = `${apiFront}/shared_labels`;
   const options = {
