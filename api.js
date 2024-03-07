@@ -1,7 +1,7 @@
 const express = require("express");
 const app = express();
 const { processMessageChain } = require("./src/chain");
-const { getChannelMessageHistory } = require("./src/remember.js");
+const { getChannelMessageHistory, storeUserMessage } = require("./src/remember.js");
 // const net = require('net');
 const logger = require("./src/logger.js")("api");
 require("dotenv").config();
