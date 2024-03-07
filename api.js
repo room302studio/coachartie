@@ -1,7 +1,10 @@
 const express = require("express");
 const app = express();
 const { processMessageChain } = require("./src/chain");
-const { getChannelMessageHistory, storeUserMessage } = require("./src/remember.js");
+const {
+  getChannelMessageHistory,
+  storeUserMessage,
+} = require("./src/remember.js");
 // const net = require('net');
 const logger = require("./src/logger.js")("api");
 require("dotenv").config();
@@ -124,10 +127,10 @@ app.post("/api/missive-reply", async (req, res) => {
   // We need to store every message we receive along with the conversation ID
   // So that when we see another webhook with this conversationId
   // we can pull all the previous messages for context
-  await storeUserMessage(
-    { username, channel: conversationId, guild: "missive" },
-    req.body.message
-  );
+  // await storeUserMessage(
+  //   { username, channel: conversationId, guild: "missive" },
+  //   req.body.message
+  // );
 
   // the user message might be in body.comment.message
   // or it might be in body.comment.body
@@ -166,7 +169,7 @@ app.post("/api/missive-reply", async (req, res) => {
           content: `New user interaction through webhook: ${webhookDescription} \n ${userMessage}`,
         },
       ],
-      username
+      { username, channel: conversationId, guild: "missive" }
     );
   } catch (error) {
     res
