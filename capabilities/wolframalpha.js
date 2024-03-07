@@ -28,7 +28,7 @@ async function askWolframAlpha(question) {
   // const [question] = destructureArgs(args);
 
   const encodedQuestion = encodeURIComponent(question);
-  const wolframUrl = `https://api.wolframalpha.com/v1/result?i=${encodedQuestion}&appid=${wolframAppId}`;
+  const wolframUrl = `https://www.wolframalpha.com/api/v1/llm-api?input=${encodedQuestion}&appid=${wolframAppId}`;
 
   try {
     const response = await axios.get(wolframUrl);
