@@ -121,7 +121,7 @@ app.post("/api/missive-reply", async (req, res) => {
   const username = req.body.username || "API User";
   const conversationId = req.body.conversation.id;
 
-  // TODO: We need to store every message we receive along with the conversation ID
+  // We need to store every message we receive along with the conversation ID
   // So that when we see another webhook with this conversationId
   // we can pull all the previous messages for context
   await storeUserMessage(
@@ -129,9 +129,20 @@ app.post("/api/missive-reply", async (req, res) => {
     req.body.message
   );
 
+  // the user message might be in body.comment.message
+  // or it might be in body.comment.body
+  let userMessage;
+  if (body.comment.message) {
+    userMessage = body.comment.message;
+  } else if (body.comment.body) {
+    userMessage = body.comment.body;
+  } else {
+    userMessage = JSON.stringify(body);
+  }
+
   const contextMessages = await getChannelMessageHistory(conversationId);
 
-  // TODO: We need to take the list of conversation messages from missive and turn them into a format that works for a message chain
+  // We need to take the list of conversation messages from missive and turn them into a format that works for a message chain
 
   const formattedMessages = contextMessages.map((m) => {
     return {
@@ -146,7 +157,12 @@ app.post("/api/missive-reply", async (req, res) => {
   });
 
   const processedMessage = await processMessageChain(
-    formattedMessages,
+    [
+      {
+        role: "user",
+        content: `New user interaction through webhook: ${webhookDescription} \n ${userMessage}`,
+      },
+    ],
     username
   );
 
@@ -178,15 +194,16 @@ app.post("/api/missive-reply", async (req, res) => {
   });
 
   // if the response post was successful, we can return a 200 response, otherwise we send back the error
+  res.status(200).end();
 
-  if (responsePost.status === 200) {
-    res.status(200).end();
-  } else {
-    // we need to parse the error and send it back
-    const error = await responsePost.json();
-    res
-      .status(500)
-      .send(`Error sending response to Missive: ${JSON.stringify(error)}`)
-      .end();
-  }
+  // if (responsePost.status === 200) {
+  //   res.status(200).end();
+  // } else {
+  //   // we need to parse the error and send it back
+  //   const error = await responsePost.json();
+  //   res
+  //     .status(500)
+  //     .send(`Error sending response to Missive: ${JSON.stringify(error)}`)
+  //     .end();
+  // }
 });
