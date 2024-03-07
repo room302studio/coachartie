@@ -156,15 +156,23 @@ app.post("/api/missive-reply", async (req, res) => {
     content: `New data received from webhook: ${webhookDescription} \n ${req.body.message}`,
   });
 
-  const processedMessage = await processMessageChain(
-    [
-      {
-        role: "user",
-        content: `New user interaction through webhook: ${webhookDescription} \n ${userMessage}`,
-      },
-    ],
-    username
-  );
+  let processedMessage;
+
+  try {
+    processedMessage = await processMessageChain(
+      [
+        {
+          role: "user",
+          content: `New user interaction through webhook: ${webhookDescription} \n ${userMessage}`,
+        },
+      ],
+      username
+    );
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: "Internal Server Error: Error processing message" });
+  }
 
   const lastMessage = processedMessage[processedMessage.length - 1];
 
@@ -193,17 +201,6 @@ app.post("/api/missive-reply", async (req, res) => {
     }),
   });
 
-  // if the response post was successful, we can return a 200 response, otherwise we send back the error
+  // if the response post was successful, we can return a 200 response, otherwise we send back the error in the place it happened
   res.status(200).end();
-
-  // if (responsePost.status === 200) {
-  //   res.status(200).end();
-  // } else {
-  //   // we need to parse the error and send it back
-  //   const error = await responsePost.json();
-  //   res
-  //     .status(500)
-  //     .send(`Error sending response to Missive: ${JSON.stringify(error)}`)
-  //     .end();
-  // }
 });
