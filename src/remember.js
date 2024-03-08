@@ -64,29 +64,6 @@ async function getAllMemories(limit = 5) {
 }
 
 /**
- * Retrieves the message history of a user.
- * @param {string} userId - The ID of the user.
- * @param {number} [limit=5] - The maximum number of messages to retrieve. Default is 5.
- * @returns {Promise<Array<Object>>} - A promise that resolves to an array of message objects.
- */
-async function getUserMessageHistory(userId, limit = 5) {
-  const { data, error } = await supabase
-    // .from("messages")
-    .from(MESSAGES_TABLE_NAME)
-    .select("*")
-    .limit(limit)
-    .order("created_at", { ascending: false })
-    .eq("user_id", userId);
-
-  if (error) {
-    logger.info("Error fetching user message:", error);
-    return null;
-  }
-
-  return data;
-}
-
-/**
  * Converts a memory into an embedding using OpenAI's text-embedding-ada-002 model.
  * @param {string} memory - The memory to convert into an embedding.
  * @returns {Promise<number[]>} - The embedding representing the memory.
@@ -186,6 +163,52 @@ async function storeUserMessage({ username, channel, guild }, value) {
 }
 
 /**
+ * Retrieves the message history of a user.
+ * @param {string} userId - The ID of the user.
+ * @param {number} [limit=5] - The maximum number of messages to retrieve. Default is 5.
+ * @returns {Promise<Array<Object>>} - A promise that resolves to an array of message objects.
+ */
+async function getUserMessageHistory(userId, limit = 5) {
+  const { data, error } = await supabase
+    // .from("messages")
+    .from(MESSAGES_TABLE_NAME)
+    .select("*")
+    .limit(limit)
+    .order("created_at", { ascending: false })
+    .eq("user_id", userId);
+
+  if (error) {
+    logger.info("Error fetching user message:", error);
+    return null;
+  }
+
+  return data;
+}
+
+/**
+ * Retrieves message history for a specific channel_id
+ * @param {string} channelId - The ID of the channel.
+ * @param {number} [limit=5] - The maximum number of messages to retrieve. Default is 5.
+ * @returns {Promise<Array<Object>>} - A promise that resolves to an array of message objects.
+ */
+async function getChannelMessageHistory(channelId, limit = 5) {
+  const { data, error } = await supabase
+    // .from("messages")
+    .from(MESSAGES_TABLE_NAME)
+    .select("*")
+    .limit(limit)
+    .order("created_at", { ascending: false })
+    .eq("channel_id", channelId);
+
+  if (error) {
+    logger.info("Error fetching channel message:", error);
+    return null;
+  }
+
+  return data;
+}
+
+/**
  * Retrieves relevant memories based on a query string.
  * @param {string} queryString - The query string to search for relevant memories.
  * @param {number} [limit=5] - The maximum number of memories to retrieve (default: 5).
@@ -227,4 +250,5 @@ module.exports = {
   getAllMemories,
   storeUserMessage,
   getRelevantMemories,
+  getChannelMessageHistory,
 };

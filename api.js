@@ -1,6 +1,10 @@
 const express = require("express");
 const app = express();
 const { processMessageChain } = require("./src/chain");
+const {
+  getChannelMessageHistory,
+  storeUserMessage,
+} = require("./src/remember.js");
 // const net = require('net');
 const logger = require("./src/logger.js")("api");
 require("dotenv").config();
@@ -95,16 +99,42 @@ Then we will also have a second endpoint that does all of the above, and then ge
 //   res.status(200).end();
 // });
 
+async function listMessages(emailMessageId) {
+  let url = `${apiFront}/conversations/${emailMessageId}/messages`;
+
+  const options = {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+  };
+
+  const response = await fetch(url, options);
+  const data = await response.json();
+  // add a 1ms delay to avoid rate limiting
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+  return data;
+}
+
 app.post("/api/missive-reply", async (req, res) => {
   const body = req.body;
   const webhookDescription = `${body?.rule?.description}`;
   // const message = req.body.message;
-  const username = req.body.username || "API User";
-  const conversationId = req.body.conversation.id;
+  const username = body.comment.author.email || "API User";
+  const conversationId = body.conversation.id;
 
-  let userMessage;
+  // We need to store every message we receive along with the conversation ID
+  // So that when we see another webhook with this conversationId
+  // we can pull all the previous messages for context
+  // await storeUserMessage(
+  //   { username, channel: conversationId, guild: "missive" },
+  //   req.body.message
+  // );
+
   // the user message might be in body.comment.message
   // or it might be in body.comment.body
+  let userMessage;
   if (body.comment.message) {
     userMessage = body.comment.message;
   } else if (body.comment.body) {
@@ -113,15 +143,39 @@ app.post("/api/missive-reply", async (req, res) => {
     userMessage = JSON.stringify(body);
   }
 
-  const processedMessage = await processMessageChain(
-    [
-      {
-        role: "user",
-        content: `New user interaction through webhook: ${webhookDescription} \n ${userMessage}`,
-      },
-    ],
-    username
-  );
+  const contextMessages = await getChannelMessageHistory(conversationId);
+
+  // We need to take the list of conversation messages from missive and turn them into a format that works for a message chain
+
+  const formattedMessages = contextMessages.map((m) => {
+    return {
+      role: "user",
+      content: m.value,
+    };
+  });
+
+  formattedMessages.push({
+    role: "user",
+    content: `${webhookDescription}: <${username}> \n ${userMessage}`,
+  });
+
+  let processedMessage;
+
+  try {
+    processedMessage = await processMessageChain(
+      [
+        {
+          role: "user",
+          content: `New user interaction through webhook: ${webhookDescription} \n ${userMessage}`,
+        },
+      ],
+      { username, channel: conversationId, guild: "missive" }
+    );
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: "Internal Server Error: Error processing message" });
+  }
 
   const lastMessage = processedMessage[processedMessage.length - 1];
 
@@ -150,17 +204,6 @@ app.post("/api/missive-reply", async (req, res) => {
     }),
   });
 
-  // if the response post was successful, we can return a 200 response, otherwise we send back the error
+  // if the response post was successful, we can return a 200 response, otherwise we send back the error in the place it happened
   res.status(200).end();
-
-  // if (responsePost.status === 200) {
-  //   res.status(200).end();
-  // } else {
-  //   // we need to parse the error and send it back
-  //   const error = await responsePost.json();
-  //   res
-  //     .status(500)
-  //     .send(`Error sending response to Missive: ${JSON.stringify(error)}`)
-  //     .end();
-  // }
 });
