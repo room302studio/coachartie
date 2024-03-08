@@ -123,9 +123,6 @@ app.post("/api/missive-reply", async (req, res) => {
     logger.info("HMAC signature check passed");
   }
 
-  // Continue with the rest of the code...
-});
-
   let userMessage;
   // the user message might be in body.comment.message
   // or it might be in body.comment.body
