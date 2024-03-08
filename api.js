@@ -112,10 +112,19 @@ app.post("/api/missive-reply", async (req, res) => {
   // Assuming the hash is sent in a header named X-Webhook-Signature
   const signature = `sha256=${req.headers["x-webhook-signature"]}`;
 
+  logger.info("HMAC signature:", signature);
+  logger.info("Computed HMAC hash:", hash);
+
   // Compare our hash with the signature provided in the request
   if (hash !== signature) {
+    logger.info("HMAC signature check failed");
     return res.status(401).send("Unauthorized request");
+  } else {
+    logger.info("HMAC signature check passed");
   }
+
+  // Continue with the rest of the code...
+});
 
   let userMessage;
   // the user message might be in body.comment.message
