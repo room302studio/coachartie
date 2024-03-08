@@ -112,13 +112,15 @@ app.post("/api/missive-reply", async (req, res) => {
   // log the headers
   logger.info("Request headers:" + JSON.stringify(req.headers));
 
-  const signature = `sha256=${req.headers["x-hook-signature"]}`;
+  const signature = `${req.headers["x-hook-signature"]}`;
 
   logger.info("HMAC signature:" + signature);
   logger.info("Computed HMAC hash:" + hash);
 
+  const hashString = `sha256=${hash}`;
+
   // Compare our hash with the signature provided in the request
-  if (hash !== signature) {
+  if (hashString !== signature) {
     logger.info("HMAC signature check failed");
     return res.status(401).send("Unauthorized request");
   } else {
