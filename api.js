@@ -109,6 +109,9 @@ app.post("/api/missive-reply", async (req, res) => {
   hmac.update(reqBodyString);
   const hash = hmac.digest("hex");
 
+  // log the headers
+  logger.info("Request headers:" + JSON.stringify(req.headers));
+
   const signature = `sha256=${req.headers["X-Hook-Signature"]}`;
 
   logger.info("HMAC signature:" + signature);
