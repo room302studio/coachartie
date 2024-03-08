@@ -112,7 +112,7 @@ app.post("/api/missive-reply", async (req, res) => {
   // log the headers
   logger.info("Request headers:" + JSON.stringify(req.headers));
 
-  const signature = `sha256=${req.headers["X-Hook-Signature"]}`;
+  const signature = `sha256=${req.headers["x-hook-signature"]}`;
 
   logger.info("HMAC signature:" + signature);
   logger.info("Computed HMAC hash:" + hash);
