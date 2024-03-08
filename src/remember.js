@@ -257,10 +257,19 @@ async function stringToEmbedding(string) {
     console.error("Error generating embedding3:", error);
   }
 
+  let embedding4 = null;
+  const openAiLargeEmbeddingResponse = await openai.createEmbedding({
+    model: 'text-embedding-3-large',
+    input: memory,
+  });
+  const [{ embedding: embedding4 }] = openAiLargeEmbeddingResponse.data.data;
+
+
   return {
     embedding1,
     embedding2,
     embedding3,
+    embedding4
   };
 }
 
