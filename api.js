@@ -6,6 +6,7 @@ const {
   storeUserMessage,
 } = require("./src/remember.js");
 // const net = require('net');
+const { createHmac } = require("crypto");
 const logger = require("./src/logger.js")("api");
 require("dotenv").config();
 
@@ -118,19 +119,35 @@ async function listMessages(emailMessageId) {
 }
 
 app.post("/api/missive-reply", async (req, res) => {
+  const passphrase = process.env.WEBHOOK_PASSPHRASE; // Assuming PASSPHRASE is the environment variable name
   const body = req.body;
   const webhookDescription = `${body?.rule?.description}`;
-  // const message = req.body.message;
   const username = body.comment.author.email || "API User";
   const conversationId = body.conversation.id;
 
-  // We need to store every message we receive along with the conversation ID
-  // So that when we see another webhook with this conversationId
-  // we can pull all the previous messages for context
-  // await storeUserMessage(
-  //   { username, channel: conversationId, guild: "missive" },
-  //   req.body.message
-  // );
+  // Generate HMAC hash of the request body to verify authenticity
+  const hmac = createHmac("sha256", passphrase);
+  const reqBodyString = JSON.stringify(req.body);
+  hmac.update(reqBodyString);
+  const hash = hmac.digest("hex");
+
+  // log the headers
+  logger.info("Request headers:" + JSON.stringify(req.headers));
+
+  const signature = `${req.headers["x-hook-signature"]}`;
+
+  logger.info("HMAC signature:" + signature);
+  logger.info("Computed HMAC hash:" + hash);
+
+  const hashString = `sha256=${hash}`;
+
+  // Compare our hash with the signature provided in the request
+  if (hashString !== signature) {
+    logger.info("HMAC signature check failed");
+    return res.status(401).send("Unauthorized request");
+  } else {
+    logger.info("HMAC signature check passed");
+  }
 
   // the user message might be in body.comment.message
   // or it might be in body.comment.body
@@ -191,11 +208,8 @@ app.post("/api/missive-reply", async (req, res) => {
     body: JSON.stringify({
       posts: {
         conversation: conversationId,
-        // body: processedMessage,
         notification: {
           title: "Coach Artie",
-          // body: lastMessage.content,
-          // body: "Hello from Coach Artie!",
           body: lastMessage.content,
         },
         text: lastMessage.content,
