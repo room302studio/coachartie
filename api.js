@@ -3,7 +3,7 @@ const app = express();
 const { processMessageChain } = require("./src/chain");
 const {
   getChannelMessageHistory,
-  storeUserMessage,
+  hasRecentMemoryOfResource
 } = require("./src/remember.js");
 // const net = require('net');
 const { createHmac } = require("crypto");
@@ -181,20 +181,49 @@ app.post("/api/missive-reply", async (req, res) => {
   let formattedMessages = []; // the array of messages we will send to processMessageChain
 
   // there might be an attachment in body.comment.attchment
-  let msgAttachments;
-  if (body.comment.attachment) {
+  const attachment = body.comment.attachment
+  if (attachment) {
     logger.info(`Attachment found: ${JSON.stringify(body.comment.attachment)}`);
-    // msgAttachments = body.comment.attachment;
-    // if there is an attachment, we need to process it and turn it into text
-    const attachmentDescription = await fetchImageDescription(
-      body.comment.attachment.url,
-    );
 
-    // add the description of the attachment to the formattedMessages array
-    formattedMessages.push({
-      role: "system",
-      content: `The user sent an attachment along with the message: ${attachmentDescription}`,
-    });
+
+    const resourceId = attachment.id;
+
+    const isInMemory = await hasMemoryOfResource(resourceId); // check if we have ANY memory of this resource
+
+    logger.info(`isInMemory: ${isInMemory} resourceId: ${resourceId}`)
+
+    if(!isInMemory) {
+      logger.info(`No memory of resource ${resourceId} found, fetching description`);
+      // we don't have any memory of this resource, so we need to store it
+      // we need to use the vision API to get a description of the image
+      const attachmentDescription = await fetchImageDescription(
+        body.comment.attachment.url,
+      );
+
+      // form a memory of the resource
+      await storeUserMemory(
+        { username, channel: conversationId, guild: "missive" },
+        attachmentDescription,
+        "attachment",
+        resourceId
+      );
+
+      // add the description of the attachment to the formattedMessages array
+      formattedMessages.push({
+        role: "system",
+        content: `The user sent an attachment along with the message: ${attachmentDescription}`,
+      });
+    }
+
+    // if it is in the memory, let's grab all of the memories of it and add them to the formattedMessages array
+    const resourceMemories = await getResourceMemories(resourceId);
+    formattedMessages.push(...resourceMemories.map((m) => {
+      return {
+        role: "system",
+        content: m.value,
+      };
+    }));
+
   }
   const contextMessages = await getChannelMessageHistory(conversationId);
 

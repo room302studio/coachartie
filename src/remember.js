@@ -3,6 +3,8 @@ const dotenv = require("dotenv");
 const { MEMORIES_TABLE_NAME, MESSAGES_TABLE_NAME } = require("../config");
 const { openai } = require("./openai");
 const logger = require("../src/logger.js")("remember");
+const { differenceInHours } = require('date-fns');
+
 
 const port = process.env.EXPRESS_PORT;
 
@@ -87,9 +89,11 @@ async function memoryToEmbedding(memory) {
  * Stores a memory in the database
  * @param {string} userId
  * @param {string} value
+ * @param {string} memoryType
+ * @param {string} resourceId
  * @returns {Promise<void>}
  */
-async function storeUserMemory({ username, channel, guild }, value) {
+async function storeUserMemory({ username, channel, guild }, value, memoryType = 'user', resourceId) {
   // first we do some checks to make sure we have the right types of data
   if (!username) {
     return logger.info("No username provided to storeUserMemory");
@@ -126,13 +130,90 @@ async function storeUserMemory({ username, channel, guild }, value) {
     .insert({
       user_id: username,
       channel_id: channel,
+      guild_id: guild,
       value,
       embedding,
+      memory_type: memoryType,
+      resource_id: resourceId,
     });
 
   if (error) {
     logger.info(`Error storing user memory: ${error.message}`);
   }
+}
+
+/**
+ * Retrieve memories associated with a specific file ID
+ * @param {string} resourceId - The ID of the file
+ * @param {number} [limit=5] - The maximum number of memories to retrieve. Default is 5.
+ * @returns {Promise<Array<Object>>} - A promise that resolves to an array of memory objects.
+ **/
+async function getResourceMemories(resourceId, limit = 5) {
+  const { data, error } = await supabase
+    .from(MEMORIES_TABLE_NAME)
+    .select("*")
+    .limit(limit)
+    .order("created_at", { ascending: false })
+    .eq("resource_id", resourceId);
+
+  if (error) {
+    logger.info("Error fetching resource memories:", error);
+    return null;
+  }
+
+  return data;
+}
+
+/**
+ * Checks if there is a memory of the file based on its resource ID.
+ * 
+ * @param {string} resourceId - The ID of the resource (file) to check.
+ * @returns {Promise<boolean>} - True if there is a memory of the file, false otherwise.
+ */
+async function hasMemoryOfResource(resourceId) {
+  const { data, error } = await supabase
+    .from(MEMORIES_TABLE_NAME)
+    .select("created_at")
+    .eq("resource_id", resourceId)
+    .limit(1);
+
+  if (error) {
+    logger.error("Error fetching the memory of the file:", error);
+    return false; // Consider the absence of data as no memory exists.
+  }
+
+  return data.length > 0;
+}
+
+/**
+ * Checks if there is a recent memory of the file based on its resource ID, where "recent" is defined by the caller.
+ * 
+ * @param {string} resourceId - The ID of the resource (file) to check.
+ * @param {number} recencyHours - The number of hours to consider a memory recent.
+ * @returns {Promise<boolean>} - True if there is a recent memory of the file, false otherwise.
+ */
+async function hasRecentMemoryOfResource(resourceId, recencyHours = 24) {
+  const hasMemory = await hasMemoryOfResource(resourceId);
+
+  if (!hasMemory) {
+    return false;
+  }
+
+  const { data, error } = await supabase
+    .from(MEMORIES_TABLE_NAME)
+    .select("created_at")
+    .eq("resource_id", resourceId)
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if (error) {
+    logger.error("Error fetching the most recent memory of the file:", error);
+    return false; // Consider the absence of data as no recent memory exists.
+  }
+
+  const hoursSinceLastMemory = differenceInHours(new Date(), new Date(data[0].created_at));
+
+  return hoursSinceLastMemory <= recencyHours;
 }
 
 /**
@@ -251,4 +332,6 @@ module.exports = {
   storeUserMessage,
   getRelevantMemories,
   getChannelMessageHistory,
+  getResourceMemories,
+  hasRecentMemoryOfResource,
 };
