@@ -103,6 +103,8 @@ Then we will also have a second endpoint that does all of the above, and then ge
 async function listMessages(emailMessageId) {
   let url = `${apiFront}/conversations/${emailMessageId}/messages`;
 
+  logger.info(`Fetching messages from ${url}`);
+
   const options = {
     method: "GET",
     headers: {
@@ -113,8 +115,8 @@ async function listMessages(emailMessageId) {
 
   const response = await fetch(url, options);
   const data = await response.json();
-  // add a 1ms delay to avoid rate limiting
-  await new Promise((resolve) => setTimeout(resolve, 1000));
+
+  logger.info(`Data: ${JSON.stringify(data)}`);
   return data;
 }
 
