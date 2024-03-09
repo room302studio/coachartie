@@ -38,7 +38,7 @@ app.post("/api/message", async (req, res) => {
         content: message,
       },
     ],
-    username
+    username,
   );
 
   res.json({ response: processedMessage });
@@ -57,7 +57,7 @@ app.post("/api/message-image", async (req, res) => {
         image: image,
       },
     ],
-    { username }
+    { username },
   );
 
   res.json({ response: processedMessage });
@@ -178,41 +178,24 @@ app.post("/api/missive-reply", async (req, res) => {
         }
       ] */
 
-  const allImageAttachments = conversationMessages.messages
-    .map((m) => m.attachments)
-    .flat()
-    // then we filter to extensions that vision can handle
-    .filter((a) => ["png", "jpg", "jpeg", "pdf"].includes(a.extension));
-
-  logger.info(`Found ${allImageAttachments.length} image attachments`);
-
-  // TODO: Do this for audio, and pass the audio to the speech-to-text API
-
-  // now we loop through the image attachments and turn them into text with ./src/vision.js
-  // TODO: We should cache these somewhere, so we don't have to process them every time
-  // We could also store the description as a memory tied to the resource ID, and look up all memories regarding that resource ID when we get new messages
-  const imageTexts = await Promise.all(
-    allImageAttachments.map(async (a) => {
-      logger.info(`Processing image attachment ${a.id}`);
-      const imageDescription = await fetchImageDescription(a.url);
-      logger.info(`Image attachment ${a.id} description: ${imageDescription}`);
-
-      // return imageDescription;
-      // we need to return the ID of the image along with the description
-      return `Attachment ${a.id}: ${imageDescription}`;
-    })
-  );
-
   let formattedMessages = []; // the array of messages we will send to processMessageChain
 
-  // now we add the image IDs and their descriptions to the formattedMessages array
-  formattedMessages = imageTexts.map((t) => {
-    return {
-      role: "user",
-      content: t,
-    };
-  });
+  // there might be an attachment in body.comment.attchment
+  let msgAttachments;
+  if (body.comment.attachment) {
+    logger.info(`Attachment found: ${JSON.stringify(body.comment.attachment)}`);
+    // msgAttachments = body.comment.attachment;
+    // if there is an attachment, we need to process it and turn it into text
+    const attachmentDescription = await fetchImageDescription(
+      body.comment.attachment.url,
+    );
 
+    // add the description of the attachment to the formattedMessages array
+    formattedMessages.push({
+      role: "system",
+      content: `The user sent an attachment along with the message: ${attachmentDescription}`,
+    });
+  }
   const contextMessages = await getChannelMessageHistory(conversationId);
 
   formattedMessages = contextMessages.map((m) => {
@@ -242,7 +225,7 @@ app.post("/api/missive-reply", async (req, res) => {
           content: `New user interaction through webhook: ${webhookDescription} \n ${userMessage}`,
         },
       ],
-      { username, channel: conversationId, guild: "missive" }
+      { username, channel: conversationId, guild: "missive" },
     );
   } catch (error) {
     res
