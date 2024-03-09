@@ -163,6 +163,7 @@ app.post("/api/missive-reply", async (req, res) => {
   // we also need to check if there is an attachment, and if there is, we need to process it and turn it into text
 
   const conversationMessages = await listMessages(conversationId);
+  logger.info(`${conversationMessages.length} messages found in conversation ${conversationId}`);
 
   /*       "attachments": [
         {
@@ -179,6 +180,33 @@ app.post("/api/missive-reply", async (req, res) => {
       ] */
 
   let formattedMessages = []; // the array of messages we will send to processMessageChain
+
+
+  // check for any attachments in any of the conversation messages also
+  // and if there are any memories of them, add them to the formattedMessages array
+  conversationMessages.forEach((message) => {
+    logger.info(`Checking message ${message.id} for attachments`);
+    const attachments = message.attachments;
+    if (attachments) {
+      attachments.forEach(async (attachment) => {
+        const resourceId = attachment.id;
+        const isInMemory = await hasRecentMemoryOfResource(resourceId); // check if we have ANY memory of this resource
+        if (isInMemory) {
+          logger.info(`Memory of resource ${resourceId} found, adding to formattedMessages`);
+          // if it is in the memory, let's grab all of the memories of it and add them to the formattedMessages array
+          const resourceMemories = await getResourceMemories(resourceId);
+          logger.info(`${resourceMemories.length} memories found for resource ${resourceId}`);
+          formattedMessages.push(...resourceMemories.map((m) => {
+            return {
+              role: "system",
+              content: m.value,
+            };
+          }));
+        }
+      });
+    }
+  })
+
 
   // there might be an attachment in body.comment.attchment
   const attachment = body.comment.attachment
@@ -200,6 +228,8 @@ app.post("/api/missive-reply", async (req, res) => {
         body.comment.attachment.url,
       );
 
+      logger.info(`Attachment description: ${attachmentDescription}`);
+
       // form a memory of the resource
       await storeUserMemory(
         { username, channel: conversationId, guild: "missive" },
@@ -217,6 +247,7 @@ app.post("/api/missive-reply", async (req, res) => {
 
     // if it is in the memory, let's grab all of the memories of it and add them to the formattedMessages array
     const resourceMemories = await getResourceMemories(resourceId);
+    logger.info(`${resourceMemories.length} memories found for resource ${resourceId}`);
     formattedMessages.push(...resourceMemories.map((m) => {
       return {
         role: "system",
@@ -226,6 +257,7 @@ app.post("/api/missive-reply", async (req, res) => {
 
   }
   const contextMessages = await getChannelMessageHistory(conversationId);
+  logger.info(`${contextMessages.length} context messages found in conversation ${conversationId}`);
 
   formattedMessages = contextMessages.map((m) => {
     return {
@@ -233,8 +265,6 @@ app.post("/api/missive-reply", async (req, res) => {
       content: m.value,
     };
   });
-
-  // TODO: Check if any of the messages have attachments, and if they do, we need to run them through GPT-4 vision and turn them into text
 
   // make the last message the user message
   formattedMessages.push({
@@ -259,7 +289,7 @@ app.post("/api/missive-reply", async (req, res) => {
   } catch (error) {
     res
       .status(500)
-      .json({ error: "Internal Server Error: Error processing message" });
+      .json({ error: `Error processing message chain: ${error.message}` });
   }
 
   const lastMessage = processedMessage[processedMessage.length - 1];
