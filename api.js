@@ -117,7 +117,10 @@ async function listMessages(emailMessageId) {
   const data = await response.json();
 
   logger.info(`Data: ${JSON.stringify(data)}`);
-  return data;
+  /* 
+  {"messages":[{"id":"72f9162e-22cd-4f11-ae91-0b2223f688b1","subject":"[FYI] HubSpot is launching a new pricing model","preview":"Please read to learn what this means for your account as an existing customer.","type":"email","delivered_at":1709661736,"updated_at":1709661751,"created_at":1709661751,"email_message_id":"<1709661726112.203e1867-4f38-4c3e-b30f-18a4cca232e1@bf1.hubspot.com>","in_reply_to":[],"references":[],"from_field":{"name":"The HubSpot Team","address":"pricing@hubspot.com"},"to_fields":[{"name":null,"address":"ejfox@room302.studio"}],"cc_fields":[],"bcc_fields":[],"reply_to_fields":[{"name":null,"address":"pricing@hubspot.com"}],"attachments":[],"author":null}]}
+  */
+  return data.messages;
 }
 
 app.post("/api/missive-reply", async (req, res) => {
