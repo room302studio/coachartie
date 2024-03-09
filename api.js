@@ -184,22 +184,24 @@ app.post("/api/missive-reply", async (req, res) => {
     // then we filter to extensions that vision can handle
     .filter((a) => ["png", "jpg", "jpeg", "pdf"].includes(a.extension));
 
+  logger.info(`Found ${allImageAttachments.length} image attachments`);
 
   // TODO: Do this for audio, and pass the audio to the speech-to-text API
-
 
   // now we loop through the image attachments and turn them into text with ./src/vision.js
   // TODO: We should cache these somewhere, so we don't have to process them every time
   // We could also store the description as a memory tied to the resource ID, and look up all memories regarding that resource ID when we get new messages
   const imageTexts = await Promise.all(
     allImageAttachments.map(async (a) => {
+      logger.info(`Processing image attachment ${a.id}`);
       const imageDescription = await fetchImageDescription(a.url);
+      logger.info(`Image attachment ${a.id} description: ${imageDescription}`);
 
       // return imageDescription;
       // we need to return the ID of the image along with the description
       return `Attachment ${a.id}: ${imageDescription}`;
     })
-  );  
+  );
 
   let formattedMessages = []; // the array of messages we will send to processMessageChain
 
@@ -211,8 +213,7 @@ app.post("/api/missive-reply", async (req, res) => {
     };
   });
 
-
-  const contextMessages = await getChannelMessageHistory(conversationId);  
+  const contextMessages = await getChannelMessageHistory(conversationId);
 
   formattedMessages = contextMessages.map((m) => {
     return {
@@ -221,16 +222,15 @@ app.post("/api/missive-reply", async (req, res) => {
     };
   });
 
-  
-
   // TODO: Check if any of the messages have attachments, and if they do, we need to run them through GPT-4 vision and turn them into text
-
 
   // make the last message the user message
   formattedMessages.push({
     role: "user",
     content: `${webhookDescription}: <${username}> \n ${userMessage}`,
   });
+
+  logger.info("Formatted messages", JSON.stringify(formattedMessages));
 
   let processedMessage;
 
