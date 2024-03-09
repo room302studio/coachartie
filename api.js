@@ -160,17 +160,73 @@ app.post("/api/missive-reply", async (req, res) => {
     userMessage = JSON.stringify(body);
   }
 
-  const contextMessages = await getChannelMessageHistory(conversationId);
+  // we also need to check if there is an attachment, and if there is, we need to process it and turn it into text
 
-  // We need to take the list of conversation messages from missive and turn them into a format that works for a message chain
+  const conversationMessages = await listMessages(conversationId);
 
-  const formattedMessages = contextMessages.map((m) => {
+  /*       "attachments": [
+        {
+          "id": "81eed561-4908-4738-9a9f-2da886b1de43",
+          "filename": "inline-image.png",
+          "extension": "png",
+          "url": "https://...",
+          "media_type": "image",
+          "sub_type": "png",
+          "size": 114615,
+          "width": 668,
+          "height": 996
+        }
+      ] */
+
+  const allImageAttachments = conversationMessages.messages
+    .map((m) => m.attachments)
+    .flat()
+    // then we filter to extensions that vision can handle
+    .filter((a) => ["png", "jpg", "jpeg", "pdf"].includes(a.extension));
+
+
+  // TODO: Do this for audio, and pass the audio to the speech-to-text API
+
+
+  // now we loop through the image attachments and turn them into text with ./src/vision.js
+  // TODO: We should cache these somewhere, so we don't have to process them every time
+  // We could also store the description as a memory tied to the resource ID, and look up all memories regarding that resource ID when we get new messages
+  const imageTexts = await Promise.all(
+    allImageAttachments.map(async (a) => {
+      const imageDescription = await fetchImageDescription(a.url);
+
+      // return imageDescription;
+      // we need to return the ID of the image along with the description
+      return `Attachment ${a.id}: ${imageDescription}`;
+    })
+  );  
+
+  let formattedMessages = []; // the array of messages we will send to processMessageChain
+
+  // now we add the image IDs and their descriptions to the formattedMessages array
+  formattedMessages = imageTexts.map((t) => {
+    return {
+      role: "user",
+      content: t,
+    };
+  });
+
+
+  const contextMessages = await getChannelMessageHistory(conversationId);  
+
+  formattedMessages = contextMessages.map((m) => {
     return {
       role: "user",
       content: m.value,
     };
   });
 
+  
+
+  // TODO: Check if any of the messages have attachments, and if they do, we need to run them through GPT-4 vision and turn them into text
+
+
+  // make the last message the user message
   formattedMessages.push({
     role: "user",
     content: `${webhookDescription}: <${username}> \n ${userMessage}`,
