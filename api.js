@@ -162,7 +162,10 @@ app.post("/api/missive-reply", async (req, res) => {
 
   // we also need to check if there is an attachment, and if there is, we need to process it and turn it into text
 
+  logger.info(`Looking for messages in conversation ${conversationId}`);
   const conversationMessages = await listMessages(conversationId);
+  logger.info(`${conversationMessages.length} messages found in conversation ${conversationId}`);
+
   logger.info(`${conversationMessages.length} messages found in conversation ${conversationId}`);
 
   /*       "attachments": [
