@@ -369,3 +369,12 @@ async function listUsers() {
   const data = await response.json();
   return data;
 }
+
+
+module.exports = {
+  listConversations,
+  listConversationMessages,
+  getMessage,
+  listSharedLabels,
+  listUsers,
+};
