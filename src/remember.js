@@ -344,5 +344,6 @@ module.exports = {
   getRelevantMemories,
   getChannelMessageHistory,
   getResourceMemories,
+  hasMemoryOfResource,
   hasRecentMemoryOfResource,
 };
