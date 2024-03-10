@@ -129,6 +129,11 @@ async function listMessages(emailMessageId) {
 }
 
 app.post("/api/missive-reply", async (req, res) => {
+
+  // missive spams us if we take longer than 15 seconds to respond
+  // so here you go
+  res.status(200).end();
+
   let formattedMessages = []; // the array of messages we will send to processMessageChain
   // everything gets added to this
   const passphrase = process.env.WEBHOOK_PASSPHRASE; // Assuming PASSPHRASE is the environment variable name
