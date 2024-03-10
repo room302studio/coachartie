@@ -12,7 +12,7 @@ const vision = require("./src/vision.js");
 // const net = require('net');
 const { createHmac } = require("crypto");
 const logger = require("./src/logger.js")("api");
-const { getMessage } = require('./src/missive.js');
+const { getMessage } = require("./src/missive.js");
 require("dotenv").config();
 
 const apiFront = "https://public.missiveapp.com/v1";
@@ -167,21 +167,22 @@ app.post("/api/missive-reply", async (req, res) => {
     userMessage = body.comment.message;
   } else if (body.comment.body) {
     userMessage = body.comment.body;
-  } 
-  else {
+  } else {
     // If we can't find a comment, just send the whole body
     userMessage = JSON.stringify(body, null, 2);
   }
 
   // Take a look at the latest message in the conversation
-  const latestMessageId = body.latest_message.id
-  const latestMessageAttachments = body.latest_message.attachments
+  const latestMessageId = body.latest_message.id;
+  const latestMessageAttachments = body.latest_message.attachments;
   logger.info(`Latest message ID: ${latestMessageId}`);
-  logger.info(`Latest message attachments: ${JSON.stringify(latestMessageAttachments)}`);
+  logger.info(
+    `Latest message attachments: ${JSON.stringify(latestMessageAttachments)}`
+  );
 
   // we also need to check if there is an attachment, and if there is, we need to process it and turn it into text
 
-  const fullLatestMessage = await getMessage(latestMessageId)
+  const fullLatestMessage = await getMessage(latestMessageId);
   logger.info(`Full latest message: ${JSON.stringify(fullLatestMessage)}`);
 
   logger.info(`Looking for messages in conversation ${conversationId}`);
@@ -217,7 +218,6 @@ app.post("/api/missive-reply", async (req, res) => {
     logger.info(`Message keys: ${Object.keys(message)}`);
     logger.info(`Attachments: ${JSON.stringify(attachments)}`);
 
-
     if (attachments) {
       attachments.forEach(async (attachment) => {
         const resourceId = attachment.id;
@@ -234,7 +234,7 @@ app.post("/api/missive-reply", async (req, res) => {
           );
           formattedMessages.push(
             ...resourceMemories.map((m) => {
-              const msg = {          
+              const msg = {
                 role: "system",
                 content: m.value,
               };
@@ -247,9 +247,9 @@ app.post("/api/missive-reply", async (req, res) => {
           try {
             vision.setImageUrl(body.comment.attachment.url);
             const attachmentDescription = await vision.fetchImageDescription();
-    
+
             logger.info(`Attachment description: ${attachmentDescription}`);
-    
+
             // form a memory of the resource
             await storeUserMemory(
               { username, channel: conversationId, guild: "missive" },
@@ -259,7 +259,7 @@ app.post("/api/missive-reply", async (req, res) => {
               "attachment",
               resourceId
             );
-    
+
             // add the description of the attachment to the formattedMessages array
             formattedMessages.push({
               role: "user",
@@ -370,7 +370,7 @@ app.post("/api/missive-reply", async (req, res) => {
   // add the contextMessages to the formattedMessages array
   formattedMessages.push(
     ...contextMessages.map((m) => {
-      const obj =  {
+      const obj = {
         role: "system",
         content: m.value,
       };
@@ -379,7 +379,6 @@ app.post("/api/missive-reply", async (req, res) => {
     })
   );
 
-
   // add the webhook description to the formattedMessages array
   // as a system message
   formattedMessages.push({
@@ -387,14 +386,13 @@ app.post("/api/missive-reply", async (req, res) => {
     content: `Webhook description: ${webhookDescription}`,
   });
 
-
   formattedMessages.push({
     role: "user",
     // content: `Webhook contents: ${JSON.stringify(body)}`,
-    content: `During this conversation, I might reference some of this information: ${jsonToMarkdownList(body)}`,
+    content: `During this conversation, I might reference some of this information: ${jsonToMarkdownList(
+      body
+    )}`,
   });
-
-  
 
   // make the last message the user message
   formattedMessages.push({
@@ -415,7 +413,11 @@ app.post("/api/missive-reply", async (req, res) => {
         content: `<${username}> \n ${userMessage}`,
       },
     ];
-    processedMessage = await processMessageChain(allMessages, { username, channel: conversationId, guild: "missive" });
+    processedMessage = await processMessageChain(allMessages, {
+      username,
+      channel: conversationId,
+      guild: "missive",
+    });
   } catch (error) {
     res
       .status(500)
@@ -453,13 +455,21 @@ app.post("/api/missive-reply", async (req, res) => {
   res.status(200).end();
 });
 
-function jsonToMarkdownList(jsonObj) {
-  // turn an object into a newline delimited list
-  // in a string, with keys and values just written straight out
-  // so the LLM can read it more efficiently
+function jsonToMarkdownList(jsonObj, indentLevel = 0) {
   let str = "";
+  const indentSpaces = " ".repeat(indentLevel * 2);
+
   for (const key in jsonObj) {
-    str += `- ${key}: ${jsonObj[key]}\n`;
+    const value = jsonObj[key];
+
+    if (typeof value === "object" && value !== null) {
+      str += `${indentSpaces}- **${key}**:\n${jsonToMarkdownList(
+        value,
+        indentLevel + 1
+      )}`;
+    } else {
+      str += `${indentSpaces}- ${key}: ${value}\n`;
+    }
   }
 
   return str;
