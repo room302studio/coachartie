@@ -25,6 +25,7 @@
     "chai": "^4.3.8",
     "chance": "^1.1.11",
     "cheerio": "^1.0.0-rc.12",
+    "cohere-ai": "^7.7.7",
     "comment-parser": "^1.4.1",
     "crypto": "^1.0.1",
     "date-fns": "^3.3.1",
