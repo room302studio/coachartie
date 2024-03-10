@@ -166,7 +166,8 @@ app.post("/api/missive-reply", async (req, res) => {
     userMessage = body.comment.message;
   } else if (body.comment.body) {
     userMessage = body.comment.body;
-  } else {
+  } 
+  else {
     userMessage = JSON.stringify(body);
   }
 
@@ -313,13 +314,16 @@ app.post("/api/missive-reply", async (req, res) => {
     logger.info(`No attachment found in body.comment`);
   }
   const contextMessages = await getChannelMessageHistory(conversationId);
+
   logger.info(
     `${contextMessages.length} context messages found in conversation ${conversationId}`
   );
 
+  // add the raw webhook json as a system message
+
   formattedMessages.push({
-    role: "user",
-    content: `${webhookDescription}: <${username}> \n ${userMessage}`,
+    role: "system",
+    content: `Webhook contents: ${JSON.stringify(body)}`,
   });
 
   // make the last message the user message
