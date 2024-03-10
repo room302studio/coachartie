@@ -170,6 +170,7 @@ app.post("/api/missive-reply", async (req, res) => {
   logger.info(`Looking for messages in conversation ${conversationId}`);
   const conversationMessages = await listMessages(conversationId);
   logger.info(`${conversationMessages.length} messages found in conversation ${conversationId}`);
+  logger.info(`Conversation messages: ${JSON.stringify(conversationMessages)}`);
 
   logger.info(`${conversationMessages.length} messages found in conversation ${conversationId}`);
 
