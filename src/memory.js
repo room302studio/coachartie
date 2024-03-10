@@ -209,8 +209,8 @@ async function generateAndStoreCapabilityCompletion(
     presence_penalty: 0.1,
     max_tokens: 256,
     messages: [
-      ...conversationHistory,
       ...memoryMessages,
+      ...conversationHistory,
       {
         role: "system",
         content: "Take a deep breath and take things step by step.",

@@ -506,11 +506,15 @@ async function generateAiCompletion(prompt, username, messages, config) {
     delete messages[messages.length - 1].image;
   }
 
-  logger.info("generateAiCompletion");
+  logger.info(`🤖 Generating AI completion for <${username}> ${prompt}`);
+  logger.info(`${messages.length} messages`);
   // logger.info('username', username)
   // logger.info('prompt', prompt)
 
   messages = await addPreambleToMessages(username, prompt, messages);
+
+  logger.info(`Sending final messages array for chat completion: ${JSON.stringify(messages, null, 2)}`);
+
   let completion = null;
   try {
     // Do a verbose log of the chat completion parameters and messages

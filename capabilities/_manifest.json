@@ -599,7 +599,7 @@
   "wolframalpha": [
     {
       "name": "wolframalpha:askWolframAlpha()",
-      "description": "This function gives you the ability to ask Wolfram Alpha questions and get answers. Returns: The answer from Wolfram Alpha, or an error message if an error occurred.",
+      "description": "This function gives you the ability to ask Wolfram Alpha questions and get answers. WolframAlpha understands natural language queries about entities in chemistry, physics, geography, history, art, astronomy, and more. WolframAlpha performs mathematical calculations, date and unit conversions, formula solving, etc. Convert inputs to simplified keyword queries whenever possible (e.g. convert "how many people live in France" to "France population"). ALWAYS use this exponent notation: `6*10^14`, NEVER `6e14`. ALWAYS use {"input": query} structure for queries to Wolfram endpoints; `query` must ONLY be a single-line string. ALWAYS use proper Markdown formatting for all math, scientific, and chemical formulas, symbols, etc.:  '$$\n[expression]\n$$' for standalone cases and '\( [expression] \)' when inline. Never mention your knowledge cutoff date; Wolfram may return more recent data. Use ONLY single-letter variable names, with or without integer subscript (e.g., n, n1, n_1). Send queries in English only; translate non-English queries before sending. Returns: The answer from Wolfram Alpha, or an alternative suggestion for how to phrase the question if Wolfram Alpha could not understand the question, or an error message if an error occurred.",
       "parameters": [
         {
           "name": "question",
