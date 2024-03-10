@@ -131,7 +131,7 @@ async function listMessages(emailMessageId) {
 async function processMissiveRequest(body) {
   let formattedMessages = []; // the array of messages we will send to processMessageChain
   // everything gets added to this
-  const passphrase = process.env.WEBHOOK_PASSPHRASE; // Assuming PASSPHRASE is the environment variable name
+
   // const body = req.body;
   // the webhook description explains why the webhook was triggered
   const webhookDescription = `${body?.rule?.description}`;
@@ -461,6 +461,7 @@ async function processMissiveRequest(body) {
 }
 
 app.post("/api/missive-reply", async (req, res) => {
+  const passphrase = process.env.WEBHOOK_PASSPHRASE; // Assuming PASSPHRASE is the environment variable name
   // Generate HMAC hash of the request body to verify authenticity
   const hmac = createHmac("sha256", passphrase);
   const reqBodyString = JSON.stringify(req.body);
