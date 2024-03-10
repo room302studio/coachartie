@@ -58,12 +58,15 @@ const proactive = {
     const potentialTaskArray =
       processedMessages[processedMessages.length - 1].content.split("\n");
 
+    logger.info(`Listed potential tasks: ${potentialTaskArray}`)
+
     return potentialTaskArray;
   },
   chooseProactiveTask: function (potentialTaskArray) {
     logger.info("Choosing a proactive task", potentialTaskArray);
     // Choose a proactive task to perform
     const task = chance.pickone(potentialTaskArray);
+    logger.info(`Chose proactive task: ${task}`)
     return task;
   },
   performProactiveTask: async function (proactiveTask) {

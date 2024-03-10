@@ -96,6 +96,8 @@ create table
     key text null,
     value text null,
     user_id text null,
+    resource_id text null,  -- field to store the resource ID if this is a memory of a resource
+    memory_type text null,
     related_message_id bigint null,  -- field to reference the ID of the related message
     conversation_id text null, -- field to store Missive conversation ID, if applicable
     constraint memories_pkey primary key (id)
