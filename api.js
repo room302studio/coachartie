@@ -224,10 +224,10 @@ app.post("/api/missive-reply", async (req, res) => {
 
   // there might be an attachment in body.comment.attchment
   const attachment = body.comment.attachment;
-  logger.info(`Attachment: ${JSON.stringify(attachment)}`);
+  // logger.info(`Attachment: ${JSON.stringify(attachment)}`);
 
   if (attachment) {
-    logger.info(`Attachment found: ${JSON.stringify(body.comment.attachment)}`);
+    logger.info(`Attachment found: ${JSON.stringify(attachment)}`);
 
     const resourceId = attachment.id;
 
@@ -238,7 +238,7 @@ app.post("/api/missive-reply", async (req, res) => {
 
     if (!isInMemory) {
       logger.info(
-        `No memory of resource ${resourceId} found, fetching description ${body.comment.attachment.url}`
+        `No memory of resource ${resourceId} found, fetching description ${attachment.url}`
       );
       // we don't have any memory of this resource, so we need to store it
       // we need to use the vision API to get a description of the image
