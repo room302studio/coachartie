@@ -6,6 +6,7 @@ const {
   hasRecentMemoryOfResource,
   hasMemoryOfResource,
 } = require("./src/remember.js");
+const { fetchImageDescription } = require("./src/vision.js");
 // const net = require('net');
 const { createHmac } = require("crypto");
 const logger = require("./src/logger.js")("api");
