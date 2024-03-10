@@ -12,6 +12,7 @@ const vision = require("./src/vision.js");
 // const net = require('net');
 const { createHmac } = require("crypto");
 const logger = require("./src/logger.js")("api");
+const { getMessage } = require('./src/missive.js');
 require("dotenv").config();
 
 const apiFront = "https://public.missiveapp.com/v1";
@@ -168,13 +169,22 @@ app.post("/api/missive-reply", async (req, res) => {
     userMessage = body.comment.body;
   } 
   else {
-    userMessage = JSON.stringify(body);
+    // If we can't find a comment, just send the whole body
+    userMessage = JSON.stringify(body, null, 2);
   }
+
+  // Take a look at the latest message in the conversation
+  const latestMessageId = body.latest_message.id
+  const latestMessageAttachments = body.latest_message.attachments
+  logger.info(`Latest message ID: ${latestMessageId}`);
+  logger.info(`Latest message attachments: ${JSON.stringify(latestMessageAttachments)}`);
 
   // we also need to check if there is an attachment, and if there is, we need to process it and turn it into text
 
-  logger.info(`Looking for messages in conversation ${conversationId}`);
+  const fullLatestMessage = await getMessage(latestMessageId)
+  logger.info(`Full latest message: ${JSON.stringify(fullLatestMessage)}`);
 
+  logger.info(`Looking for messages in conversation ${conversationId}`);
   const conversationMessages = await listMessages(conversationId);
 
   logger.info(
@@ -187,14 +197,17 @@ app.post("/api/missive-reply", async (req, res) => {
 
   let formattedMessages = []; // the array of messages we will send to processMessageChain
 
-  // check for any attachments in any of the conversation messages also
+  // check for any attachments in ANY of the conversation messages also
   // and if there are any memories of them, add them to the formattedMessages array
   conversationMessages.forEach((message) => {
     logger.info(`Checking message ${message.id} for attachments`);
     const attachments = message.attachment;
+
     // log the keys available in message
     logger.info(`Message keys: ${Object.keys(message)}`);
     logger.info(`Attachments: ${JSON.stringify(attachments)}`);
+
+
     if (attachments) {
       attachments.forEach(async (attachment) => {
         const resourceId = attachment.id;
@@ -211,15 +224,40 @@ app.post("/api/missive-reply", async (req, res) => {
           );
           formattedMessages.push(
             ...resourceMemories.map((m) => {
-              return {
+              const msg = {          
                 role: "system",
                 content: m.value,
               };
+              // logger.info(`Adding message to formattedMessages: ${JSON.stringify(msg)}`);
+              return msg;
             })
           );
         } else {
           logger.info(`No memory of resource ${resourceId} found`);
-          // TODO: MAKE A MEMORY OF IT THEN!
+          try {
+            vision.setImageUrl(body.comment.attachment.url);
+            const attachmentDescription = await vision.fetchImageDescription();
+    
+            logger.info(`Attachment description: ${attachmentDescription}`);
+    
+            // form a memory of the resource
+            await storeUserMemory(
+              { username, channel: conversationId, guild: "missive" },
+              // attachmentDescription,
+              // add the filename to the description
+              `Attachment ${body.comment.attachment.filename}: ${attachmentDescription}`,
+              "attachment",
+              resourceId
+            );
+    
+            // add the description of the attachment to the formattedMessages array
+            formattedMessages.push({
+              role: "user",
+              content: `Attachment ${body.comment.attachment.filename}: ${attachmentDescription}`,
+            });
+          } catch (error) {
+            logger.error(`Error processing image: ${error.message}`);
+          }
         }
       });
     }
@@ -230,7 +268,7 @@ app.post("/api/missive-reply", async (req, res) => {
   // logger.info(`Attachment: ${JSON.stringify(attachment)}`);
 
   if (attachment) {
-    logger.info(`Attachment found: ${JSON.stringify(attachment)}`);
+    logger.info(`Attachment found in body: ${JSON.stringify(attachment)}`);
 
     const resourceId = attachment.id;
 
@@ -273,24 +311,24 @@ app.post("/api/missive-reply", async (req, res) => {
       logger.info(
         `Memory of resource ${resourceId} found, adding to formattedMessages`
       );
-    }
 
-    try {
-      // if it is in the memory, let's grab all of the memories of it and add them to the formattedMessages array
-      const resourceMemories = await getResourceMemories(resourceId);
-      logger.info(
-        `${resourceMemories.length} memories found for resource ${resourceId}`
-      );
-      formattedMessages.push(
-        ...resourceMemories.map((m) => {
-          return {
-            role: "system",
-            content: m.value,
-          };
-        })
-      );
-    } catch (error) {
-      logger.error(`Error fetching resource memories: ${error.message}`);
+      try {
+        // if it is in the memory, let's grab all of the memories of it and add them to the formattedMessages array
+        const resourceMemories = await getResourceMemories(resourceId);
+        logger.info(
+          `${resourceMemories.length} memories found for resource ${resourceId}`
+        );
+        formattedMessages.push(
+          ...resourceMemories.map((m) => {
+            return {
+              role: "system",
+              content: m.value,
+            };
+          })
+        );
+      } catch (error) {
+        logger.error(`Error fetching resource memories: ${error.message}`);
+      }
     }
 
     try {
@@ -317,6 +355,18 @@ app.post("/api/missive-reply", async (req, res) => {
 
   logger.info(
     `${contextMessages.length} context messages found in conversation ${conversationId}`
+  );
+
+  // add the contextMessages to the formattedMessages array
+  formattedMessages.push(
+    ...contextMessages.map((m) => {
+      const obj =  {
+        role: "system",
+        content: m.value,
+      };
+
+      return obj;
+    })
   );
 
   // add the raw webhook json as a system message
