@@ -407,15 +407,15 @@ app.post("/api/missive-reply", async (req, res) => {
   let processedMessage;
 
   try {
-    processedMessage = await processMessageChain(
-      [
-        {
-          role: "user",
-          content: `New user interaction through webhook: ${webhookDescription} \n ${userMessage}`,
-        },
-      ],
-      { username, channel: conversationId, guild: "missive" }
-    );
+    // we need to pull in all of the formattedMessages before the final user message
+    const allMessages = [
+      ...formattedMessages,
+      {
+        role: "user",
+        content: `<${username}> \n ${userMessage}`,
+      },
+    ];
+    processedMessage = await processMessageChain(allMessages, { username, channel: conversationId, guild: "missive" });
   } catch (error) {
     res
       .status(500)
