@@ -169,12 +169,17 @@ async function processMissiveRequest(body) {
   // we need to get the HTML email body out of the message, sanitize it a bit to save on tokens, and add that as a system message
   const latestMessageHtmlBody = fullLatestMessage?.messages?.body;
 
-  // now we need to strip out all the newlines and HTML tags
-  const latestMessageTextBody = latestMessageHtmlBody
-    .replace(/<[^>]*>/g, "")
-    .replace(/\n/g, "");
-
-  logger.info(`Latest message text body: ${latestMessageTextBody}`);
+  // now we need to strip out all the newlines, HTML tags, and any styles/css
+  const latestMessageTextBody = latestMessageHtmlBody.replace(`\n`, " ").replace(
+    /<style([\s\S]*?)<\/style>/gi,
+    ""
+  )
+  .replace(/<script([\s\S]*?)<\/script>/gi, "")
+  .replace(/<[^>]+>/gi, "")
+  
+  logger.info(
+    `Latest message text body: ${latestMessageTextBody}`
+  );
 
   // now lets add that as a system message
   formattedMessages.push({
@@ -401,14 +406,6 @@ async function processMissiveRequest(body) {
     )}`,
   });
 
-  // make the last message the user message
-  formattedMessages.push({
-    role: "user",
-    content: `<${username}> \n ${userMessage}`,
-  });
-
-  logger.info(`Formatted messages: ${JSON.stringify(formattedMessages)}`);
-
   let processedMessage;
 
   try {
@@ -420,6 +417,9 @@ async function processMissiveRequest(body) {
         content: `<${username}> \n ${userMessage}`,
       },
     ];
+
+    logger.info(`All messages: ${JSON.stringify(allMessages)}`);
+
     processedMessage = await processMessageChain(allMessages, {
       username,
       channel: conversationId,

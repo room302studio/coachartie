@@ -263,7 +263,10 @@ async function processMessage(
     return messages;
   }
 
-  const lastUserMessage = messages.find((m) => m.role === "user");
+  const lastUserMessage = messages
+    .slice()
+    .reverse()
+    .find((m) => m.role === "user");
   const prompt = lastUserMessage.content;
 
   storeUserMessage({ username, channel, guild }, prompt);
