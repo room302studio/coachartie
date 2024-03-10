@@ -132,7 +132,7 @@ async function processMissiveRequest(body) {
   let formattedMessages = []; // the array of messages we will send to processMessageChain
   // everything gets added to this
   const passphrase = process.env.WEBHOOK_PASSPHRASE; // Assuming PASSPHRASE is the environment variable name
-  const body = req.body;
+  // const body = req.body;
   // the webhook description explains why the webhook was triggered
   const webhookDescription = `${body?.rule?.description}`;
   const username = body.comment.author.email || "API User";
@@ -191,10 +191,9 @@ async function processMissiveRequest(body) {
   const latestMessageHtmlBody = fullLatestMessage?.messages?.body;
 
   // now we need to strip out all the newlines and HTML tags
-  const latestMessageTextBody = latestMessageHtmlBody.replace(
-    /<[^>]*>/g,
-    ""
-  ).replace(/\n/g, "");
+  const latestMessageTextBody = latestMessageHtmlBody
+    .replace(/<[^>]*>/g, "")
+    .replace(/\n/g, "");
 
   logger.info(`Latest message text body: ${latestMessageTextBody}`);
 
@@ -226,8 +225,6 @@ async function processMissiveRequest(body) {
   logger.info(
     `${conversationMessages.length} messages found in conversation ${conversationId}`
   );
-
-  
 
   // add the previous conversationMessages to the formattedMessages array
   formattedMessages.push(
@@ -482,22 +479,22 @@ async function processMissiveRequest(body) {
 
   logger.info(`Response post status: ${responsePost.status}`);
   logger.info(`Response post body: ${JSON.stringify(responsePost)}`);
-
 }
 
 app.post("/api/missive-reply", async (req, res) => {
-
   // missive spams us if we take longer than 15 seconds to respond
   // so here you go
   logger.info(`Sending 200 response`);
 
   res.status(200).end();
 
-  processMissiveRequest(req.body).then(() => {
-    logger.info(`Message processed`);
-  }).catch((error) => {
-    logger.error(`Error processing message: ${error.message}`);
-  })
+  processMissiveRequest(req.body)
+    .then(() => {
+      logger.info(`Message processed`);
+    })
+    .catch((error) => {
+      logger.error(`Error processing message: ${error.message}`);
+    });
 });
 
 function jsonToMarkdownList(jsonObj, indentLevel = 0) {
