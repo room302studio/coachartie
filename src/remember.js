@@ -3,8 +3,7 @@ const dotenv = require("dotenv");
 const { MEMORIES_TABLE_NAME, MESSAGES_TABLE_NAME } = require("../config");
 const { openai } = require("./openai");
 const logger = require("../src/logger.js")("remember");
-const { differenceInHours } = require('date-fns');
-
+const { differenceInHours } = require("date-fns");
 
 const port = process.env.EXPRESS_PORT;
 
@@ -93,7 +92,12 @@ async function memoryToEmbedding(memory) {
  * @param {string} resourceId
  * @returns {Promise<void>}
  */
-async function storeUserMemory({ username, channel, guild }, value, memoryType = 'user', resourceId) {
+async function storeUserMemory(
+  { username, channel, guild },
+  value,
+  memoryType = "user",
+  resourceId
+) {
   // first we do some checks to make sure we have the right types of data
   if (!username) {
     return logger.info("No username provided to storeUserMemory");
@@ -166,7 +170,7 @@ async function getResourceMemories(resourceId, limit = 5) {
 
 /**
  * Checks if there is a memory of the file based on its resource ID.
- * 
+ *
  * @param {string} resourceId - The ID of the resource (file) to check.
  * @returns {Promise<boolean>} - True if there is a memory of the file, false otherwise.
  */
@@ -178,7 +182,7 @@ async function hasMemoryOfResource(resourceId) {
     .limit(1);
 
   if (error) {
-    logger.error("Error fetching the memory of the file:", error);
+    logger.error(`Error checking for memories of resource: ${error.message}`);
     return false; // Consider the absence of data as no memory exists.
   }
 
@@ -187,7 +191,7 @@ async function hasMemoryOfResource(resourceId) {
 
 /**
  * Checks if there is a recent memory of the file based on its resource ID, where "recent" is defined by the caller.
- * 
+ *
  * @param {string} resourceId - The ID of the resource (file) to check.
  * @param {number} recencyHours - The number of hours to consider a memory recent.
  * @returns {Promise<boolean>} - True if there is a recent memory of the file, false otherwise.
@@ -211,7 +215,14 @@ async function hasRecentMemoryOfResource(resourceId, recencyHours = 24) {
     return false; // Consider the absence of data as no recent memory exists.
   }
 
-  const hoursSinceLastMemory = differenceInHours(new Date(), new Date(data[0].created_at));
+  // const hoursSinceLastMemory = differenceInHours(
+  //   new Date(),
+  //   new Date(data[0].created_at)
+  // );
+  // we need to remove the date-fns dependency
+  // and do this with plain ol' date objects
+  const hoursSinceLastMemory =
+    (new Date().getTime() - new Date(data[0].created_at).getTime()) / 1000 / 60 / 60;  
 
   return hoursSinceLastMemory <= recencyHours;
 }

@@ -3,7 +3,8 @@ const app = express();
 const { processMessageChain } = require("./src/chain");
 const {
   getChannelMessageHistory,
-  hasRecentMemoryOfResource
+  hasRecentMemoryOfResource,
+  
 } = require("./src/remember.js");
 // const net = require('net');
 const { createHmac } = require("crypto");
