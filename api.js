@@ -128,12 +128,7 @@ async function listMessages(emailMessageId) {
   return data.messages;
 }
 
-app.post("/api/missive-reply", async (req, res) => {
-
-  // missive spams us if we take longer than 15 seconds to respond
-  // so here you go
-  res.status(200).end();
-
+async function processMissiveRequest(body) {
   let formattedMessages = []; // the array of messages we will send to processMessageChain
   // everything gets added to this
   const passphrase = process.env.WEBHOOK_PASSPHRASE; // Assuming PASSPHRASE is the environment variable name
@@ -488,9 +483,21 @@ app.post("/api/missive-reply", async (req, res) => {
   logger.info(`Response post status: ${responsePost.status}`);
   logger.info(`Response post body: ${JSON.stringify(responsePost)}`);
 
-  // if the response post was successful, we can return a 200 response, otherwise we send back the error in the place it happened
+}
+
+app.post("/api/missive-reply", async (req, res) => {
+
+  // missive spams us if we take longer than 15 seconds to respond
+  // so here you go
   logger.info(`Sending 200 response`);
+
   res.status(200).end();
+
+  processMissiveRequest(req.body).then(() => {
+    logger.info(`Message processed`);
+  }).catch((error) => {
+    logger.error(`Error processing message: ${error.message}`);
+  })
 });
 
 function jsonToMarkdownList(jsonObj, indentLevel = 0) {
