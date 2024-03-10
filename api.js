@@ -6,7 +6,7 @@ const {
   hasRecentMemoryOfResource,
   hasMemoryOfResource,
 } = require("./src/remember.js");
-const { fetchImageDescription } = require("./src/vision.js");
+const vision = require("./vision.js");
 // const net = require('net');
 const { createHmac } = require("crypto");
 const logger = require("./src/logger.js")("api");
@@ -40,7 +40,7 @@ app.post("/api/message", async (req, res) => {
         content: message,
       },
     ],
-    username,
+    username
   );
 
   res.json({ response: processedMessage });
@@ -59,7 +59,7 @@ app.post("/api/message-image", async (req, res) => {
         image: image,
       },
     ],
-    { username },
+    { username }
   );
 
   res.json({ response: processedMessage });
@@ -155,7 +155,7 @@ app.post("/api/missive-reply", async (req, res) => {
     logger.info("HMAC signature check passed");
   }
 
-  logger.info(`Body: ${JSON.stringify(body)}`)
+  logger.info(`Body: ${JSON.stringify(body)}`);
 
   // the user message might be in body.comment.message
   // or it might be in body.comment.body
@@ -171,15 +171,18 @@ app.post("/api/missive-reply", async (req, res) => {
   // we also need to check if there is an attachment, and if there is, we need to process it and turn it into text
 
   logger.info(`Looking for messages in conversation ${conversationId}`);
-  
+
   const conversationMessages = await listMessages(conversationId);
-  
-  logger.info(`${conversationMessages.length} messages found in conversation ${conversationId}`);
+
+  logger.info(
+    `${conversationMessages.length} messages found in conversation ${conversationId}`
+  );
   logger.info(`Conversation messages: ${JSON.stringify(conversationMessages)}`);
-  logger.info(`${conversationMessages.length} messages found in conversation ${conversationId}`);
+  logger.info(
+    `${conversationMessages.length} messages found in conversation ${conversationId}`
+  );
 
   let formattedMessages = []; // the array of messages we will send to processMessageChain
-
 
   // check for any attachments in any of the conversation messages also
   // and if there are any memories of them, add them to the formattedMessages array
@@ -190,52 +193,57 @@ app.post("/api/missive-reply", async (req, res) => {
     logger.info(`Message keys: ${Object.keys(message)}`);
     logger.info(`Attachments: ${JSON.stringify(attachments)}`);
     if (attachments) {
-      attachments.forEach(async (attachment) => {      
+      attachments.forEach(async (attachment) => {
         const resourceId = attachment.id;
         logger.info(`Checking for memories of resource ${resourceId}`);
         const isInMemory = await hasRecentMemoryOfResource(resourceId); // check if we have ANY memory of this resource
         if (isInMemory) {
-          logger.info(`Memory of resource ${resourceId} found, adding to formattedMessages`);
+          logger.info(
+            `Memory of resource ${resourceId} found, adding to formattedMessages`
+          );
           // if it is in the memory, let's grab all of the memories of it and add them to the formattedMessages array
           const resourceMemories = await getResourceMemories(resourceId);
-          logger.info(`${resourceMemories.length} memories found for resource ${resourceId}`);
-          formattedMessages.push(...resourceMemories.map((m) => {
-            return {
-              role: "system",
-              content: m.value,
-            };
-          }));
+          logger.info(
+            `${resourceMemories.length} memories found for resource ${resourceId}`
+          );
+          formattedMessages.push(
+            ...resourceMemories.map((m) => {
+              return {
+                role: "system",
+                content: m.value,
+              };
+            })
+          );
         } else {
           logger.info(`No memory of resource ${resourceId} found`);
           // TODO: MAKE A MEMORY OF IT THEN!
         }
       });
     }
-  })
-
+  });
 
   // there might be an attachment in body.comment.attchment
-  const attachment = body.comment.attachment
+  const attachment = body.comment.attachment;
   logger.info(`Attachment: ${JSON.stringify(attachment)}`);
 
   if (attachment) {
     logger.info(`Attachment found: ${JSON.stringify(body.comment.attachment)}`);
-
 
     const resourceId = attachment.id;
 
     logger.info(`Checking for memories of resource ${resourceId}`);
     const isInMemory = await hasMemoryOfResource(resourceId); // check if we have ANY memory of this resource
 
-    logger.info(`isInMemory: ${isInMemory} resourceId: ${resourceId}`)
+    logger.info(`isInMemory: ${isInMemory} resourceId: ${resourceId}`);
 
-    if(!isInMemory) {
-      logger.info(`No memory of resource ${resourceId} found, fetching description`);
+    if (!isInMemory) {
+      logger.info(
+        `No memory of resource ${resourceId} found, fetching description ${body.comment.attachment.url}`
+      );
       // we don't have any memory of this resource, so we need to store it
       // we need to use the vision API to get a description of the image
-      const attachmentDescription = await fetchImageDescription(
-        body.comment.attachment.url,
-      );
+      vision.setImageUrl(body.comment.attachment.url);
+      const attachmentDescription = await vision.fetchImageDescription();
 
       logger.info(`Attachment description: ${attachmentDescription}`);
 
@@ -253,34 +261,45 @@ app.post("/api/missive-reply", async (req, res) => {
         content: `The user sent an attachment along with the message: ${attachmentDescription}`,
       });
     } else {
-      logger.info(`Memory of resource ${resourceId} found, adding to formattedMessages`);
+      logger.info(
+        `Memory of resource ${resourceId} found, adding to formattedMessages`
+      );
 
       // if it is in the memory, let's grab all of the memories of it and add them to the formattedMessages array
       const resourceMemories = await getResourceMemories(resourceId);
-      logger.info(`${resourceMemories.length} memories found for resource ${resourceId}`);
-      formattedMessages.push(...resourceMemories.map((m) => {
+      logger.info(
+        `${resourceMemories.length} memories found for resource ${resourceId}`
+      );
+      formattedMessages.push(
+        ...resourceMemories.map((m) => {
+          return {
+            role: "system",
+            content: m.value,
+          };
+        })
+      );
+    }
+
+    // if it is in the memory, let's grab all of the memories of it and add them to the formattedMessages array
+    const resourceMemories = await getResourceMemories(resourceId);
+    logger.info(
+      `${resourceMemories.length} memories found for resource ${resourceId}`
+    );
+    formattedMessages.push(
+      ...resourceMemories.map((m) => {
         return {
           role: "system",
           content: m.value,
         };
-      }));      
-    }    
-
-    // if it is in the memory, let's grab all of the memories of it and add them to the formattedMessages array
-    const resourceMemories = await getResourceMemories(resourceId);
-    logger.info(`${resourceMemories.length} memories found for resource ${resourceId}`);
-    formattedMessages.push(...resourceMemories.map((m) => {
-      return {
-        role: "system",
-        content: m.value,
-      };
-    }));
-
+      })
+    );
   } else {
     logger.info(`No attachment found in body.comment`);
   }
   const contextMessages = await getChannelMessageHistory(conversationId);
-  logger.info(`${contextMessages.length} context messages found in conversation ${conversationId}`);
+  logger.info(
+    `${contextMessages.length} context messages found in conversation ${conversationId}`
+  );
 
   formattedMessages.push({
     role: "user",
@@ -305,7 +324,7 @@ app.post("/api/missive-reply", async (req, res) => {
           content: `New user interaction through webhook: ${webhookDescription} \n ${userMessage}`,
         },
       ],
-      { username, channel: conversationId, guild: "missive" },
+      { username, channel: conversationId, guild: "missive" }
     );
   } catch (error) {
     res
