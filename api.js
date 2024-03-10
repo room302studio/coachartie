@@ -450,6 +450,7 @@ app.post("/api/missive-reply", async (req, res) => {
       guild: "missive",
     });
   } catch (error) {
+    logger.error(`Error processing message chain: ${error.message}`);
     res
       .status(500)
       .json({ error: `Error processing message chain: ${error.message}` });
@@ -483,6 +484,7 @@ app.post("/api/missive-reply", async (req, res) => {
   logger.info(`Response post body: ${JSON.stringify(responsePost)}`);
 
   // if the response post was successful, we can return a 200 response, otherwise we send back the error in the place it happened
+  logger.info(`Sending 200 response`);
   res.status(200).end();
 });
 
