@@ -126,8 +126,10 @@ async function listMessages(emailMessageId) {
 app.post("/api/missive-reply", async (req, res) => {
   const passphrase = process.env.WEBHOOK_PASSPHRASE; // Assuming PASSPHRASE is the environment variable name
   const body = req.body;
+  // the webhook description explains why the webhook was triggered
   const webhookDescription = `${body?.rule?.description}`;
   const username = body.comment.author.email || "API User";
+  // the conversationID is the ID of the conversation that the webhook was triggered from and is used to look up other messages in the conversation outside of the webhook
   const conversationId = body.conversation.id;
 
   // Generate HMAC hash of the request body to verify authenticity
@@ -138,14 +140,11 @@ app.post("/api/missive-reply", async (req, res) => {
 
   // log the headers
   logger.info("Request headers:" + JSON.stringify(req.headers));
-
   const signature = `${req.headers["x-hook-signature"]}`;
-
-  logger.info("HMAC signature:" + signature);
-  logger.info("Computed HMAC hash:" + hash);
+  // logger.info("HMAC signature:" + signature);
+  // logger.info("Computed HMAC hash:" + hash);
 
   const hashString = `sha256=${hash}`;
-
   // Compare our hash with the signature provided in the request
   if (hashString !== signature) {
     logger.info("HMAC signature check failed");
@@ -153,6 +152,8 @@ app.post("/api/missive-reply", async (req, res) => {
   } else {
     logger.info("HMAC signature check passed");
   }
+
+  logger.info(`Body: ${JSON.stringify(body)}`)
 
   // the user message might be in body.comment.message
   // or it might be in body.comment.body
@@ -168,25 +169,12 @@ app.post("/api/missive-reply", async (req, res) => {
   // we also need to check if there is an attachment, and if there is, we need to process it and turn it into text
 
   logger.info(`Looking for messages in conversation ${conversationId}`);
+  
   const conversationMessages = await listMessages(conversationId);
+  
   logger.info(`${conversationMessages.length} messages found in conversation ${conversationId}`);
   logger.info(`Conversation messages: ${JSON.stringify(conversationMessages)}`);
-
   logger.info(`${conversationMessages.length} messages found in conversation ${conversationId}`);
-
-  /*       "attachments": [
-        {
-          "id": "81eed561-4908-4738-9a9f-2da886b1de43",
-          "filename": "inline-image.png",
-          "extension": "png",
-          "url": "https://...",
-          "media_type": "image",
-          "sub_type": "png",
-          "size": 114615,
-          "width": 668,
-          "height": 996
-        }
-      ] */
 
   let formattedMessages = []; // the array of messages we will send to processMessageChain
 
@@ -196,10 +184,13 @@ app.post("/api/missive-reply", async (req, res) => {
   conversationMessages.forEach((message) => {
     logger.info(`Checking message ${message.id} for attachments`);
     const attachments = message.attachment;
+    // log the keys available in message
+    logger.info(`Message keys: ${Object.keys(message)}`);
     logger.info(`Attachments: ${JSON.stringify(attachments)}`);
     if (attachments) {
-      attachments.forEach(async (attachment) => {
+      attachments.forEach(async (attachment) => {      
         const resourceId = attachment.id;
+        logger.info(`Checking for memories of resource ${resourceId}`);
         const isInMemory = await hasRecentMemoryOfResource(resourceId); // check if we have ANY memory of this resource
         if (isInMemory) {
           logger.info(`Memory of resource ${resourceId} found, adding to formattedMessages`);
@@ -212,6 +203,9 @@ app.post("/api/missive-reply", async (req, res) => {
               content: m.value,
             };
           }));
+        } else {
+          logger.info(`No memory of resource ${resourceId} found`);
+          // TODO: MAKE A MEMORY OF IT THEN!
         }
       });
     }
@@ -228,6 +222,7 @@ app.post("/api/missive-reply", async (req, res) => {
 
     const resourceId = attachment.id;
 
+    logger.info(`Checking for memories of resource ${resourceId}`);
     const isInMemory = await hasMemoryOfResource(resourceId); // check if we have ANY memory of this resource
 
     logger.info(`isInMemory: ${isInMemory} resourceId: ${resourceId}`)
@@ -255,7 +250,19 @@ app.post("/api/missive-reply", async (req, res) => {
         role: "system",
         content: `The user sent an attachment along with the message: ${attachmentDescription}`,
       });
-    }
+    } else {
+      logger.info(`Memory of resource ${resourceId} found, adding to formattedMessages`);
+
+      // if it is in the memory, let's grab all of the memories of it and add them to the formattedMessages array
+      const resourceMemories = await getResourceMemories(resourceId);
+      logger.info(`${resourceMemories.length} memories found for resource ${resourceId}`);
+      formattedMessages.push(...resourceMemories.map((m) => {
+        return {
+          role: "system",
+          content: m.value,
+        };
+      }));      
+    }    
 
     // if it is in the memory, let's grab all of the memories of it and add them to the formattedMessages array
     const resourceMemories = await getResourceMemories(resourceId);
@@ -273,11 +280,9 @@ app.post("/api/missive-reply", async (req, res) => {
   const contextMessages = await getChannelMessageHistory(conversationId);
   logger.info(`${contextMessages.length} context messages found in conversation ${conversationId}`);
 
-  formattedMessages = contextMessages.map((m) => {
-    return {
-      role: "user",
-      content: m.value,
-    };
+  formattedMessages.push({
+    role: "user",
+    content: `${webhookDescription}: <${username}> \n ${userMessage}`,
   });
 
   // make the last message the user message
