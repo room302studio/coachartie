@@ -185,6 +185,35 @@ app.post("/api/missive-reply", async (req, res) => {
   const fullLatestMessage = await getMessage(latestMessageId);
   logger.info(`Full latest message: ${JSON.stringify(fullLatestMessage)}`);
 
+  // we need to get the HTML email body out of the message, sanitize it a bit to save on tokens, and add that as a system message
+  const latestMessageHtmlBody = fullLatestMessage?.messages?.body;
+
+  // now we need to strip out all the newlines and HTML tags
+  const latestMessageTextBody = latestMessageHtmlBody.replace(
+    /<[^>]*>/g,
+    ""
+  ).replace(/\n/g, "");
+
+  logger.info(`Latest message text body: ${latestMessageTextBody}`);
+
+  // now lets add that as a system message
+  formattedMessages.push({
+    role: "system",
+    content: `Latest message in conversation: ${latestMessageTextBody}`,
+  });
+
+  // we can also add the JSON of the fullLatestMessage MINUS the body
+  // as a system message
+  const latestMessageMinusBody = { ...fullLatestMessage };
+  delete latestMessageMinusBody.body;
+
+  formattedMessages.push({
+    role: "system",
+    content: `Latest message in conversation: ${jsonToMarkdownList(
+      latestMessageMinusBody
+    )}`,
+  });
+
   logger.info(`Looking for messages in conversation ${conversationId}`);
   const conversationMessages = await listMessages(conversationId);
 
