@@ -139,27 +139,6 @@ async function processMissiveRequest(body) {
   // the conversationID is the ID of the conversation that the webhook was triggered from and is used to look up other messages in the conversation outside of the webhook
   const conversationId = body.conversation.id;
 
-  // Generate HMAC hash of the request body to verify authenticity
-  const hmac = createHmac("sha256", passphrase);
-  const reqBodyString = JSON.stringify(req.body);
-  hmac.update(reqBodyString);
-  const hash = hmac.digest("hex");
-
-  // log the headers
-  logger.info("Request headers:" + JSON.stringify(req.headers));
-  const signature = `${req.headers["x-hook-signature"]}`;
-  // logger.info("HMAC signature:" + signature);
-  // logger.info("Computed HMAC hash:" + hash);
-
-  const hashString = `sha256=${hash}`;
-  // Compare our hash with the signature provided in the request
-  if (hashString !== signature) {
-    logger.info("HMAC signature check failed");
-    return res.status(401).send("Unauthorized request");
-  } else {
-    logger.info("HMAC signature check passed");
-  }
-
   logger.info(`Body: ${JSON.stringify(body)}`);
 
   // the user message might be in body.comment.message
@@ -482,6 +461,27 @@ async function processMissiveRequest(body) {
 }
 
 app.post("/api/missive-reply", async (req, res) => {
+  // Generate HMAC hash of the request body to verify authenticity
+  const hmac = createHmac("sha256", passphrase);
+  const reqBodyString = JSON.stringify(req.body);
+  hmac.update(reqBodyString);
+  const hash = hmac.digest("hex");
+
+  // log the headers
+  logger.info("Request headers:" + JSON.stringify(req.headers));
+  const signature = `${req.headers["x-hook-signature"]}`;
+  // logger.info("HMAC signature:" + signature);
+  // logger.info("Computed HMAC hash:" + hash);
+
+  const hashString = `sha256=${hash}`;
+  // Compare our hash with the signature provided in the request
+  if (hashString !== signature) {
+    logger.info("HMAC signature check failed");
+    return res.status(401).send("Unauthorized request");
+  } else {
+    logger.info("HMAC signature check passed");
+  }
+
   // missive spams us if we take longer than 15 seconds to respond
   // so here you go
   logger.info(`Sending 200 response`);
