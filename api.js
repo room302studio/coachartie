@@ -6,9 +6,9 @@ const {
   hasRecentMemoryOfResource,
   hasMemoryOfResource,
   getResourceMemories,
-  storeUserMemory
+  storeUserMemory,
 } = require("./src/remember.js");
-const vision = require("./src/vision.js")
+const vision = require("./src/vision.js");
 // const net = require('net');
 const { createHmac } = require("crypto");
 const logger = require("./src/logger.js")("api");
@@ -42,7 +42,7 @@ app.post("/api/message", async (req, res) => {
         content: message,
       },
     ],
-    username,
+    username
   );
 
   res.json({ response: processedMessage });
@@ -61,7 +61,7 @@ app.post("/api/message-image", async (req, res) => {
         image: image,
       },
     ],
-    { username },
+    { username }
   );
 
   res.json({ response: processedMessage });
@@ -177,11 +177,11 @@ app.post("/api/missive-reply", async (req, res) => {
   const conversationMessages = await listMessages(conversationId);
 
   logger.info(
-    `${conversationMessages.length} messages found in conversation ${conversationId}`,
+    `${conversationMessages.length} messages found in conversation ${conversationId}`
   );
   logger.info(`Conversation messages: ${JSON.stringify(conversationMessages)}`);
   logger.info(
-    `${conversationMessages.length} messages found in conversation ${conversationId}`,
+    `${conversationMessages.length} messages found in conversation ${conversationId}`
   );
 
   let formattedMessages = []; // the array of messages we will send to processMessageChain
@@ -201,12 +201,12 @@ app.post("/api/missive-reply", async (req, res) => {
         const isInMemory = await hasRecentMemoryOfResource(resourceId); // check if we have ANY memory of this resource
         if (isInMemory) {
           logger.info(
-            `Memory of resource ${resourceId} found, adding to formattedMessages`,
+            `Memory of resource ${resourceId} found, adding to formattedMessages`
           );
           // if it is in the memory, let's grab all of the memories of it and add them to the formattedMessages array
           const resourceMemories = await getResourceMemories(resourceId);
           logger.info(
-            `${resourceMemories.length} memories found for resource ${resourceId}`,
+            `${resourceMemories.length} memories found for resource ${resourceId}`
           );
           formattedMessages.push(
             ...resourceMemories.map((m) => {
@@ -214,7 +214,7 @@ app.post("/api/missive-reply", async (req, res) => {
                 role: "system",
                 content: m.value,
               };
-            }),
+            })
           );
         } else {
           logger.info(`No memory of resource ${resourceId} found`);
@@ -240,7 +240,7 @@ app.post("/api/missive-reply", async (req, res) => {
 
     if (!isInMemory) {
       logger.info(
-        `No memory of resource ${resourceId} found, fetching description ${attachment.url}`,
+        `No memory of resource ${resourceId} found, fetching description ${attachment.url}`
       );
       // we don't have any memory of this resource, so we need to store it
       // we need to use the vision API to get a description of the image
@@ -253,9 +253,11 @@ app.post("/api/missive-reply", async (req, res) => {
         // form a memory of the resource
         await storeUserMemory(
           { username, channel: conversationId, guild: "missive" },
-          attachmentDescription,
+          // attachmentDescription,
+          // add the filename to the description
+          `Attachment ${body.comment.attachment.filename}: ${attachmentDescription}`,
           "attachment",
-          resourceId,
+          resourceId
         );
 
         // add the description of the attachment to the formattedMessages array
@@ -268,7 +270,7 @@ app.post("/api/missive-reply", async (req, res) => {
       }
     } else {
       logger.info(
-        `Memory of resource ${resourceId} found, adding to formattedMessages`,
+        `Memory of resource ${resourceId} found, adding to formattedMessages`
       );
     }
 
@@ -276,7 +278,7 @@ app.post("/api/missive-reply", async (req, res) => {
       // if it is in the memory, let's grab all of the memories of it and add them to the formattedMessages array
       const resourceMemories = await getResourceMemories(resourceId);
       logger.info(
-        `${resourceMemories.length} memories found for resource ${resourceId}`,
+        `${resourceMemories.length} memories found for resource ${resourceId}`
       );
       formattedMessages.push(
         ...resourceMemories.map((m) => {
@@ -284,7 +286,7 @@ app.post("/api/missive-reply", async (req, res) => {
             role: "system",
             content: m.value,
           };
-        }),
+        })
       );
     } catch (error) {
       logger.error(`Error fetching resource memories: ${error.message}`);
@@ -294,7 +296,7 @@ app.post("/api/missive-reply", async (req, res) => {
       // if it is in the memory, let's grab all of the memories of it and add them to the formattedMessages array
       const resourceMemories = await getResourceMemories(resourceId);
       logger.info(
-        `${resourceMemories.length} memories found for resource ${resourceId}`,
+        `${resourceMemories.length} memories found for resource ${resourceId}`
       );
       formattedMessages.push(
         ...resourceMemories.map((m) => {
@@ -302,7 +304,7 @@ app.post("/api/missive-reply", async (req, res) => {
             role: "system",
             content: m.value,
           };
-        }),
+        })
       );
     } catch (error) {
       logger.error(`Error fetching resource memories: ${error.message}`);
@@ -312,7 +314,7 @@ app.post("/api/missive-reply", async (req, res) => {
   }
   const contextMessages = await getChannelMessageHistory(conversationId);
   logger.info(
-    `${contextMessages.length} context messages found in conversation ${conversationId}`,
+    `${contextMessages.length} context messages found in conversation ${conversationId}`
   );
 
   formattedMessages.push({
@@ -338,7 +340,7 @@ app.post("/api/missive-reply", async (req, res) => {
           content: `New user interaction through webhook: ${webhookDescription} \n ${userMessage}`,
         },
       ],
-      { username, channel: conversationId, guild: "missive" },
+      { username, channel: conversationId, guild: "missive" }
     );
   } catch (error) {
     res
