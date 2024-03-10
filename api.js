@@ -197,6 +197,16 @@ app.post("/api/missive-reply", async (req, res) => {
 
   let formattedMessages = []; // the array of messages we will send to processMessageChain
 
+  // add the previous conversationMessages to the formattedMessages array
+  formattedMessages.push(
+    ...conversationMessages.map((m) => {
+      return {
+        role: "system",
+        content: jsonToMarkdownList(m),
+      };
+    })
+  );
+
   // check for any attachments in ANY of the conversation messages also
   // and if there are any memories of them, add them to the formattedMessages array
   conversationMessages.forEach((message) => {
@@ -369,17 +379,27 @@ app.post("/api/missive-reply", async (req, res) => {
     })
   );
 
-  // add the raw webhook json as a system message
 
+  // add the webhook description to the formattedMessages array
+  // as a system message
   formattedMessages.push({
     role: "system",
-    content: `Webhook contents: ${JSON.stringify(body)}`,
+    content: `Webhook description: ${webhookDescription}`,
   });
+
+
+  formattedMessages.push({
+    role: "user",
+    // content: `Webhook contents: ${JSON.stringify(body)}`,
+    content: `During this conversation, I might reference some of this information: ${jsonToMarkdownList(body)}`,
+  });
+
+  
 
   // make the last message the user message
   formattedMessages.push({
     role: "user",
-    content: `${webhookDescription}: <${username}> \n ${userMessage}`,
+    content: `<${username}> \n ${userMessage}`,
   });
 
   logger.info(`Formatted messages: ${JSON.stringify(formattedMessages)}`);
@@ -432,3 +452,15 @@ app.post("/api/missive-reply", async (req, res) => {
   // if the response post was successful, we can return a 200 response, otherwise we send back the error in the place it happened
   res.status(200).end();
 });
+
+function jsonToMarkdownList(jsonObj) {
+  // turn an object into a newline delimited list
+  // in a string, with keys and values just written straight out
+  // so the LLM can read it more efficiently
+  let str = "";
+  for (const key in jsonObj) {
+    str += `- ${key}: ${jsonObj[key]}\n`;
+  }
+
+  return str;
+}
