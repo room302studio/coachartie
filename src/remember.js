@@ -133,8 +133,6 @@ async function storeUserMemory(
     .from(MEMORIES_TABLE_NAME)
     .insert({
       user_id: username,
-      channel_id: channel,
-      guild_id: guild,
       value,
       embedding,
       memory_type: memoryType,
