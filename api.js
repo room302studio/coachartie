@@ -260,8 +260,8 @@ app.post("/api/missive-reply", async (req, res) => {
 
         // add the description of the attachment to the formattedMessages array
         formattedMessages.push({
-          role: "system",
-          content: `The user sent an attachment along with the message: ${attachmentDescription}`,
+          role: "user",
+          content: `Attachment ${body.comment.attachment.filename}: ${attachmentDescription}`,
         });
       } catch (error) {
         logger.error(`Error processing image: ${error.message}`);
