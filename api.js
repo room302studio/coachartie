@@ -129,6 +129,8 @@ async function listMessages(emailMessageId) {
 }
 
 app.post("/api/missive-reply", async (req, res) => {
+  let formattedMessages = []; // the array of messages we will send to processMessageChain
+  // everything gets added to this
   const passphrase = process.env.WEBHOOK_PASSPHRASE; // Assuming PASSPHRASE is the environment variable name
   const body = req.body;
   // the webhook description explains why the webhook was triggered
@@ -225,7 +227,7 @@ app.post("/api/missive-reply", async (req, res) => {
     `${conversationMessages.length} messages found in conversation ${conversationId}`
   );
 
-  let formattedMessages = []; // the array of messages we will send to processMessageChain
+  
 
   // add the previous conversationMessages to the formattedMessages array
   formattedMessages.push(
