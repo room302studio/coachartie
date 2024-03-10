@@ -5,7 +5,8 @@ const {
   getChannelMessageHistory,
   hasRecentMemoryOfResource,
   hasMemoryOfResource,
-  getResourceMemories
+  getResourceMemories,
+  storeUserMemory
 } = require("./src/remember.js");
 const vision = require("./src/vision.js")
 // const net = require('net');
