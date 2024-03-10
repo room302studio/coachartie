@@ -194,7 +194,8 @@ app.post("/api/missive-reply", async (req, res) => {
   // and if there are any memories of them, add them to the formattedMessages array
   conversationMessages.forEach((message) => {
     logger.info(`Checking message ${message.id} for attachments`);
-    const attachments = message.attachments;
+    const attachments = message.attachment;
+    logger.info(`Attachments: ${JSON.stringify(attachments)}`);
     if (attachments) {
       attachments.forEach(async (attachment) => {
         const resourceId = attachment.id;
@@ -218,6 +219,8 @@ app.post("/api/missive-reply", async (req, res) => {
 
   // there might be an attachment in body.comment.attchment
   const attachment = body.comment.attachment
+  logger.info(`Attachment: ${JSON.stringify(attachment)}`);
+
   if (attachment) {
     logger.info(`Attachment found: ${JSON.stringify(body.comment.attachment)}`);
 
@@ -263,6 +266,8 @@ app.post("/api/missive-reply", async (req, res) => {
       };
     }));
 
+  } else {
+    logger.info(`No attachment found in body.comment`);
   }
   const contextMessages = await getChannelMessageHistory(conversationId);
   logger.info(`${contextMessages.length} context messages found in conversation ${conversationId}`);
@@ -280,7 +285,7 @@ app.post("/api/missive-reply", async (req, res) => {
     content: `${webhookDescription}: <${username}> \n ${userMessage}`,
   });
 
-  logger.info("Formatted messages", JSON.stringify(formattedMessages));
+  logger.info(`Formatted messages: ${JSON.stringify(formattedMessages)}`);
 
   let processedMessage;
 
