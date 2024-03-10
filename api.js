@@ -17,8 +17,8 @@ require("dotenv").config();
 
 const apiFront = "https://public.missiveapp.com/v1";
 const apiKey = process.env.MISSIVE_API_KEY;
-
 const port = process.env.EXPRESS_PORT;
+const BOT_NAME = process.env.BOT_NAME;
 
 app.use(express.json());
 
@@ -447,11 +447,11 @@ async function processMissiveRequest(body) {
       posts: {
         conversation: conversationId,
         notification: {
-          title: "Coach Artie",
+          title: BOT_NAME,
           body: lastMessage.content,
         },
         text: lastMessage.content,
-        username: "Coach Artie",
+        username: BOT_NAME,
       },
     }),
   });
