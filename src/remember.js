@@ -483,5 +483,5 @@ module.exports = {
   hasRecentMemoryOfResource,
   markTaskMemoryAsCompleted,
   addTaskMemory,
-  
+  getTaskMemories,
 };
