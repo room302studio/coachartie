@@ -177,8 +177,8 @@ async function generateAndStoreTaskEvaluation(
   let taskMessages = []
 
   taskMessages.push({
-    role: 'system',
-    content: `# Your Current To-Do List:
+    role: 'user',
+    content: `# Current To-Do List:
 ${tasks.map(task => `  - <${id}> ${task.value}`).join('\n')}
     `
   })
