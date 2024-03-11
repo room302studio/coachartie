@@ -1,4 +1,5 @@
-import dotenv from "dotenv";
+// import dotenv from "dotenv";
+const { dotenv } = require("dotenv");
 dotenv.config();
 
 const BOT_NAME = process.env.BOT_NAME;
