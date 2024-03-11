@@ -384,4 +384,5 @@ async function generateAndStoreCapabilityCompletion(
 module.exports = {
   generateAndStoreRememberCompletion,
   generateAndStoreCapabilityCompletion,
+  generateAndStoreTaskEvaluation,
 };

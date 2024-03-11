@@ -10,6 +10,7 @@ const {
 const {
   generateAndStoreRememberCompletion,
   generateAndStoreCapabilityCompletion,
+  generateAndStoreTaskEvaluation
 } = require("./memory");
 const { capabilityRegex, callCapabilityMethod } = require("./capabilities");
 const { storeUserMessage } = require("./remember");
