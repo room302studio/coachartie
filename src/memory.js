@@ -216,40 +216,40 @@ ${response}`
   logger.info(`🔧 Task Evaluation Text: ${taskEvaluationText}`)
 
   // check if the response modifies the task list
-  const addTaskRegex = /addTask\((.*)\)/
-  const markCompletedRegex = /markCompleted\((.*)\)/
-  const markDeletedRegex = /markDeleted\((.*)\)/
-  const updateTaskRegex = /updateTask\((.*), (.*)\)/
+  const addTaskRegex = /addTask\((.*)\)/g;
+  const markCompletedRegex = /markCompleted\((.*)\)/g;
+  const markDeletedRegex = /markDeleted\((.*)\)/g;
+  const updateTaskRegex = /updateTask\((.*), (.*)\)/g;
 
-  const addTaskMatch = taskEvaluationText.match(addTaskRegex)
-  const markCompletedMatch = taskEvaluationText.match(markCompletedRegex)
-  const markDeletedMatch = taskEvaluationText.match(markDeletedRegex)
-  const updateTaskMatch = taskEvaluationText.match(updateTaskRegex)
+  let addTaskMatches = taskEvaluationText.matchAll(addTaskRegex);
+  let markCompletedMatches = taskEvaluationText.matchAll(markCompletedRegex);
+  let markDeletedMatches = taskEvaluationText.matchAll(markDeletedRegex);
+  let updateTaskMatches = taskEvaluationText.matchAll(updateTaskRegex);
 
-  if (addTaskMatch) {
-    logger.info(`🔧 Adding task: ${addTaskMatch[1]}`)
-    const task = addTaskMatch[1]
-    const taskId = await addTaskMemory(value)    
-    logger.info(`🔧 Added task with id: ${taskId}`)
+  for (const match of addTaskMatches) {
+    logger.info(`🔧 Adding task: ${match[1]}`);
+    const task = match[1];
+    const taskId = await addTaskMemory(task);
+    logger.info(`🔧 Added task with id: ${taskId}`);
   }
 
-  if (markCompletedMatch) {
-    const taskId = markCompletedMatch[1]
-    await markTaskCompleted(taskId)
-    logger.info(`🔧 Marked task with id ${taskId} as completed`)
+  for (const match of markCompletedMatches) {
+    const taskId = match[1];
+    await markTaskCompleted(taskId);
+    logger.info(`🔧 Marked task with id ${taskId} as completed`);
   }
 
-  if (markDeletedMatch) {
-    const taskId = markDeletedMatch[1]
-    await markTaskDeleted(taskId)
-    logger.info(`🔧 Marked task with id ${taskId} as deleted`)
+  for (const match of markDeletedMatches) {
+    const taskId = match[1];
+    await markTaskDeleted(taskId);
+    logger.info(`🔧 Marked task with id ${taskId} as deleted`);
   }
 
-  if (updateTaskMatch) {
-    const taskId = updateTaskMatch[1]
-    const task = updateTaskMatch[2]
-    await updateTask(taskId, task)
-    logger.info(`🔧 Updated task with id ${taskId} to ${task}`)
+  for (const match of updateTaskMatches) {
+    const taskId = match[1];
+    const task = match[2];
+    await updateTask(taskId, task);
+    logger.info(`🔧 Updated task with id ${taskId} to ${task}`);
   }
 
   // make a memory of the task evaluation
