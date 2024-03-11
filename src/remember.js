@@ -154,6 +154,61 @@ async function getResourceMemories(resourceId, limit = 5) {
 }
 
 /**
+ * Retrieve a certain number of task memories
+ * @param {number} [limit=5] - The maximum number of memories to retrieve. Default is 5.
+ */
+async function getTaskMemories(limit = 100) {
+  const { data, error } = await supabase
+    .from(MEMORIES_TABLE_NAME)
+    .select("*")
+    .limit(limit)
+    .order("created_at", { ascending: false })
+    .eq("memory_type", "task");
+
+  if (error) {
+    logger.info("Error fetching task memories:", error);
+    return null;
+  }
+
+  return data;
+}
+
+
+
+/**
+ * Marks a task memory as completed by prepending a checkmark to the value and updating the created_at time.
+ * @param {string} memoryId - The ID of the task memory to mark as completed.
+ * @returns {Promise<null>} - Returns null if there is an error marking the task memory as completed.
+ */
+async function markTaskMemoryAsCompleted(memoryId) {
+  // if a task memory is completed, we will prepend the value with a checkmark
+  // and update the created_at to the current time
+  const { data, error } = await supabase
+    .from(MEMORIES_TABLE_NAME)
+    .update({ value: `✅ ${value}` })
+    .eq("id", memoryId);
+
+  if (error) {
+    logger.info("Error marking task memory as completed:", error);
+    return null;
+  }
+}
+
+async function addTaskMemory(value) {
+  const { data, error } = await supabase
+    .from(MEMORIES_TABLE_NAME)
+    .insert({ value, memory_type: "task" });
+
+  if (error) {
+    logger.info("Error adding task memory:", error);
+    return null;
+  }
+
+  // return the memory ID 
+  return data[0].id;
+}
+
+/**
  * Checks if there is a memory of the file based on its resource ID.
  *
  * @param {string} resourceId - The ID of the resource (file) to check.

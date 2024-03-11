@@ -295,6 +295,13 @@ async function processMessage(
     messages
   );
 
+  generateAndStoreTaskEvaluation(
+    prompt,
+    aiResponse,
+    { username, channel, guild },
+    messages
+  );
+
   return messages;
 }
 
