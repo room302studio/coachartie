@@ -186,9 +186,35 @@ ${tasks.map(task => `  - <${id}> ${task.value}`).join('\n')}
   // explain the to-do list management task
   taskMessages.push({
     role: 'user',
-    content: `I am entrusting you with my current to-do list and a recent exchange between myself and my assistant. Your responsibility is to critically assess this exchange and its implications on my tasks. Determine if any modifications are needed on the to-do list based on this interaction; this could involve adding new tasks, marking existing ones as completed, or leaving the list unchanged if no action is warranted. Your decisions should be rooted in ensuring optimal response and support to our users, aligning with Room 302 Studio's objectives of fostering a positive environment for growth, learning, and collaboration. Keep your memo short, precise, and actionable.
+    content: `I am entrusting you with my current to-do list and a recent exchange between myself and my assistant. Your responsibility is to critically assess this exchange and its implications on my tasks. Determine if any modifications are needed on the to-do list based on this interaction; this could involve adding new tasks, marking existing ones as completed, or leaving the list unchanged if no action is warranted. Your decisions should be rooted in ensuring optimal response and support to our users, aligning with Room 302 Studio's objectives of fostering a positive environment for growth, learning, and collaboration. Keep your memo short, precise, and actionable. If possible, use #hashtags to categorize tasks.
     
     If any part of your response contains the text markCompleted(<id>), it will be interpreted as a request to mark the task with the given id as completed. If any part of your response contains the text markDeleted(<id>), it will be interpreted as a request to mark the task with the given id as deleted. If any part of your response contains the text addTask(<task>), it will be interpreted as a request to add the given task to the list. If any part of your response contains the text updateTask(<id>, <task>), it will be interpreted as a request to update the task with the given id to the given task.`
+  })
+
+  taskMessages.push({
+    role: 'user',
+    content: `Do you remember how to modify tasks?`
+  })
+
+  taskMessages.push({
+    role: 'assistant',
+    content: `Yes! You can add a task by saying addTask(<task>), mark a task as completed by saying markCompleted(<id>), mark a task as deleted by saying markDeleted(<id>), or update a task by saying updateTask(<id>, <task>).`
+  })
+
+  taskMessages.push({
+    role: 'user',
+    content: `Exactly! Can you add 2 new tasks named 'write end-of-week report' and 'prepare for next week' to the list?`
+  })
+
+  taskMessages.push({
+    role: 'assistant',
+    content: `addTask(write end-of-week report #weekly)
+addTask(prepare for next week #weekly)`    
+  })
+
+  taskMessages.push({
+    role: 'user',
+    content: `Great!`
   })
 
   // add the exchange to the task evaluation
