@@ -1,5 +1,5 @@
 // import dotenv from "dotenv";
-require("dotenv").config();
+const dotenv = require("dotenv").config();
 
 const BOT_NAME = process.env.BOT_NAME;
 const BOT_EMAIL = process.env.BOT_EMAIL;
