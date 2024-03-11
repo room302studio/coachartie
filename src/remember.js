@@ -108,7 +108,7 @@ async function storeUserMemory(
   // If the API keys are defined in the .env, then we should get embeddings from them and store those as well
 
   try {
-    {embedding, embedding2, embedding3} = await memoryToEmbedding(value);
+    const {embedding, embedding2, embedding3} = await memoryToEmbedding(value);
   } catch (e) {
     logger.info(e.message);
   }
