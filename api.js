@@ -154,8 +154,8 @@ async function processMissiveRequest(body) {
   }
 
   // Take a look at the latest message in the conversation
-  const latestMessageId = body.latest_message.id;
-  const latestMessageAttachments = body.latest_message.attachments;
+  const latestMessageId = body.latest_message?.id;
+  const latestMessageAttachments = body?.latest_message.attachments;
   logger.info(`Latest message ID: ${latestMessageId}`);
   logger.info(
     `Latest message attachments: ${JSON.stringify(latestMessageAttachments)}`
