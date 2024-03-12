@@ -347,12 +347,12 @@ async function stringToEmbedding(string) {
     console.error("Error generating embedding3:", error);
   }
 
-  let embedding4 = null;
   const openAiLargeEmbeddingResponse = await openai.createEmbedding({
     model: 'text-embedding-3-large',
     input: memory,
   });
-  const [{ embedding: embedding4 }] = openAiLargeEmbeddingResponse.data.data;
+  const [{ embedding }] = openAiLargeEmbeddingResponse.data.data;
+  const embedding4 = embedding;
 
 
   return {
