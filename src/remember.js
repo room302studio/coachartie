@@ -81,7 +81,7 @@ async function storeUserMemory(
   { username, channel, guild },
   value,
   memoryType = "user",
-  resourceId
+  resourceId = null
 ) {
   // first we do some checks to make sure we have the right types of data
   if (!username) {
@@ -116,6 +116,8 @@ async function storeUserMemory(
   // } catch (e) {
   //   logger.info(`Error making embeddings: ${e.message}`);
   // }
+
+  logger.info(`Storing memory for ${username}: ${value} in ${memoryType} memory`);
 
   // const { embedding1: embedding, embedding2, embedding3, embedding4 } = embeddings;
   const openAiEmbeddingResponse = await openai.createEmbedding({
