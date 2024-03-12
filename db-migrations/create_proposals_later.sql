@@ -1,3 +1,4 @@
+-- to discuss later, this is so that we tachio can reflect on the feedback it receives and create proposals for how to improve its prompts in the future
 
 -- Create the function to handle briefing proposal decisions
 CREATE OR REPLACE FUNCTION handle_proposal_decision(
