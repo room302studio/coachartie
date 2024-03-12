@@ -117,7 +117,7 @@ async function storeUserMemory(
     logger.info(`Error making embeddings: ${e.message}`);
   }
 
-  const { embedding, embedding2, embedding3, embedding4 } = embeddings;
+  const { embedding1: embedding, embedding2, embedding3, embedding4 } = embeddings;
 
   const { data, error } = await supabase
     // .from("storage")
