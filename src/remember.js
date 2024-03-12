@@ -356,7 +356,7 @@ async function stringToEmbedding(string) {
     }
   } catch (error) {
     console.error("Error generating embedding3:", error);
-    retyrn { embedding1: embedding1 || null, embedding2: embedding2 || null, embedding3: embedding3 || null };
+    return { embedding1: embedding1 || null, embedding2: embedding2 || null, embedding3: embedding3 || null };
   }
 
   const openAiLargeEmbeddingResponse = await openai.createEmbedding({
