@@ -5,6 +5,7 @@ const { openai } = require("./openai");
 const { CohereClient } = require("cohere-ai");
 const logger = require("../src/logger.js")("remember");
 const { differenceInHours } = require("date-fns");
+const axios = require("axios");
 
 const cohere = new CohereClient({
   token: process.env.COHERE_API_KEY,
