@@ -110,14 +110,20 @@ async function storeUserMemory(
   //   logger.info(e.message);
   // }
 
-  let embeddings
-  try {
-    embeddings = await stringToEmbedding(value);
-  } catch (e) {
-    logger.info(`Error making embeddings: ${e.message}`);
-  }
+  // let embeddings
+  // try {
+  //   embeddings = await stringToEmbedding(value);
+  // } catch (e) {
+  //   logger.info(`Error making embeddings: ${e.message}`);
+  // }
 
-  const { embedding1: embedding, embedding2, embedding3, embedding4 } = embeddings;
+  // const { embedding1: embedding, embedding2, embedding3, embedding4 } = embeddings;
+  const openAiEmbeddingResponse = await openai.createEmbedding({
+    model: "text-embedding-ada-002",
+    input: string,
+  });
+
+  const [{ embedding }] = openAiEmbeddingResponse.data.data;
 
   const { data, error } = await supabase
     // .from("storage")
@@ -126,8 +132,8 @@ async function storeUserMemory(
       user_id: username,
       value,
       embedding: embedding || null,
-      embedding2: embedding2 || null,
-      embedding3: embedding3 || null,
+      // embedding2: embedding2 || null,
+      // embedding3: embedding3 || null,
       memory_type: memoryType,
       resource_id: resourceId,
     });
