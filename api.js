@@ -170,7 +170,7 @@ async function processMissiveRequest(body) {
   const latestMessageHtmlBody = fullLatestMessage?.messages?.body;
 
   // now we need to strip out all the newlines, HTML tags, and any styles/css
-  const latestMessageTextBody = latestMessageHtmlBody.replace(`\n`, " ").replace(
+  const latestMessageTextBody = latestMessageHtmlBody?.replace(`\n`, " ").replace(
     /<style([\s\S]*?)<\/style>/gi,
     ""
   )
