@@ -98,10 +98,6 @@ async function storeUserMemory(
     return logger.info("value provided to storeUserMemory is not a string");
   }
 
-  // TODO: We need to convert the memory into an embedding using the openai embeddings API
-  // and include that in the database entry
-  let embedding = null;
-
   // TODO: Check .env for any non-openAI embedding models
   // Cohere, Voyage, etc
 
