@@ -121,7 +121,7 @@ async function storeUserMemory(
       value,
       embedding,
       embedding2,
-      embedding3
+      embedding3,
       memory_type: memoryType,
       resource_id: resourceId,
     });
