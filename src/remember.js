@@ -363,10 +363,10 @@ async function stringToEmbedding(string) {
   const embedding4 = embedding;
 
   return {
-    embedding1,
-    embedding2,
-    embedding3,
-    embedding4,
+    embedding1 || null,
+    embedding2 || null,
+    embedding3 || null,
+    embedding4 || null,
   };
 }
 
