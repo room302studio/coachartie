@@ -320,7 +320,7 @@ async function voyageEmbedding(string, model = "voyage-large-2") {
 /**
  * Converts a string into three different embeddings using different models.
  * @param {string} string - The input string to convert into embeddings.
- * @returns {Object} An object containing three different embeddings.
+  * @returns {Promise<object>} - A promise that resolves to an object containing the three embeddings: embedding1, embedding2, and embedding3.
  * @throws {Error} If there is an error generating any of the embeddings.
  */
 async function stringToEmbedding(string) {
