@@ -345,7 +345,7 @@ async function stringToEmbedding(string) {
   let embedding2 = null;
   try {
     if (process.env.COHERE_API_KEY) {
-      const embed = await CohereClient.embed({
+      const embed = await cohere.embed({
         texts: [string],
         model: "embed-english-v3.0",
         inputType: "search_document",
@@ -425,7 +425,14 @@ async function getRelevantMemories(queryString, limit = 5) {
     return [];
   }
 
-  const { embedding1: embedding } = await stringToEmbedding(queryString);
+  // const { embedding1: embedding } = await stringToEmbedding(queryString);
+
+  const openAiEmbeddingResponse = await openai.createEmbedding({
+    model: "text-embedding-ada-002",
+    input: queryString,
+  });
+
+  const [{ embedding }] = openAiEmbeddingResponse.data.data;
 
   // query the database for the most relevant memories, currently this is only supported on the openai embeddings
   const { data, error } = await supabase.rpc("match_memories", {
