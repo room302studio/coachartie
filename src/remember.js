@@ -207,7 +207,10 @@ async function hasRecentMemoryOfResource(resourceId, recencyHours = 24) {
   // we need to remove the date-fns dependency
   // and do this with plain ol' date objects
   const hoursSinceLastMemory =
-    (new Date().getTime() - new Date(data[0].created_at).getTime()) / 1000 / 60 / 60;  
+    (new Date().getTime() - new Date(data[0].created_at).getTime()) /
+    1000 /
+    60 /
+    60;
 
   return hoursSinceLastMemory <= recencyHours;
 }
@@ -285,7 +288,6 @@ async function getChannelMessageHistory(channelId, limit = 5) {
   return data;
 }
 
-
 /**
  * Embeds a string using the Voyage AI API.
  * @param {string} string - The input string to embed.
@@ -327,7 +329,7 @@ async function stringToEmbedding(string) {
   try {
     if (process.env.COHERE_API_KEY) {
       const embed = await Cohere.embed({
-        texts: [memory],
+        texts: [string],
         model: "embed-english-v3.0",
         inputType: "search_document",
       });
@@ -348,18 +350,17 @@ async function stringToEmbedding(string) {
   }
 
   const openAiLargeEmbeddingResponse = await openai.createEmbedding({
-    model: 'text-embedding-3-large',
+    model: "text-embedding-3-large",
     input: memory,
   });
   const [{ embedding }] = openAiLargeEmbeddingResponse.data.data;
   const embedding4 = embedding;
 
-
   return {
     embedding1,
     embedding2,
     embedding3,
-    embedding4
+    embedding4,
   };
 }
 
@@ -380,7 +381,11 @@ async function memoryToEmbedding(memory) {
 
   // const [{ embedding }] = embeddingResponse.data.data;
 
-  const { embedding1: embedding, embedding2, embedding3 } = await stringToEmbedding(memory);
+  const {
+    embedding1: embedding,
+    embedding2,
+    embedding3,
+  } = await stringToEmbedding(memory);
 
   return { embedding, embedding2, embedding3 };
 }
