@@ -330,6 +330,7 @@ async function stringToEmbedding(string) {
   });
 
   const [{ embedding: embedding1 }] = openAiEmbeddingResponse.data.data;
+  if (embedding1) logger.info(`Embedding 1 length: ${embedding1.length}`);
 
   let embedding2 = null;
   try {
@@ -339,7 +340,8 @@ async function stringToEmbedding(string) {
         model: "embed-english-v3.0",
         inputType: "search_document",
       });
-      embedding2 = embed.embeddings;
+      embedding2 = embed.embeddings ? embed.embeddings[0] : null;
+      logger.info(`Embedding 2 length: ${embedding2.length}`);
     }
   } catch (error) {
     console.error("Error generating embedding2:", error);
@@ -349,18 +351,20 @@ async function stringToEmbedding(string) {
   try {
     if (process.env.VOYAGE_API_KEY) {
       const embed = await voyageEmbedding(string, "voyage-large-2");
-      embedding3 = embed.embedding;
+      embedding3 = embed.embedding ? embed.embedding : null;
+      logger.info(`Embedding 3 length: ${embedding3.length}`);
     }
   } catch (error) {
     console.error("Error generating embedding3:", error);
   }
 
   const openAiLargeEmbeddingResponse = await openai.createEmbedding({
-    model: "text-embedding-3-large",
+    model: "text-embedding-large",
     input: string,
   });
   const [{ embedding }] = openAiLargeEmbeddingResponse.data.data;
-  const embedding4 = embedding;
+  const embedding4 = embedding || null;
+  if (embedding4) logger.info(`Embedding 4 length: ${embedding4.length}`);
 
   return {
     embedding1: embedding1 || null,
