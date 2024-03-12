@@ -103,12 +103,21 @@ async function storeUserMemory(
 
   // If the API keys are defined in the .env, then we should get embeddings from them and store those as well
 
-  let embedding, embedding2, embedding3;
+  // let embedding, embedding2, embedding3;
+  // try {
+  //   ({ embedding, embedding2, embedding3 } = await memoryToEmbedding(value));
+  // } catch (e) {
+  //   logger.info(e.message);
+  // }
+
+  let embeddings
   try {
-    ({ embedding, embedding2, embedding3 } = await memoryToEmbedding(value));
+    embeddings = await stringToEmbedding(value);
   } catch (e) {
-    logger.info(e.message);
+    logger.info(`Error making embeddings: ${e.message}`);
   }
+
+  const { embedding, embedding2, embedding3, embedding4 } = embeddings;
 
   const { data, error } = await supabase
     // .from("storage")
@@ -339,7 +348,7 @@ async function stringToEmbedding(string) {
   let embedding3 = null;
   try {
     if (process.env.VOYAGE_API_KEY) {
-      const embed = await voyageEmbedding(memory, "voyage-large-2");
+      const embed = await voyageEmbedding(string, "voyage-large-2");
       embedding3 = embed.embedding;
     }
   } catch (error) {
@@ -382,9 +391,10 @@ async function memoryToEmbedding(memory) {
     embedding1: embedding,
     embedding2,
     embedding3,
+    embedding4
   } = await stringToEmbedding(memory);
 
-  return { embedding, embedding2, embedding3 };
+  return { embedding, embedding2, embedding3, embedding4 };
 }
 
 /**
