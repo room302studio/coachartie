@@ -335,7 +335,7 @@ async function stringToEmbedding(string) {
   let embedding2 = null;
   try {
     if (process.env.COHERE_API_KEY) {
-      const embed = await Cohere.embed({
+      const embed = await CohereClient.embed({
         texts: [string],
         model: "embed-english-v3.0",
         inputType: "search_document",
@@ -356,6 +356,7 @@ async function stringToEmbedding(string) {
     }
   } catch (error) {
     console.error("Error generating embedding3:", error);
+    retyrn { embedding1: embedding1 || null, embedding2: embedding2 || null, embedding3: embedding3 || null };
   }
 
   const openAiLargeEmbeddingResponse = await openai.createEmbedding({
