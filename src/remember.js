@@ -107,6 +107,7 @@ async function storeUserMemory(
 
   // If the API keys are defined in the .env, then we should get embeddings from them and store those as well
 
+  let embedding, embedding2, embedding3;
   try {
     ({ embedding, embedding2, embedding3 } = await memoryToEmbedding(value));
   } catch (e) {
@@ -119,9 +120,9 @@ async function storeUserMemory(
     .insert({
       user_id: username,
       value,
-      embedding,
-      embedding2,
-      embedding3,
+      embedding: embedding || null,
+      embedding2: embedding2 || null,
+      embedding3: embedding3 || null,
       memory_type: memoryType,
       resource_id: resourceId,
     });
