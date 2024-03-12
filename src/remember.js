@@ -127,7 +127,6 @@ async function storeUserMemory(
 
   const [{ embedding }] = openAiEmbeddingResponse.data.data;
   logger.info(`Embedding length: ${embedding.length}`);
-
   const { data, error } = await supabase
     // .from("storage")
     .from(MEMORIES_TABLE_NAME)
@@ -140,6 +139,8 @@ async function storeUserMemory(
       memory_type: memoryType,
       resource_id: resourceId,
     });
+
+  logger.info(`Stored memory for ${username}: ${value} in ${memoryType} memory ${JSON.stringify(data)}`);
 
   if (error) {
     logger.info(`Error storing user memory: ${error.message}`);
