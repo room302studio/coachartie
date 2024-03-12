@@ -105,7 +105,7 @@ async function generateAndStoreRememberCompletion(
     },
   ];
 
-  preambleLogger.info("📜 Preamble messages", completeMessages);
+  preambleLogger.info(`📜 Preamble messages ${JSON.stringify(completeMessages)}`)
 
   const rememberCompletion = await openai.createChatCompletion({
     model: REMEMBER_MODEL,
@@ -117,6 +117,7 @@ async function generateAndStoreRememberCompletion(
   });
 
   const rememberText = rememberCompletion.data.choices[0].message.content;
+  logger.info(`🧠 Interaction memory: ${rememberText} for ${username} in ${channel} in ${guild} `);
   // logger.info("🧠 Interaction memory", rememberText);
 
   // if the remember text is ✨ AKA empty, we don't wanna store it
