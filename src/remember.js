@@ -348,7 +348,7 @@ async function stringToEmbedding(string) {
 
   const openAiLargeEmbeddingResponse = await openai.createEmbedding({
     model: "text-embedding-3-large",
-    input: memory,
+    input: string,
   });
   const [{ embedding }] = openAiLargeEmbeddingResponse.data.data;
   const embedding4 = embedding;
