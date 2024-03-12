@@ -132,7 +132,7 @@ async function storeUserMemory(
     .insert({
       user_id: username,
       value,
-      // embedding: embedding || null,
+      embedding: embedding || null,
       // embedding2: embedding2 || null,
       // embedding3: embedding3 || null,
       memory_type: memoryType,
