@@ -120,7 +120,7 @@ async function storeUserMemory(
   // const { embedding1: embedding, embedding2, embedding3, embedding4 } = embeddings;
   const openAiEmbeddingResponse = await openai.createEmbedding({
     model: "text-embedding-ada-002",
-    input: string,
+    input: value,
   });
 
   const [{ embedding }] = openAiEmbeddingResponse.data.data;
