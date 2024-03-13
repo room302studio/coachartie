@@ -1,6 +1,4 @@
 {
-  "chance": [],
-  "_generate-manifest": [],
   "calculator": [
     {
       "name": "calculator:add()",
@@ -73,38 +71,6 @@
       ]
     }
   ],
-  "discord-events": [],
-  "evaluate": [
-    {
-      "name": "evaluate:runCodeInSandbox()",
-      "description": "Runs the provided code in a sandboxed environment. Returns: The result of the code execution.",
-      "parameters": [
-        {
-          "name": "code",
-          "description": "The code to be executed."
-        },
-        {
-          "name": "sandbox",
-          "description": "The sandbox object to provide the execution context."
-        }
-      ]
-    }
-  ],
-  "js": [
-    {
-      "name": "js:executeJavascriptAndCaptureImage()",
-      "description": "Executes the provided JavaScript code in a headless browser using Puppeteer and captures a screenshot of the resulting page. Returns: A promise that resolves to an object containing the captured screenshot image as a Buffer.",
-      "parameters": [
-        {
-          "name": "javascriptCode",
-          "description": "The JavaScript code to be executed in the browser."
-        }
-      ],
-      "exceptions": [
-        "If an error occurs while executing the JavaScript code and capturing the image."
-      ]
-    }
-  ],
   "calendar": [
     {
       "name": "calendar:listAllCalendars()",
@@ -170,25 +136,8 @@
       ]
     }
   ],
-  "mastodon": [
-    {
-      "name": "mastodon:postStatus()",
-      "description": "Posts a status to Mastodon. Returns: A promise that resolves to the response data from Mastodon.",
-      "parameters": [
-        {
-          "name": "text",
-          "description": "The text content of the status."
-        },
-        {
-          "name": "image",
-          "description": "The ID of the image to attach to the status."
-        }
-      ],
-      "exceptions": [
-        "If an error occurs while posting to Mastodon."
-      ]
-    }
-  ],
+  "_generate-manifest": [],
+  "chance": [],
   "drive": [
     {
       "name": "drive:getDriveInstance()",
@@ -232,6 +181,138 @@
       ]
     }
   ],
+  "evaluate": [
+    {
+      "name": "evaluate:runCodeInSandbox()",
+      "description": "Runs the provided code in a sandboxed environment. Returns: The result of the code execution.",
+      "parameters": [
+        {
+          "name": "code",
+          "description": "The code to be executed."
+        },
+        {
+          "name": "sandbox",
+          "description": "The sandbox object to provide the execution context."
+        }
+      ]
+    }
+  ],
+  "discord-events": [],
+  "mastodon": [
+    {
+      "name": "mastodon:postStatus()",
+      "description": "Posts a status to Mastodon. Returns: A promise that resolves to the response data from Mastodon.",
+      "parameters": [
+        {
+          "name": "text",
+          "description": "The text content of the status."
+        },
+        {
+          "name": "image",
+          "description": "The ID of the image to attach to the status."
+        }
+      ],
+      "exceptions": [
+        "If an error occurs while posting to Mastodon."
+      ]
+    }
+  ],
+  "js": [
+    {
+      "name": "js:executeJavascriptAndCaptureImage()",
+      "description": "Executes the provided JavaScript code in a headless browser using Puppeteer and captures a screenshot of the resulting page. Returns: A promise that resolves to an object containing the captured screenshot image as a Buffer.",
+      "parameters": [
+        {
+          "name": "javascriptCode",
+          "description": "The JavaScript code to be executed in the browser."
+        }
+      ],
+      "exceptions": [
+        "If an error occurs while executing the JavaScript code and capturing the image."
+      ]
+    }
+  ],
+  "mermaid": [
+    {
+      "name": "mermaid:convertMermaidDiagram()",
+      "description": "Converts a Mermaid diagram text into an image. Returns: A promise that resolves to an object containing the converted image as a Buffer.",
+      "parameters": [
+        {
+          "name": "diagramText",
+          "description": "The Mermaid diagram text to convert."
+        }
+      ],
+      "exceptions": [
+        "If an error occurs while converting the Mermaid diagram."
+      ]
+    }
+  ],
+  "stablediffusion": [
+    {
+      "name": "stablediffusion:generateImageFromText()",
+      "description": "Generates an image from the given text using the Stable Diffusion API. Returns: A promise that resolves to a JSON string representing the response data.",
+      "parameters": [
+        {
+          "name": "args",
+          "description": "The arguments for generating the image."
+        }
+      ],
+      "exceptions": [
+        "If an error occurs during the API request."
+      ]
+    }
+  ],
+  "supabasetodo": [
+    {
+      "name": "supabasetodo:createTodo()",
+      "description": "Creates a new todo item in the database. This capability allows for the creation of a new todo item within a specified project. It supports optional details such as description, status, priority, due date, external URLs, and attachments, making it flexible for various use cases. The function defaults to setting the todo's status to \"To Do\" if not specified, ensuring a new todo is actionable immediately upon creation.\nWhen to Use: Use this capability when a new task arises that needs tracking within a project's context. It's suitable for user-driven todo creation based on input or automated task generation from project activities or milestones.\nHow to Use:\nPrepare Todo Details: Construct an object containing the details of the todo to be created, including the mandatory projectId and name fields, along with any other optional information.\nCall the Function: Invoke the createTodo function with the prepared object. Handle the promise returned by the function to deal with the newly created todo or to catch any errors.\nProcess Response: On successful creation, use the returned todo item for display, further processing, or confirmation to the user. Returns: A promise that resolves to the created todo item.",
+      "parameters": [
+        {
+          "name": "todoDetails",
+          "description": "Details of the todo to be created."
+        }
+      ]
+    },
+    {
+      "name": "supabasetodo:deleteTodo()",
+      "description": "Deletes a todo item from the database.\nThis capability allows for the deletion of a specified todo item from the database. It is a straightforward function that requires only the ID of the todo item to be deleted. This capability is essential for maintaining the relevance and accuracy of the todo list by removing completed, cancelled, or outdated tasks.\nWhen to Use: Utilize this capability when a todo item is no longer needed or relevant. This could be after the completion of a task, cancellation of a project, or any situation where a todo does not need to be tracked anymore.\nHow to Use:\nDetermine Todo ID: Identify the ID of the todo item that needs to be deleted.\nCall the Function: Execute the deleteTodo function with the identified todo ID. Manage the promise to address any errors and confirm deletion.\nVerify Deletion: The function returns a boolean value indicating the success of the deletion operation. Use this to provide feedback to the user or to update the application state accordingly. Returns: A promise that resolves to true if the deletion was successful, false otherwise.",
+      "parameters": [
+        {
+          "name": "todoId",
+          "description": "ID of the todo to be deleted."
+        }
+      ]
+    },
+    {
+      "name": "supabasetodo:updateTodo()",
+      "description": "Updates an existing todo item in the database. Returns: A promise that resolves to the updated todo item.",
+      "parameters": [
+        {
+          "name": "todoId",
+          "description": "ID of the todo to be updated."
+        },
+        {
+          "name": "updates",
+          "description": "Object containing the fields to update."
+        }
+      ]
+    }
+  ],
+  "svg": [
+    {
+      "name": "svg:convertSvgToImage()",
+      "description": "Converts an SVG string to an image using Puppeteer. Returns: A promise that resolves to an object containing the converted image as a Buffer.",
+      "parameters": [
+        {
+          "name": "svgString",
+          "description": "The SVG string to convert."
+        }
+      ],
+      "exceptions": [
+        "If an error occurs while converting SVG to image."
+      ]
+    }
+  ],
   "scratchfile": [
     {
       "name": "scratchfile:readScratchFile()",
@@ -268,47 +349,58 @@
       ]
     }
   ],
-  "mermaid": [
+  "web": [
     {
-      "name": "mermaid:convertMermaidDiagram()",
-      "description": "Converts a Mermaid diagram text into an image. Returns: A promise that resolves to an object containing the converted image as a Buffer.",
+      "name": "web:fetchAllLinks()",
+      "description": "Fetches all links on a given URL. Returns: A promise that resolves to a string containing the links.",
       "parameters": [
         {
-          "name": "diagramText",
-          "description": "The Mermaid diagram text to convert."
+          "name": "url",
+          "description": "The URL to fetch links from."
         }
-      ],
-      "exceptions": [
-        "If an error occurs while converting the Mermaid diagram."
+      ]
+    },
+    {
+      "name": "web:fetchAllVisibleImages()",
+      "description": "Fetches all visible images on a given URL. Returns: A promise that resolves to an array of image objects, each containing the source (src) and alternative text (alt) of the image.",
+      "parameters": [
+        {
+          "name": "url",
+          "description": "The URL to fetch images from."
+        }
+      ]
+    },
+    {
+      "name": "web:fetchLargestImage()",
+      "description": "Fetches the largest image from the given URL. Returns: The source URL of the largest image.",
+      "parameters": [
+        {
+          "name": "url",
+          "description": "The URL to fetch the images from."
+        }
+      ]
+    },
+    {
+      "name": "web:fetchAndSummarizeUrl()",
+      "description": "Fetches the content of a URL, generates a summary, and caches the result. Returns: The generated summary.",
+      "parameters": [
+        {
+          "name": "url",
+          "description": "The URL to fetch and summarize."
+        }
       ]
     }
   ],
-  "schedule": [
+  "wolframalpha": [
     {
-      "name": "schedule:auth()",
-      "description": "Google Auth object"
-    },
-    {
-      "name": "schedule:findPotentialMeetingTimes()",
-      "description": "This function uses the Google Calendar API to find potential meeting times within the specified interval Returns: Array of potential meeting times",
+      "name": "wolframalpha:askWolframAlpha()",
+      "description": "This function gives you the ability to ask Wolfram Alpha questions and get answers. If you're ever unsure about a calculation, a conversion, or a general fact about the world, then you can ask Wolfram Alpha to double check it for you by asking it as a simple question. Wolfram Alpha can perform all types of calculations, conversions between units or currencies, and lookup most basic facts about the world. Wolfram Alpha provides information that is always up-to-date.  Wolfram Alpha understands natural language queries about entities in government, politics, economics, chemistry, physics, geography, history, art, astronomy, and more. WolframAlpha performs mathematical calculations, date and unit conversions, formula solving, etc. Be sure to convert inputs to simplified keyword queries whenever possible (e.g. convert \"how many people live in France\" to \"France population\"). ALWAYS use this exponent notation:  6*10^14 , NEVER  6e14 . ALWAYS use {\"input\": query} structure for queries to Wolfram endpoints;  query  must ONLY be a single-line string. ALWAYS use proper Markdown formatting for all math, scientific, and chemical formulas, symbols, etc.:  '$$\\n[expression]\\n$$' for standalone cases and '( [expression] )' when inline. Never mention your knowledge cutoff date; Wolfram may return more recent data. Use ONLY single-letter variable names, with or without integer subscript (e.g., n, n1, n_1). Send queries in English only; translate non-English queries before sending. Returns: The answer from Wolfram Alpha, or an alternative suggestion for how to phrase the question if Wolfram Alpha could not understand the question, or an error message if an error occurred. Returns: The answer from Wolfram Alpha, or an error message if an error occurred.",
       "parameters": [
         {
-          "name": "emailString",
-          "description": "Space-separated list of emails to check for availability, escape any commas in the list"
-        },
-        {
-          "name": "timeMin",
-          "description": "Start of time interval in human readable format"
-        },
-        {
-          "name": "timeMax",
-          "description": "End of time interval in human readable format"
+          "name": "question",
+          "description": "The question to ask Wolfram Alpha."
         }
       ]
-    },
-    {
-      "name": "schedule:schedule()",
-      "description": "Exports an object with a method to handle capability methods"
     }
   ],
   "github": [
@@ -539,21 +631,6 @@
       ]
     }
   ],
-  "stablediffusion": [
-    {
-      "name": "stablediffusion:generateImageFromText()",
-      "description": "Generates an image from the given text using the Stable Diffusion API. Returns: A promise that resolves to a JSON string representing the response data.",
-      "parameters": [
-        {
-          "name": "args",
-          "description": "The arguments for generating the image."
-        }
-      ],
-      "exceptions": [
-        "If an error occurs during the API request."
-      ]
-    }
-  ],
   "wikipedia": [
     {
       "name": "wikipedia:askWikipedia()",
@@ -569,73 +646,32 @@
       ]
     }
   ],
-  "svg": [
+  "schedule": [
     {
-      "name": "svg:convertSvgToImage()",
-      "description": "Converts an SVG string to an image using Puppeteer. Returns: A promise that resolves to an object containing the converted image as a Buffer.",
+      "name": "schedule:auth()",
+      "description": "Google Auth object"
+    },
+    {
+      "name": "schedule:findPotentialMeetingTimes()",
+      "description": "This function uses the Google Calendar API to find potential meeting times within the specified interval Returns: Array of potential meeting times",
       "parameters": [
         {
-          "name": "svgString",
-          "description": "The SVG string to convert."
-        }
-      ],
-      "exceptions": [
-        "If an error occurs while converting SVG to image."
-      ]
-    }
-  ],
-  "web": [
-    {
-      "name": "web:fetchAllLinks()",
-      "description": "Fetches all links on a given URL. Returns: A promise that resolves to a string containing the links.",
-      "parameters": [
+          "name": "emailString",
+          "description": "Space-separated list of emails to check for availability, escape any commas in the list"
+        },
         {
-          "name": "url",
-          "description": "The URL to fetch links from."
+          "name": "timeMin",
+          "description": "Start of time interval in human readable format"
+        },
+        {
+          "name": "timeMax",
+          "description": "End of time interval in human readable format"
         }
       ]
     },
     {
-      "name": "web:fetchAllVisibleImages()",
-      "description": "Fetches all visible images on a given URL. Returns: A promise that resolves to an array of image objects, each containing the source (src) and alternative text (alt) of the image.",
-      "parameters": [
-        {
-          "name": "url",
-          "description": "The URL to fetch images from."
-        }
-      ]
-    },
-    {
-      "name": "web:fetchLargestImage()",
-      "description": "Fetches the largest image from the given URL. Returns: The source URL of the largest image.",
-      "parameters": [
-        {
-          "name": "url",
-          "description": "The URL to fetch the images from."
-        }
-      ]
-    },
-    {
-      "name": "web:fetchAndSummarizeUrl()",
-      "description": "Fetches the content of a URL, generates a summary, and caches the result. Returns: The generated summary.",
-      "parameters": [
-        {
-          "name": "url",
-          "description": "The URL to fetch and summarize."
-        }
-      ]
-    }
-  ],
-  "wolframalpha": [
-    {
-      "name": "wolframalpha:askWolframAlpha()",
-      "description": "This function gives you the ability to ask Wolfram Alpha questions and get answers. If you're ever unsure about a calculation, a conversion, or a general fact about the world, then you can ask Wolfram Alpha to double check it for you by asking it as a simple question. Wolfram Alpha can perform all types of calculations, conversions between units or currencies, and lookup most basic facts about the world. Wolfram Alpha provides information that is always up-to-date.  Wolfram Alpha understands natural language queries about entities in government, politics, economics, chemistry, physics, geography, history, art, astronomy, and more. WolframAlpha performs mathematical calculations, date and unit conversions, formula solving, etc. Be sure to convert inputs to simplified keyword queries whenever possible (e.g. convert \"how many people live in France\" to \"France population\"). ALWAYS use this exponent notation:  6*10^14 , NEVER  6e14 . ALWAYS use {\"input\": query} structure for queries to Wolfram endpoints;  query  must ONLY be a single-line string. ALWAYS use proper Markdown formatting for all math, scientific, and chemical formulas, symbols, etc.:  '$$\\n[expression]\\n$$' for standalone cases and '( [expression] )' when inline. Never mention your knowledge cutoff date; Wolfram may return more recent data. Use ONLY single-letter variable names, with or without integer subscript (e.g., n, n1, n_1). Send queries in English only; translate non-English queries before sending. Returns: The answer from Wolfram Alpha, or an alternative suggestion for how to phrase the question if Wolfram Alpha could not understand the question, or an error message if an error occurred. Returns: The answer from Wolfram Alpha, or an error message if an error occurred.",
-      "parameters": [
-        {
-          "name": "question",
-          "description": "The question to ask Wolfram Alpha."
-        }
-      ]
+      "name": "schedule:schedule()",
+      "description": "Exports an object with a method to handle capability methods"
     }
   ]
 }

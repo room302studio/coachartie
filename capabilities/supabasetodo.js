@@ -1,0 +1,118 @@
+const dotenv = require("dotenv");
+const { createClient } = require("@supabase/supabase-js");
+dotenv.config();
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_API_KEY,
+);
+const { destructureArgs } = require("../helpers");
+
+/**
+ * Creates a new todo item in the database. This capability allows for the creation of a new todo item within a specified project. It supports optional details such as description, status, priority, due date, external URLs, and attachments, making it flexible for various use cases. The function defaults to setting the todo's status to "To Do" if not specified, ensuring a new todo is actionable immediately upon creation.
+ * When to Use: Use this capability when a new task arises that needs tracking within a project's context. It's suitable for user-driven todo creation based on input or automated task generation from project activities or milestones.
+ * How to Use:
+ * Prepare Todo Details: Construct an object containing the details of the todo to be created, including the mandatory projectId and name fields, along with any other optional information.
+ * Call the Function: Invoke the createTodo function with the prepared object. Handle the promise returned by the function to deal with the newly created todo or to catch any errors.
+ * Process Response: On successful creation, use the returned todo item for display, further processing, or confirmation to the user.
+ *
+ * @param {Object} todoDetails - Details of the todo to be created.
+ * @param {number} todoDetails.projectId - ID of the project the todo belongs to.
+ * @param {string} todoDetails.name - Name of the todo.
+ * @param {string} [todoDetails.description] - Description of the todo (optional).
+ * @param {string} [todoDetails.status='To Do'] - Status of the todo (optional, defaults to 'To Do').
+ * @param {string} [todoDetails.priority] - Priority of the todo (optional).
+ * @param {Date} [todoDetails.dueDate] - Due date of the todo (optional).
+ * @param {Array<string>} [todoDetails.externalUrls=[]] - External URLs related to the todo (optional).
+ * @param {Array<string>} [todoDetails.attachments=[]] - Attachment URLs related to the todo (optional).
+ * @returns {Promise<Object>} A promise that resolves to the created todo item.
+ */
+async function createTodo(name, description = "") {
+  const { data, error } = await supabase.from("todos").insert([
+    {
+      name,
+      description,
+    },
+  ]);
+
+  console.log(JSON.stringify(data));
+
+  if (error) throw new Error(error.message);
+  return data;
+}
+// deleteTodo.js
+
+/**
+ * Deletes a todo item from the database.
+ * This capability allows for the deletion of a specified todo item from the database. It is a straightforward function that requires only the ID of the todo item to be deleted. This capability is essential for maintaining the relevance and accuracy of the todo list by removing completed, cancelled, or outdated tasks.
+ * When to Use: Utilize this capability when a todo item is no longer needed or relevant. This could be after the completion of a task, cancellation of a project, or any situation where a todo does not need to be tracked anymore.
+ * How to Use:
+ * Determine Todo ID: Identify the ID of the todo item that needs to be deleted.
+ * Call the Function: Execute the deleteTodo function with the identified todo ID. Manage the promise to address any errors and confirm deletion.
+ * Verify Deletion: The function returns a boolean value indicating the success of the deletion operation. Use this to provide feedback to the user or to update the application state accordingly.
+ *
+ * @param {number} todoId - ID of the todo to be deleted.
+ * @returns {Promise<boolean>} A promise that resolves to true if the deletion was successful, false otherwise.
+ */
+async function deleteTodo(todoId) {
+  const { data, error } = await supabase
+    .from("todos")
+    .delete()
+    .match({ id: todoId });
+
+  if (error) {
+    console.error("Error deleting todo:", error.message);
+    return false;
+  }
+  return true;
+}
+/*
+
+*/
+
+/**
+ * Updates an existing todo item in the database.
+ *
+ * @param {number} todoId - ID of the todo to be updated.
+ * @param {Object} updates - Object containing the fields to update.
+ * @returns {Promise<Object>} A promise that resolves to the updated todo item.
+ */
+async function updateTodo(todoId, updates) {
+  const { data, error } = await supabase
+    .from("todos")
+    .update(updates)
+    .match({ id: todoId });
+
+  if (error) throw new Error(error.message);
+  return data[0];
+}
+/*
+This capability enables updating specific fields of an existing todo item, such as its status, priority, or due date. It allows partial updates, making it flexible for reflecting changes in todo items over time without needing to specify the entire todo details.
+
+When to Use: Use this capability when there's a need to modify an existing todo item, such as marking it as completed, updating its due date, or changing its priority based on new information or project changes.
+
+How to Use:
+
+Identify Todo and Changes: Determine the ID of the todo you wish to update and prepare an object with the fields that need updating.
+Call the Function: Invoke the updateTodo function with the todo ID and the updates object. Handle the promise to catch any potential errors.
+Process Response: Use the updated todo item returned by the function to verify the updates and inform the user or further application logic.
+*/
+
+module.exports = {
+  handleCapabilityMethod: async (method, args) => {
+    // const desArgs = destructureArgs(args);
+    // const [arg1, arg2] = desArgs;
+    const [arg1] = destructureArgs(args);
+    console.log(`⚡️ Calling capability method: supabasetodo.${method}`);
+    // console.log(`⚡️ With arguments: ${JSON.stringify(desArgs)}`);
+
+    if (method === "createTodo") {
+      return await createTodo(arg1);
+    } else if (method === "deleteTodo") {
+      return await deleteTodo(arg1);
+    } else if (method === "updateTodo") {
+      return await updateTodo(arg1);
+    } else {
+      throw new Error(`Invalid method: ${method}`);
+    }
+  },
+};

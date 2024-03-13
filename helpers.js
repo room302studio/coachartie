@@ -743,6 +743,7 @@ async function assembleMessagePreamble(username) {
   addCapabilityManifestMessage(messages);
   await addUserMessages(username, messages);
   await addUserMemories(username, messages);
+  // TODO: add todo memories here
   return messages;
 }
 
