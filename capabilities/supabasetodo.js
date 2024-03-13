@@ -34,10 +34,8 @@ async function createTodo(name, description = "") {
     },
   ]);
 
-  console.log(JSON.stringify(data));
-
   if (error) throw new Error(error.message);
-  return data;
+  return `Successfully added todo: ${name}`;
 }
 // deleteTodo.js
 
@@ -63,7 +61,7 @@ async function deleteTodo(todoId) {
     console.error("Error deleting todo:", error.message);
     return false;
   }
-  return true;
+  return `Successfully deleted todo with ID: ${todoId}`;
 }
 /*
 
@@ -97,6 +95,26 @@ Call the Function: Invoke the updateTodo function with the todo ID and the updat
 Process Response: Use the updated todo item returned by the function to verify the updates and inform the user or further application logic.
 */
 
+/* list todo function */
+
+/**
+ * Lists all todo items in the database.
+ * This capability allows for the retrieval of all todo items from the database. It is a simple function that returns an array of all todo items, which can be used for display, processing, or further manipulation.
+ * When to Use: Utilize this capability when you need to display all the todo items in a project, or when you need to process or manipulate the entire list of todos.
+ * How to Use:
+ * Call the Function: Execute the listTodos function. Handle the promise to catch any errors and process the array of todo items returned.
+ * Process Response: Use the array of todo items for display, processing, or further manipulation as needed.
+ * @param {number} projectId - ID of the project to list todos for.
+ * @returns {Promise<Object[]>} A promise that resolves to an array of all todo items.
+ * 
+ */
+async function listTodos() {
+  const { data, error } = await supabase.from("todos").select("*");
+
+  if (error) throw new Error(error.message);
+  return JSON.stringify(data);
+}
+
 module.exports = {
   handleCapabilityMethod: async (method, args) => {
     // const desArgs = destructureArgs(args);
@@ -106,11 +124,14 @@ module.exports = {
     // console.log(`⚡️ With arguments: ${JSON.stringify(desArgs)}`);
 
     if (method === "createTodo") {
-      return await createTodo(arg1);
+      const res = await createTodo(arg1);
+      return res;
     } else if (method === "deleteTodo") {
       return await deleteTodo(arg1);
     } else if (method === "updateTodo") {
       return await updateTodo(arg1);
+    } else if (method === "listTodos") {
+      return await listTodos();
     } else {
       throw new Error(`Invalid method: ${method}`);
     }
