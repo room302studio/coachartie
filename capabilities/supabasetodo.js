@@ -52,7 +52,7 @@ async function deleteTodo(todoId) {
 
   if (error) {
     console.error("Error deleting todo:", error.message);
-    return false;
+    return `Error deleting todo with ID: ${todoId} ${error.message}`;
   }
   return `Successfully deleted todo with ID: ${todoId}`;
 }
@@ -93,7 +93,7 @@ Process Response: Use the updated todo item returned by the function to verify t
 /**
  * Lists all todo items in the database.
  * This capability allows for the retrieval of all todo items from the database. It is a simple function that returns an array of all todo items, which can be used for display, processing, or further manipulation.
- * When to Use: Utilize this capability when you need to display all the todo items in a project, or when you need to process or manipulate the entire list of todos.
+* When to Use: Utilize this capability when you need to display all the todo items in a project, or when you need to process or manipulate the entire list of todos.
  * How to Use:
  * Call the Function: Execute the listTodos function. Handle the promise to catch any errors and process the array of todo items returned.
  * Process Response: Use the array of todo items for display, processing, or further manipulation as needed.
@@ -112,6 +112,7 @@ module.exports = {
   handleCapabilityMethod: async (method, args) => {
     // const desArgs = destructureArgs(args);
     // const [arg1, arg2] = desArgs;
+    console.log('args', args);
     const [arg1, arg2] = destructureArgs(args);
     console.log(`⚡️ Calling capability method: supabasetodo.${method}`);
     // console.log(`⚡️ With arguments: ${JSON.stringify(desArgs)}`);
@@ -134,4 +135,5 @@ module.exports = {
       throw new Error(`Invalid method: ${method}`);
     }
   },
+  listTodos,
 };
