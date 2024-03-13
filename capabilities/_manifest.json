@@ -1,6 +1,5 @@
 {
   "_generate-manifest": [],
-  "chance": [],
   "calculator": [
     {
       "name": "calculator:add()",
@@ -73,7 +72,7 @@
       ]
     }
   ],
-  "discord-events": [],
+  "chance": [],
   "calendar": [
     {
       "name": "calendar:listAllCalendars()",
@@ -139,6 +138,7 @@
       ]
     }
   ],
+  "discord-events": [],
   "drive": [
     {
       "name": "drive:getDriveInstance()",
@@ -441,21 +441,6 @@
       ]
     }
   ],
-  "mermaid": [
-    {
-      "name": "mermaid:convertMermaidDiagram()",
-      "description": "Converts a Mermaid diagram text into an image. Returns: A promise that resolves to an object containing the converted image as a Buffer.",
-      "parameters": [
-        {
-          "name": "diagramText",
-          "description": "The Mermaid diagram text to convert."
-        }
-      ],
-      "exceptions": [
-        "If an error occurs while converting the Mermaid diagram."
-      ]
-    }
-  ],
   "mastodon": [
     {
       "name": "mastodon:postStatus()",
@@ -473,6 +458,121 @@
       "exceptions": [
         "If an error occurs while posting to Mastodon."
       ]
+    }
+  ],
+  "mermaid": [
+    {
+      "name": "mermaid:convertMermaidDiagram()",
+      "description": "Converts a Mermaid diagram text into an image. Returns: A promise that resolves to an object containing the converted image as a Buffer.",
+      "parameters": [
+        {
+          "name": "diagramText",
+          "description": "The Mermaid diagram text to convert."
+        }
+      ],
+      "exceptions": [
+        "If an error occurs while converting the Mermaid diagram."
+      ]
+    }
+  ],
+  "pgcron": [
+    {
+      "name": "pgcron:createJob()",
+      "description": "Creates a new job using pg_cron to schedule it in Supabase. Returns: A promise that resolves to a success message when the job is successfully scheduled.",
+      "parameters": [
+        {
+          "name": "name",
+          "description": "The name of the job."
+        },
+        {
+          "name": "description",
+          "description": "The description of the job (optional)."
+        },
+        {
+          "name": "webhookUrl",
+          "description": "The URL to send the HTTP POST request."
+        },
+        {
+          "name": "headers",
+          "description": "The headers to include in the HTTP POST request (optional)."
+        },
+        {
+          "name": "body",
+          "description": "The body of the HTTP POST request (optional)."
+        }
+      ],
+      "exceptions": [
+        "If there is an error scheduling the job."
+      ]
+    },
+    {
+      "name": "pgcron:listJobs()",
+      "description": "Lists the cron jobs currently scheduled with pg_cron in Supabase. Returns: A promise that resolves to a success message with the list of jobs.",
+      "exceptions": [
+        "If there is an error listing the jobs."
+      ]
+    },
+    {
+      "name": "pgcron:deleteJob()",
+      "description": "Deletes a job scheduled with pg_cron in Supabase. Returns: A promise that resolves to a success message when the job is successfully deleted.",
+      "parameters": [
+        {
+          "name": "name",
+          "description": "The name of the job to delete."
+        }
+      ],
+      "exceptions": [
+        "If there is an error deleting the job."
+      ]
+    },
+    {
+      "name": "pgcron:updateJob()",
+      "description": "Updates a job scheduled with pg_cron in Supabase. Returns: A promise that resolves to a success message when the job is successfully updated.",
+      "parameters": [
+        {
+          "name": "name",
+          "description": "The name of the job to update."
+        },
+        {
+          "name": "schedule",
+          "description": "The new schedule for the job."
+        },
+        {
+          "name": "command",
+          "description": "The new command for the job."
+        }
+      ],
+      "exceptions": [
+        "If there is an error updating the job."
+      ]
+    }
+  ],
+  "schedule": [
+    {
+      "name": "schedule:auth()",
+      "description": "Google Auth object"
+    },
+    {
+      "name": "schedule:findPotentialMeetingTimes()",
+      "description": "This function uses the Google Calendar API to find potential meeting times within the specified interval Returns: Array of potential meeting times",
+      "parameters": [
+        {
+          "name": "emailString",
+          "description": "Space-separated list of emails to check for availability, escape any commas in the list"
+        },
+        {
+          "name": "timeMin",
+          "description": "Start of time interval in human readable format"
+        },
+        {
+          "name": "timeMax",
+          "description": "End of time interval in human readable format"
+        }
+      ]
+    },
+    {
+      "name": "schedule:schedule()",
+      "description": "Exports an object with a method to handle capability methods"
     }
   ],
   "scratchfile": [
@@ -508,6 +608,21 @@
       "description": "Finds the current size of the scratch file in tokens. Returns: The size of the scratch file in tokens.",
       "exceptions": [
         "If the file read operation fails."
+      ]
+    }
+  ],
+  "stablediffusion": [
+    {
+      "name": "stablediffusion:generateImageFromText()",
+      "description": "Generates an image from the given text using the Stable Diffusion API. Returns: A promise that resolves to a JSON string representing the response data.",
+      "parameters": [
+        {
+          "name": "args",
+          "description": "The arguments for generating the image."
+        }
+      ],
+      "exceptions": [
+        "If an error occurs during the API request."
       ]
     }
   ],
@@ -561,49 +676,6 @@
       ]
     }
   ],
-  "schedule": [
-    {
-      "name": "schedule:auth()",
-      "description": "Google Auth object"
-    },
-    {
-      "name": "schedule:findPotentialMeetingTimes()",
-      "description": "This function uses the Google Calendar API to find potential meeting times within the specified interval Returns: Array of potential meeting times",
-      "parameters": [
-        {
-          "name": "emailString",
-          "description": "Space-separated list of emails to check for availability, escape any commas in the list"
-        },
-        {
-          "name": "timeMin",
-          "description": "Start of time interval in human readable format"
-        },
-        {
-          "name": "timeMax",
-          "description": "End of time interval in human readable format"
-        }
-      ]
-    },
-    {
-      "name": "schedule:schedule()",
-      "description": "Exports an object with a method to handle capability methods"
-    }
-  ],
-  "stablediffusion": [
-    {
-      "name": "stablediffusion:generateImageFromText()",
-      "description": "Generates an image from the given text using the Stable Diffusion API. Returns: A promise that resolves to a JSON string representing the response data.",
-      "parameters": [
-        {
-          "name": "args",
-          "description": "The arguments for generating the image."
-        }
-      ],
-      "exceptions": [
-        "If an error occurs during the API request."
-      ]
-    }
-  ],
   "svg": [
     {
       "name": "svg:convertSvgToImage()",
@@ -616,21 +688,6 @@
       ],
       "exceptions": [
         "If an error occurs while converting SVG to image."
-      ]
-    }
-  ],
-  "wikipedia": [
-    {
-      "name": "wikipedia:askWikipedia()",
-      "description": "This function is used to search Wikipedia for a given query.\nIt uses the Wikipedia API to perform the search and then uses OpenAI to evaluate the search results. Returns: A promise that resolves to a string containing the evaluated search results.",
-      "parameters": [
-        {
-          "name": "args",
-          "description": "An array containing the arguments passed to the function."
-        }
-      ],
-      "exceptions": [
-        "If an error occurs while contacting Wikipedia or OpenAI."
       ]
     }
   ],
@@ -673,6 +730,21 @@
           "name": "url",
           "description": "The URL to fetch and summarize."
         }
+      ]
+    }
+  ],
+  "wikipedia": [
+    {
+      "name": "wikipedia:askWikipedia()",
+      "description": "This function is used to search Wikipedia for a given query.\nIt uses the Wikipedia API to perform the search and then uses OpenAI to evaluate the search results. Returns: A promise that resolves to a string containing the evaluated search results.",
+      "parameters": [
+        {
+          "name": "args",
+          "description": "An array containing the arguments passed to the function."
+        }
+      ],
+      "exceptions": [
+        "If an error occurs while contacting Wikipedia or OpenAI."
       ]
     }
   ],
