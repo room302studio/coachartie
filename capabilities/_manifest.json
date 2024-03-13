@@ -1,49 +1,6 @@
 {
   "_generate-manifest": [],
   "chance": [],
-  "drive": [
-    {
-      "name": "drive:getDriveInstance()",
-      "description": "Get an instance of Google Drive. Returns: A promise that resolves to an instance of Google Drive."
-    },
-    {
-      "name": "drive:listFiles()",
-      "description": "List all files in the Google Drive. Returns: A promise that resolves to an array of file names and IDs."
-    },
-    {
-      "name": "drive:readDoc()",
-      "description": "Read a Google Doc from Drive and return it as a string Returns: A promise that resolves when the file has been read.",
-      "parameters": [
-        {
-          "name": "fileId",
-          "description": "The ID of the file to read."
-        }
-      ]
-    },
-    {
-      "name": "drive:readFile()",
-      "description": "Read a file from Google Drive. Returns: A promise that resolves when the file has been read.",
-      "parameters": [
-        {
-          "name": "fileId",
-          "description": "The ID of the file to read."
-        }
-      ]
-    },
-    {
-      "name": "drive:createNewDocument()",
-      "parameters": [
-        {
-          "name": "title",
-          "description": "The title of the new document."
-        },
-        {
-          "name": "text",
-          "description": "The text to use as the content of the new document."
-        }
-      ]
-    }
-  ],
   "calculator": [
     {
       "name": "calculator:add()",
@@ -182,6 +139,49 @@
       ]
     }
   ],
+  "drive": [
+    {
+      "name": "drive:getDriveInstance()",
+      "description": "Get an instance of Google Drive. Returns: A promise that resolves to an instance of Google Drive."
+    },
+    {
+      "name": "drive:listFiles()",
+      "description": "List all files in the Google Drive. Returns: A promise that resolves to an array of file names and IDs."
+    },
+    {
+      "name": "drive:readDoc()",
+      "description": "Read a Google Doc from Drive and return it as a string Returns: A promise that resolves when the file has been read.",
+      "parameters": [
+        {
+          "name": "fileId",
+          "description": "The ID of the file to read."
+        }
+      ]
+    },
+    {
+      "name": "drive:readFile()",
+      "description": "Read a file from Google Drive. Returns: A promise that resolves when the file has been read.",
+      "parameters": [
+        {
+          "name": "fileId",
+          "description": "The ID of the file to read."
+        }
+      ]
+    },
+    {
+      "name": "drive:createNewDocument()",
+      "parameters": [
+        {
+          "name": "title",
+          "description": "The title of the new document."
+        },
+        {
+          "name": "text",
+          "description": "The text to use as the content of the new document."
+        }
+      ]
+    }
+  ],
   "evaluate": [
     {
       "name": "evaluate:runCodeInSandbox()",
@@ -195,21 +195,6 @@
           "name": "sandbox",
           "description": "The sandbox object to provide the execution context."
         }
-      ]
-    }
-  ],
-  "js": [
-    {
-      "name": "js:executeJavascriptAndCaptureImage()",
-      "description": "Executes the provided JavaScript code in a headless browser using Puppeteer and captures a screenshot of the resulting page. Returns: A promise that resolves to an object containing the captured screenshot image as a Buffer.",
-      "parameters": [
-        {
-          "name": "javascriptCode",
-          "description": "The JavaScript code to be executed in the browser."
-        }
-      ],
-      "exceptions": [
-        "If an error occurs while executing the JavaScript code and capturing the image."
       ]
     }
   ],
@@ -441,6 +426,21 @@
       ]
     }
   ],
+  "js": [
+    {
+      "name": "js:executeJavascriptAndCaptureImage()",
+      "description": "Executes the provided JavaScript code in a headless browser using Puppeteer and captures a screenshot of the resulting page. Returns: A promise that resolves to an object containing the captured screenshot image as a Buffer.",
+      "parameters": [
+        {
+          "name": "javascriptCode",
+          "description": "The JavaScript code to be executed in the browser."
+        }
+      ],
+      "exceptions": [
+        "If an error occurs while executing the JavaScript code and capturing the image."
+      ]
+    }
+  ],
   "mermaid": [
     {
       "name": "mermaid:convertMermaidDiagram()",
@@ -475,14 +475,54 @@
       ]
     }
   ],
+  "scratchfile": [
+    {
+      "name": "scratchfile:readScratchFile()",
+      "description": "Reads the content of the scratch file. Returns: The content of the scratch file.",
+      "exceptions": [
+        "If the file read operation fails."
+      ]
+    },
+    {
+      "name": "scratchfile:writeScratchFile()",
+      "description": "Writes content to the scratch file. Returns: A success message.",
+      "parameters": [
+        {
+          "name": "content",
+          "description": "The content to write to the scratch file."
+        }
+      ],
+      "exceptions": [
+        "If the file write operation fails."
+      ]
+    },
+    {
+      "name": "scratchfile:clearScratchFile()",
+      "description": "Clears the content of the scratch file. Returns: A success message.",
+      "exceptions": [
+        "If the file write operation fails."
+      ]
+    },
+    {
+      "name": "scratchfile:getScratchFileSize()",
+      "description": "Finds the current size of the scratch file in tokens. Returns: The size of the scratch file in tokens.",
+      "exceptions": [
+        "If the file read operation fails."
+      ]
+    }
+  ],
   "supabasetodo": [
     {
       "name": "supabasetodo:createTodo()",
-      "description": "Creates a new todo item in the database. This capability allows for the creation of a new todo item within a specified project. It supports optional details such as description, status, priority, due date, external URLs, and attachments, making it flexible for various use cases. The function defaults to setting the todo's status to \"To Do\" if not specified, ensuring a new todo is actionable immediately upon creation.\nWhen to Use: Use this capability when a new task arises that needs tracking within a project's context. It's suitable for user-driven todo creation based on input or automated task generation from project activities or milestones.\nHow to Use:\nPrepare Todo Details: Construct an object containing the details of the todo to be created, including the mandatory projectId and name fields, along with any other optional information.\nCall the Function: Invoke the createTodo function with the prepared object. Handle the promise returned by the function to deal with the newly created todo or to catch any errors.\nProcess Response: On successful creation, use the returned todo item for display, further processing, or confirmation to the user. Returns: A promise that resolves to the created todo item.",
+      "description": "Creates a new todo item in the database. This capability allows for the creation of a new todo item within a specified project. It supports optional details such as description, status, priority, due date, external URLs, and attachments, making it flexible for various use cases. The function defaults to setting the todo's status to \"To Do\" if not specified, ensuring a new todo is actionable immediately upon creation.\nWhen to Use: Use this capability when a new task arises that needs tracking within a project's context. It's suitable for user-driven todo creation based on input or automated task generation from project activities or milestones.\nHow to Use:\nPrepare Todo Details: Construct an object containing the details of the todo to be created, including the mandatory projectId and name fields, along with any other optional information.\nCall the Function: Invoke the createTodo function with the prepared object. Handle the promise returned by the function to deal with the newly created todo or to catch any errors.\nProcess Response: On successful creation, use the returned todo item for display, further processing, or confirmation to the user. Returns: A promise that resolves to a success message.",
       "parameters": [
         {
-          "name": "todoDetails",
-          "description": "Details of the todo to be created."
+          "name": "name",
+          "description": "The name of the todo item."
+        },
+        {
+          "name": "description",
+          "description": "The description of the todo item."
         }
       ]
     },
@@ -547,42 +587,6 @@
     {
       "name": "schedule:schedule()",
       "description": "Exports an object with a method to handle capability methods"
-    }
-  ],
-  "scratchfile": [
-    {
-      "name": "scratchfile:readScratchFile()",
-      "description": "Reads the content of the scratch file. Returns: The content of the scratch file.",
-      "exceptions": [
-        "If the file read operation fails."
-      ]
-    },
-    {
-      "name": "scratchfile:writeScratchFile()",
-      "description": "Writes content to the scratch file. Returns: A success message.",
-      "parameters": [
-        {
-          "name": "content",
-          "description": "The content to write to the scratch file."
-        }
-      ],
-      "exceptions": [
-        "If the file write operation fails."
-      ]
-    },
-    {
-      "name": "scratchfile:clearScratchFile()",
-      "description": "Clears the content of the scratch file. Returns: A success message.",
-      "exceptions": [
-        "If the file write operation fails."
-      ]
-    },
-    {
-      "name": "scratchfile:getScratchFileSize()",
-      "description": "Finds the current size of the scratch file in tokens. Returns: The size of the scratch file in tokens.",
-      "exceptions": [
-        "If the file read operation fails."
-      ]
     }
   ],
   "stablediffusion": [

@@ -15,16 +15,9 @@ const { destructureArgs } = require("../helpers");
  * Call the Function: Invoke the createTodo function with the prepared object. Handle the promise returned by the function to deal with the newly created todo or to catch any errors.
  * Process Response: On successful creation, use the returned todo item for display, further processing, or confirmation to the user.
  *
- * @param {Object} todoDetails - Details of the todo to be created.
- * @param {number} todoDetails.projectId - ID of the project the todo belongs to.
- * @param {string} todoDetails.name - Name of the todo.
- * @param {string} [todoDetails.description] - Description of the todo (optional).
- * @param {string} [todoDetails.status='To Do'] - Status of the todo (optional, defaults to 'To Do').
- * @param {string} [todoDetails.priority] - Priority of the todo (optional).
- * @param {Date} [todoDetails.dueDate] - Due date of the todo (optional).
- * @param {Array<string>} [todoDetails.externalUrls=[]] - External URLs related to the todo (optional).
- * @param {Array<string>} [todoDetails.attachments=[]] - Attachment URLs related to the todo (optional).
- * @returns {Promise<Object>} A promise that resolves to the created todo item.
+ * @param {string} name - The name of the todo item.
+ * @param {string} description - The description of the todo item.
+ * @returns {Promise<string>} A promise that resolves to a success message.
  */
 async function createTodo(name, description = "") {
   const { data, error } = await supabase.from("todos").insert([
@@ -119,11 +112,16 @@ module.exports = {
   handleCapabilityMethod: async (method, args) => {
     // const desArgs = destructureArgs(args);
     // const [arg1, arg2] = desArgs;
-    const [arg1] = destructureArgs(args);
+    const [arg1, arg2] = destructureArgs(args);
     console.log(`⚡️ Calling capability method: supabasetodo.${method}`);
     // console.log(`⚡️ With arguments: ${JSON.stringify(desArgs)}`);
 
     if (method === "createTodo") {
+      // const todoJsonString = arg1
+      // const todoJson = JSON.parse(todoJsonString);
+      /*{"name":"Implement priority labels for todos", "description":"Add priority labels such as High, Medium, Low to each todo item for better task prioritization."}*/
+      // pull the name out of the json and use it to create the todo
+      // const name = todoJson.name;
       const res = await createTodo(arg1);
       return res;
     } else if (method === "deleteTodo") {
