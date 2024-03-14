@@ -11,10 +11,6 @@ const vision = require("./vision.js");
 const logger = require("../src/logger.js")("memory");
 const dotenv = require("dotenv");
 dotenv.config();
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_API_KEY,
-);
 
 const preambleLogger = require("../src/logger.js")("preamble");
 const { REMEMBER_MODEL } = require("../config");
