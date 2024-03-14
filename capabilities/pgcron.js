@@ -8,45 +8,23 @@ const supabase = createClient(
 const { destructureArgs } = require("../helpers");
 
 /**
- * Creates a new job using pg_cron to schedule it in Supabase.
- * @param {string} name - The name of the job.
- * @param {string} [description=""] - The description of the job (optional).
- * @param {string} webhookUrl - The URL to send the HTTP POST request.
- * @param {Object} [headers={}] - The headers to include in the HTTP POST request (optional).
- * @param {Object} [body={}] - The body of the HTTP POST request (optional).
- * @returns {Promise<string>} A promise that resolves to a success message when the job is successfully scheduled.
- * @throws {Error} If there is an error scheduling the job.
+ * Schedule a task in Supabase.
+ * @param {string} schedule - The schedule for the task.
+ * @param {string} command - The command to be executed by the task.
+ * @returns {Promise<void>} - A promise that resolves when the task is scheduled successfully.
  */
-async function createJob(name, description = "", webhookUrl, headers = {}, body = {}) {
-  // Utilizing pg_cron to schedule a new job in Supabase
-  const schedule = '0 * * * *'; // Example schedule: At the start of every hour
-  const jobCommand = `SELECT net.http_post(
-    url:='${webhookUrl}', 
-    headers:='${JSON.stringify(headers)}'::jsonb, 
-    body:=jsonb_build_object(${JSON.stringify(body).replace(/"/g, "'")})
-  )`;
-
-  try {
-    const { data, error } = await supabase.rpc('cron.schedule', {
-      name,
-      schedule,
-      command: jobCommand,
-    });
-
-    if (error) {
-      console.error('Error scheduling job with pg_cron:', error.message);
-      throw error;
-    }
-
-    console.log('Successfully scheduled job:', data);
-  } catch (err) {
-    console.error('Failed to schedule job:', err.message);
-    throw new Error('Failed to schedule job with pg_cron');
+async function scheduleSupabaseTask(schedule, command) {
+  const { data, error } = await supabase
+    .rpc('schedule_task', { _schedule: schedule, _command: command })
+  
+  if (error) {
+    console.error('Error scheduling task:', error);
+    return;
   }
 
-  if (error) throw new Error(error.message);
-  return `Successfully added job: ${name}`;
+  console.log('Scheduled task data:', data);
 }
+
 
 /**
  * Lists the cron jobs currently scheduled with pg_cron in Supabase.
@@ -130,10 +108,46 @@ module.exports = {
   handleCapabilityMethod: async (method, args) => {
     const [arg1, arg2, arg3] = destructureArgs(args);
     console.log(`⚡️ Calling capability method: supabasetodo.${method}`);
-    console.log(`⚡️ With arguments: ${JSON.stringify(desArgs)}`);
+
+    /* args is a string passed in like
+      pgcron:createJob(
+      "Test Webhook Call",
+      "Sends a test webhook call to the specified URL at the designated time",
+      "http://webhook-dev.room302.studio/api/webhook",
+      "{}", // Assuming no specific headers are required
+      "{}"  // Assuming no specific body is required
+    ) */
+    // so we also need to remove any quotes from the args if needed
+    // and then parse the args into the correct types
+    const processedArgs = destructureArgs(args).map((arg) => {
+      if (arg.startsWith('"') && arg.endsWith('"')) {
+        return arg.slice(1, -1);
+      }
+      // if it's an object, parse it
+      if (arg.startsWith('{') && arg.endsWith('}')) {
+        return JSON.parse(arg);
+      }
+
+      // if it's a number, parse it
+      if (!isNaN(arg)) {
+        return parseFloat(arg);
+      }
+
+      // otherwise, return the arg as is
+      return arg;
+    }
+    );
+
+
+
 
     if (method === "createJob") {
-      return await createJob(arg1, arg2);
+      // return await createJob(arg1, arg2);
+      // we need to use our new fancy processedArgs
+      // return await createJob(processedArgs[0], processedArgs[1], processedArgs[2], processedArgs[3], processedArgs[4]);
+
+      // lets do the simplest possible thing first
+      return await scheduleSupabaseTask(processedArgs[0], processedArgs[1]);
     } else if (method === "listJobs") {
       return await listJobs();
     } else if (method === "deleteJob") {
