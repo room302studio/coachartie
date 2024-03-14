@@ -1,11 +1,4 @@
-const dotenv = require("dotenv");
-const { createClient } = require("@supabase/supabase-js");
-dotenv.config();
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_API_KEY,
-);
-const { destructureArgs } = require("../helpers");
+const { supabase, destructureArgs } = require("../helpers");
 
 /**
  * Creates a new todo item in the database. This capability allows for the creation of a new todo item within a specified project. It supports optional details such as description, status, priority, due date, external URLs, and attachments, making it flexible for various use cases. The function defaults to setting the todo's status to "To Do" if not specified, ensuring a new todo is actionable immediately upon creation.

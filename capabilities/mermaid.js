@@ -16,6 +16,7 @@ try {
  * @param {string} diagramText - The Mermaid diagram text to convert.
  * @returns {Promise<{ image: Buffer }>} - A promise that resolves to an object containing the converted image as a Buffer.
  * @throws {Error} - If an error occurs while converting the Mermaid diagram.
+ * @example convertMermaidDiagram("graph LR; A-->B;"); // Returns { image: <Buffer> }
  */
 const convertMermaidDiagram = async (diagramText) => {
   try {

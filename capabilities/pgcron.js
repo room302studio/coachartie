@@ -1,11 +1,4 @@
-const dotenv = require("dotenv");
-const { createClient } = require("@supabase/supabase-js");
-dotenv.config();
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_API_KEY,
-);
-const { destructureArgs } = require("../helpers");
+const { supabase, destructureArgs } = require("../helpers");
 
 /**
  * Schedule a task in Supabase.

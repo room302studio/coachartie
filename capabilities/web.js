@@ -1,12 +1,8 @@
 const dotenv = require("dotenv");
 const { Configuration, OpenAIApi } = require("openai");
 const puppeteer = require("puppeteer");
-// const { fstat } = require("fs");
-// const { fs } = require("fs");
-const {
-  WEBPAGE_UNDERSTANDER_PROMPT,
-  WEBPAGE_CHUNK_UNDERSTANDER_PROMPT,
-} = require("../prompts");
+const { getPromptsFromSupabase } = require("../helpers");
+const { WEBPAGE_UNDERSTANDER_PROMPT, WEBPAGE_CHUNK_UNDERSTANDER_PROMPT } = getPromptsFromSupabase();
 const { encode, decode } = require("@nem035/gpt-3-encoder");
 // import chance
 const chance = require("chance").Chance();
@@ -20,6 +16,7 @@ const path = require("path");
 const crypto = require("crypto");
 const logger = require("../src/logger.js")("web");
 
+// TODO: Pull this in from config
 // const CHUNK_TOKEN_AMOUNT = 7000
 const CHUNK_TOKEN_AMOUNT = 10952;
 

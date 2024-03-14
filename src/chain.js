@@ -13,9 +13,11 @@ const {
 } = require("./memory");
 const { capabilityRegex, callCapabilityMethod } = require("./capabilities");
 const { storeUserMessage } = require("./remember");
-const { CAPABILITY_ERROR_PROMPT } = require("../prompts");
+const { getPromptsFromSupabase } = require("../helpers");
+const { CAPABILITY_ERROR_PROMPT } = getPromptsFromSupabase();
 const logger = require("../src/logger.js")("chain");
 
+// TODO: Swap out with getConfigFromSupabase
 const {
   TOKEN_LIMIT,
   WARNING_BUFFER,

@@ -5,18 +5,64 @@ const fs = require("fs");
 const { openai } = require("./src/openai");
 const { capabilityRegex } = require("./src/capabilities.js");
 dotenv.config();
-const { PROMPT_SYSTEM, CAPABILITY_PROMPT_INTRO } = require("./prompts");
-// 📚 GPT-3 token-encoder: our linguistic enigma machine
 const { encode, decode } = require("@nem035/gpt-3-encoder");
+// TODO: Swap out for getConfigFromSupabase
 const { RESPONSE_LIMIT, TOKEN_LIMIT, MAX_OUTPUT_TOKENS } = require("./config");
 const { getUserMemory, getUserMessageHistory } = require("./src/remember.js");
 const logger = require("./src/logger.js")("helpers");
 const { createClient } = require("@supabase/supabase-js");
-
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_API_KEY,
 );
+const { PROMPT_SYSTEM, CAPABILITY_PROMPT_INTRO } = getPromptsFromSupabase();
+
+/**
+ * Retrieves prompts from Supabase.
+ * @returns {Promise<Object>} An object containing different prompts.
+ * @example {
+ *  PROMPT_REMEMBER: "In order to remember, you must first forget.",
+ *  PROMPT_CAPABILITY_REMEMBER: "I remember that I can",
+ * 
+ */
+async function getPromptsFromSupabase() {
+  const { data, error } = await supabase.from("prompts").select("*");
+
+  const promptArray = data;
+  // lets turn this array of objects into a big object that can be destructured
+
+  return {
+    PROMPT_REMEMBER: getConfigByKey(promptArray, "PROMPT_REMEMBER"),
+    PROMPT_CAPABILITY_REMEMBER: getConfigByKey(promptArray, "PROMPT_CAPABILITY_REMEMBER"),
+    PROMPT_REMEMBER_INTRO: getConfigByKey(promptArray, "PROMPT_REMEMBER_INTRO"),
+  };
+}
+
+/**
+ * Retrieves configuration data from Supabase.
+ * @returns {Promise<Object>} An object containing the configuration keys and values.
+ */
+async function getConfigFromSupabase() {
+  const { data, error } = await supabase.from("config").select("*");
+
+  // turn the array of objects into a big object that can be destructured
+  const configArray = data;
+  // get all the keys and values
+  const configKeys = configArray.map((config) => config.key)
+  const configValues = configArray.map((config) => config.value)
+  // return an object with all the keys and values
+  return Object.fromEntries(configKeys.map((_, i) => [configKeys[i], configValues[i]]))
+}
+
+/**
+ * Retrieves the value from the configArray that matches the given key.
+ * @param {Array} configArray - The array of config objects.
+ * @param {string} key - The key to search for in the configArray.
+ * @returns {*} - The value associated with the matching key.
+ */
+function getConfigByKey(configArray, key) {
+  return configArray.find((config) => config.key === key).value;
+}
 
 /**
  * Replaces the robot id with the robot name in a given string.
@@ -1268,6 +1314,7 @@ function getUniqueEmoji() {
 }
 
 module.exports = {
+  supabase,
   destructureArgs,
   getHexagram,
   countTokens,
@@ -1287,4 +1334,6 @@ module.exports = {
   isExceedingTokenLimit,
   lastUserMessage,
   getUniqueEmoji,
+  getPromptsFromSupabase,
+  getConfigFromSupabase
 };

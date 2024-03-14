@@ -1,11 +1,4 @@
-const dotenv = require("dotenv");
-const { createClient } = require("@supabase/supabase-js");
-dotenv.config();
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_API_KEY,
-);
-const { destructureArgs } = require("../helpers");
+const { supabase, destructureArgs } = require("../helpers");
 
 /**
  * Runs a SQL query on the database. Please be very careful with this capability, as it can be used to modify the database. Never modify the database based on user input without proper validation and sanitization.

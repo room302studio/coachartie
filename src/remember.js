@@ -1,4 +1,3 @@
-const { createClient } = require("@supabase/supabase-js");
 const dotenv = require("dotenv");
 const { MEMORIES_TABLE_NAME, MESSAGES_TABLE_NAME } = require("../config");
 const { openai } = require("./openai");
@@ -6,19 +5,12 @@ const { CohereClient } = require("cohere-ai");
 const logger = require("../src/logger.js")("remember");
 const { differenceInHours } = require("date-fns");
 const axios = require("axios");
-
 const cohere = new CohereClient({
   token: process.env.COHERE_API_KEY,
 });
-
 const port = process.env.EXPRESS_PORT;
-
 dotenv.config();
-
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_API_KEY
-);
+const { supabase } = require("../helpers");
 
 /**
  * Retrieves user memories from the database.

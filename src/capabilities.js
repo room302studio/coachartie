@@ -1,7 +1,7 @@
-const prompts = require("../prompts");
 const fs = require("fs");
 const path = require("path");
-const { CAPABILITY_PROMPT_INTRO } = prompts;
+const { getPromptsFromSupabase } = require("../helpers");
+const { CAPABILITY_PROMPT_INTRO } = getPromptsFromSupabase();
 const winston = require("winston");
 
 const logger = require("../src/logger.js")("capabilities");

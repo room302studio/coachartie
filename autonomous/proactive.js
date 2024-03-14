@@ -2,11 +2,12 @@ const cron = require("node-cron");
 const Chance = require("chance");
 const chance = new Chance();
 const { processMessageChain } = require("../src/chain");
-const {
-  PROACTIVE_IDEA_BRAINSTORM,
-  PROACTIVE_PERFORM_TASK,
-  PROACTIVE_COMPLETION_EVALUATOR,
-} = require("../prompts");
+const { getPromptsFromSupabase } = require("../helpers");
+// const {
+//   PROACTIVE_IDEA_BRAINSTORM,
+//   PROACTIVE_PERFORM_TASK,
+//   PROACTIVE_COMPLETION_EVALUATOR,
+// } = require("../prompts");
 const logger = require("../src/logger.js")("proactive");
 
 const PROACTIVE_OUTPUT_CHANNEL_ID = "1086329744762622023";

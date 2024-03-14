@@ -1,5 +1,5 @@
 const { openai } = require("./openai");
-const { getHexagram, replaceRobotIdWithName } = require("../helpers.js");
+const { supabase, getHexagram, replaceRobotIdWithName, getPromptsFromSupabase } = require("../helpers.js");
 const {
   getUserMemory,
   getAllMemories,
@@ -9,14 +9,17 @@ const {
 const chance = require("chance").Chance();
 const vision = require("./vision.js");
 const logger = require("../src/logger.js")("memory");
+const dotenv = require("dotenv");
+dotenv.config();
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_API_KEY,
+);
 
 const preambleLogger = require("../src/logger.js")("preamble");
-
-// 📜 prompts: our guidebook of conversational cues
-const prompts = require("../prompts");
-const { PROMPT_REMEMBER, PROMPT_CAPABILITY_REMEMBER, PROMPT_REMEMBER_INTRO } =
-  prompts;
 const { REMEMBER_MODEL } = require("../config");
+
+const { PROMPT_REMEMBER, PROMPT_CAPABILITY_REMEMBER, PROMPT_REMEMBER_INTRO } = await getPromptsFromSupabase()
 
 /**
  * Generates a remember completion and stores it in the database
