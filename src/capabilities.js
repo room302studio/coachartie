@@ -1,7 +1,6 @@
 const fs = require("fs");
 const path = require("path");
 const { getPromptsFromSupabase } = require("../helpers");
-const { CAPABILITY_PROMPT_INTRO } = getPromptsFromSupabase();
 const winston = require("winston");
 
 const logger = require("../src/logger.js")("capabilities");
@@ -17,6 +16,9 @@ const capabilityFile = fs.readFileSync(
 
 // parse the json
 const capabilities = JSON.parse(capabilityFile);
+
+(async () => {
+const { CAPABILITY_PROMPT_INTRO } = getPromptsFromSupabase();
 
 // capability prompt
 // to tell the robot all the capabilities it has and what they do
@@ -43,6 +45,7 @@ ${CAPABILITY_PROMPT_INTRO}
 These are all of your capabilities:
 ${prepareCapabilities.join("\n")}
 `;
+})();
 
 /**
  * Function for calling capability methods.
@@ -100,6 +103,5 @@ async function callCapabilityMethod(
 module.exports = {
   capabilityRegex,
   capabilities,
-  capabilityPrompt,
   callCapabilityMethod,
 };
