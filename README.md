@@ -145,6 +145,20 @@ create table
     history jsonb not null default '[]'::jsonb,
     constraint config_pkey primary key (id)
   ) tablespace pg_default;
+
+INSERT INTO public.config (config_key, config_value)
+VALUES
+    ('ERROR_MSG', 'I am so sorry, there was some sort of problem. Feel free to ask me again, or try again later.'),
+    ('TOKEN_LIMIT', '14000'),
+    ('RESPONSE_LIMIT', '5120'),
+    ('WARNING_BUFFER', '1024'),
+    ('MAX_OUTPUT_TOKENS', '720'),
+    ('REMEMBER_MODEL', 'gpt-4-turbo-preview'),
+    ('CHAT_MODEL', 'gpt-4-turbo-preview'),
+    ('MAX_RETRY_COUNT', '3'),
+    ('MAX_CAPABILITY_CALLS', '6'),
+    ('MESSAGES_TABLE_NAME', 'messages'),
+    ('MEMORIES_TABLE_NAME', 'memories');
 ```
 
 ### Matching Query

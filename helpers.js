@@ -1,9 +1,10 @@
 const { Chance } = require("chance");
 const chance = new Chance();
 const dotenv = require("dotenv");
+const util = require("util");
 const fs = require("fs");
 const { openai } = require("./src/openai");
-const { capabilityRegex } = require("./src/capabilities.js");
+// const { capabilityRegex } = require("./src/capabilities.js");
 dotenv.config();
 const { encode, decode } = require("@nem035/gpt-3-encoder");
 // TODO: Swap out for getConfigFromSupabase
@@ -15,7 +16,8 @@ const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_API_KEY,
 );
-const { PROMPT_SYSTEM, CAPABILITY_PROMPT_INTRO } = getPromptsFromSupabase();
+
+const capabilityRegex = /(\w+):(\w+)\(([^]*?)\)/; // captures newlines in the  third argument
 
 /**
  * Retrieves prompts from Supabase.
@@ -23,19 +25,19 @@ const { PROMPT_SYSTEM, CAPABILITY_PROMPT_INTRO } = getPromptsFromSupabase();
  * @example {
  *  PROMPT_REMEMBER: "In order to remember, you must first forget.",
  *  PROMPT_CAPABILITY_REMEMBER: "I remember that I can",
- * 
+ *
  */
 async function getPromptsFromSupabase() {
   const { data, error } = await supabase.from("prompts").select("*");
-
   const promptArray = data;
-  // lets turn this array of objects into a big object that can be destructured
-
-  return {
-    PROMPT_REMEMBER: getConfigByKey(promptArray, "PROMPT_REMEMBER"),
-    PROMPT_CAPABILITY_REMEMBER: getConfigByKey(promptArray, "PROMPT_CAPABILITY_REMEMBER"),
-    PROMPT_REMEMBER_INTRO: getConfigByKey(promptArray, "PROMPT_REMEMBER_INTRO"),
-  };
+  const promptKeys = promptArray.map((prompt) => prompt.prompt_name);
+  const promptValues = promptArray.map((prompt) => prompt.prompt_text);
+  // return an object with all the keys and values
+  const prompts = Object.fromEntries(
+    promptKeys.map((_, i) => [promptKeys[i], promptValues[i]]),
+  );
+  logger.info(`Prompts: ${JSON.stringify(prompts, null, 2)}`);
+  return prompts;
 }
 
 /**
@@ -48,10 +50,12 @@ async function getConfigFromSupabase() {
   // turn the array of objects into a big object that can be destructured
   const configArray = data;
   // get all the keys and values
-  const configKeys = configArray.map((config) => config.key)
-  const configValues = configArray.map((config) => config.value)
+  const configKeys = configArray.map((config) => config.key);
+  const configValues = configArray.map((config) => config.value);
   // return an object with all the keys and values
-  return Object.fromEntries(configKeys.map((_, i) => [configKeys[i], configValues[i]]))
+  return Object.fromEntries(
+    configKeys.map((_, i) => [configKeys[i], configValues[i]]),
+  );
 }
 
 /**
@@ -61,7 +65,13 @@ async function getConfigFromSupabase() {
  * @returns {*} - The value associated with the matching key.
  */
 function getConfigByKey(configArray, key) {
-  return configArray.find((config) => config.key === key).value;
+  if (!configArray) {
+    return;
+  }
+  if (!configArray.length) {
+    return;
+  }
+  return configArray.find((config) => config.key === key)?.value;
 }
 
 /**
@@ -301,7 +311,7 @@ function trimResponseIfNeeded(capabilityResponse) {
   while (isResponseExceedingLimit(capabilityResponse)) {
     capabilityResponse = trimResponseByLineCount(
       capabilityResponse,
-      countTokens(capabilityResponse)
+      countTokens(capabilityResponse),
     );
   }
   return capabilityResponse;
@@ -559,18 +569,36 @@ async function generateAiCompletion(prompt, username, messages, config) {
 
   messages = await addPreambleToMessages(username, prompt, messages);
 
-  logger.info(`Sending final messages array for chat completion: ${JSON.stringify(messages, null, 2)}`);
+  // logger.info(
+  //   `Sending final messages array for chat completion: ${JSON.stringify(
+  //     messages,
+  //     null,
+  //     2,
+  //   )}`,
+  // );
+
+  logger.info(
+    `Sending final messages array for chat completion: ${util.inspect(
+      messages,
+      { depth: null, colors: true },
+    )}`,
+  );
 
   let completion = null;
+
+  // remove any messages that do not have values
+  messages = messages.filter((message) => message.content);
+
   try {
     completion = await createChatCompletion(
       messages,
       temperature,
-      presence_penalty
+      presence_penalty,
     );
   } catch (err) {
-    logger.info(err);
+    logger.info(`Error creating chat completion ${err}`);
   }
+  // logger.info(`${JSON.stringify(completion, null, 2)}`);
   const aiResponse = completion.data.choices[0].message.content;
   logger.info("🤖 AI Response:", aiResponse);
   messages.push(aiResponse);
@@ -587,21 +615,39 @@ const completionModel = "openai";
  * @param {number} presence_penalty - The presence penalty value for controlling response length.
  * @returns {Promise} - A promise that resolves to the chat completion result.
  */
-async function createChatCompletion(messages, temperature, presence_penalty) {
+async function createChatCompletion(
+  messages,
+  temperature,
+  presence_penalty = 0.01,
+) {
   if (completionModel === "openai") {
-    return await openai.createChatCompletion({
-      model: "gpt-4-turbo-preview",
-      temperature,
-      presence_penalty,
-      max_tokens: MAX_OUTPUT_TOKENS,
-      messages: messages,
-    });
+    logger.info("Using OpenAI for chat completion");
+
+    logger.info(` Model: gpt-4-turbo-preview
+    Temperature: ${temperature}
+    Presence Penalty: ${presence_penalty}
+    Max Tokens: ${MAX_OUTPUT_TOKENS}
+    Message Count: ${messages.length}
+    `);
+
+    try {
+      return await openai.createChatCompletion({
+        model: "gpt-4-turbo-preview",
+        temperature,
+        presence_penalty,
+        max_tokens: MAX_OUTPUT_TOKENS,
+        messages: messages,
+      });
+    } catch (error) {
+      logger.error("Error creating chat completion:", error);
+      return `Error creating chat completion: ${error}`;
+    }
   } else if (completionModel === "gemini") {
     // return a gemini completion
     return await createGeminiCompletion(
       messages,
       temperature,
-      presence_penalty
+      presence_penalty,
     );
   }
 }
@@ -792,9 +838,9 @@ async function assembleMessagePreamble(username) {
   const messages = [];
   addCurrentDateTime(messages);
   await addHexagramPrompt(messages);
-  addSystemPrompt(messages);
-  addCapabilityPromptIntro(messages);
-  addCapabilityManifestMessage(messages);
+  await addSystemPrompt(messages);
+  await addCapabilityPromptIntro(messages);
+  await addCapabilityManifestMessage(messages);
   await addTodosToMessages(messages);
   await addUserMessages(username, messages);
   await addUserMemories(username, messages);
@@ -806,18 +852,18 @@ async function listTodos() {
   const { data, error } = await supabase.from("todos").select("*");
 
   if (error) throw new Error(error.message);
-  return data
+  return data;
 }
 
 async function addTodosToMessages(messages) {
   const todos = await listTodos();
-  console.log('returning todos', todos)
+  console.log("returning todos", todos);
   const todoString = JSON.stringify(todos);
   messages.push({
     role: "system",
     content: `Here are your todos: 
 ${todoString}`,
-  });  
+  });
 }
 
 /**
@@ -839,8 +885,10 @@ function addCurrentDateTime(messages) {
  */
 async function addHexagramPrompt(messages) {
   if (chance.bool({ likelihood: 50 })) {
-    const hexagramPrompt = `Let this hexagram from the I Ching guide this interaction: ${generateHexagram()}`;
-    logger.info(`🔧 Adding hexagram prompt to message ${hexagramPrompt}`);
+    logger.info("🔧 Adding hexagram prompt to messages");
+    const hexagram = generateHexagram();
+    logger.info(`🔧 Adding hexagram prompt to message ${hexagram}`);
+    const hexagramPrompt = `Let this hexagram from the I Ching guide this interaction: ${hexagram}`;
     messages.push({
       role: "system",
       content: hexagramPrompt,
@@ -852,7 +900,8 @@ async function addHexagramPrompt(messages) {
  * Adds a system prompt to the given array of messages.
  * @param {Array} messages - The array of messages to add the system prompt to.
  */
-function addSystemPrompt(messages) {
+async function addSystemPrompt(messages) {
+  const { PROMPT_SYSTEM } = await getPromptsFromSupabase();
   messages.push({
     role: "user",
     content: PROMPT_SYSTEM,
@@ -863,7 +912,9 @@ function addSystemPrompt(messages) {
  * Adds a capability prompt introduction message to the given array of messages.
  * @param {Array} messages - The array of messages to add the capability prompt introduction to.
  */
-function addCapabilityPromptIntro(messages) {
+async function addCapabilityPromptIntro(messages) {
+  const { CAPABILITY_PROMPT_INTRO } = await getPromptsFromSupabase();
+
   messages.push({
     role: "system",
     content: CAPABILITY_PROMPT_INTRO,
@@ -891,7 +942,7 @@ function loadCapabilityManifest() {
  * @param {Array} messages - The array of messages to add the capability manifest message to.
  * @returns {Array} - The updated array of messages.
  */
-function addCapabilityManifestMessage(messages) {
+async function addCapabilityManifestMessage(messages) {
   const manifest = loadCapabilityManifest();
   if (manifest) {
     messages.push({
@@ -911,12 +962,12 @@ function addCapabilityManifestMessage(messages) {
 async function addUserMessages(username, messages) {
   const userMessageCount = chance.integer({ min: 4, max: 32 });
   logger.info(
-    `🔧 Retrieving ${userMessageCount} previous messages for ${username}`
+    `🔧 Retrieving ${userMessageCount} previous messages for ${username}`,
   );
   try {
     const userMessages = await getUserMessageHistory(
       username,
-      userMessageCount
+      userMessageCount,
     );
     if (!userMessages) {
       logger.info(`No previous messages found for ${username}`);
@@ -1026,11 +1077,14 @@ function splitAndSendMessage(message, channel) {
     logger.info("splitAndSendMessage: message is not a string");
     return;
   }
+
+  logger.info(`splitAndSendMessage: message length: ${message.length}`);
+
   if (message.length < 2000) {
     try {
       channel.send(message);
     } catch (e) {
-      logger.info(e);
+      logger.info(`Error sending message: ${e}`);
     }
   } else {
     const messageChunks = splitMessageIntoChunks(message);
@@ -1038,7 +1092,7 @@ function splitAndSendMessage(message, channel) {
       try {
         channel.send(messageChunks[i]);
       } catch (error) {
-        logger.info(error);
+        logger.info(`Error sending message chunk ${i}: ${error}`);
       }
     }
   }
@@ -1335,5 +1389,6 @@ module.exports = {
   lastUserMessage,
   getUniqueEmoji,
   getPromptsFromSupabase,
-  getConfigFromSupabase
+  getConfigFromSupabase,
+  capabilityRegex,
 };

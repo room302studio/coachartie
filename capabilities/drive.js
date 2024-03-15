@@ -42,7 +42,7 @@ async function listFiles() {
             reject(new Error("No files found."));
           } else {
             const files = res.data.files.map(
-              ({ name, id }) => `${name} (${id})`
+              ({ name, id }) => `${name} (${id})`,
             );
             resolve(files);
           }
@@ -220,4 +220,3 @@ module.exports = {
     }
   },
 };
-

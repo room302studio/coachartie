@@ -2,7 +2,8 @@ const dotenv = require("dotenv");
 const { Configuration, OpenAIApi } = require("openai");
 const puppeteer = require("puppeteer");
 const { getPromptsFromSupabase } = require("../helpers");
-const { WEBPAGE_UNDERSTANDER_PROMPT, WEBPAGE_CHUNK_UNDERSTANDER_PROMPT } = getPromptsFromSupabase();
+const { WEBPAGE_UNDERSTANDER_PROMPT, WEBPAGE_CHUNK_UNDERSTANDER_PROMPT } =
+  getPromptsFromSupabase();
 const { encode, decode } = require("@nem035/gpt-3-encoder");
 // import chance
 const chance = require("chance").Chance();
@@ -409,15 +410,15 @@ async function fetchAndSummarizeUrl(url, userPrompt = "") {
       chunkResponses = JSON.parse(
         fs.readFileSync(
           path.join(__dirname, `../cache/${cacheKey}.json`),
-          "utf8"
-        )
+          "utf8",
+        ),
       );
     } else {
       chunkResponses = await processChunks(chunks, data);
       // Cache the chunks
       fs.writeFileSync(
         path.join(__dirname, `../cache/${cacheKey}.json`),
-        JSON.stringify(chunkResponses)
+        JSON.stringify(chunkResponses),
       );
     }
 
@@ -473,7 +474,7 @@ function randomUserAgent() {
   ];
 
   const pickedUserAgent = chance.pickone(potentialUserAgents);
-  logger.info(`📝  Picked User Agent: ${pickedUserAgent}`)
+  logger.info(`📝  Picked User Agent: ${pickedUserAgent}`);
 
   // use chance.choose to pick a random user agent
   return pickedUserAgent;

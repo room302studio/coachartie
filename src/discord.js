@@ -23,25 +23,23 @@ class DiscordBot {
         GatewayIntentBits.MessageContent,
         GatewayIntentBits.GuildMessageReactions,
         GatewayIntentBits.DirectMessages,
-        GatewayIntentBits.MessageContent
+        GatewayIntentBits.MessageContent,
       ],
     });
     this.bot.login(process.env.DISCORD_BOT_TOKEN);
     this.bot.on("ready", onClientReady);
     // this.bot.on("messageCreate", this.onMessageCreate);
     this.bot.on("messageCreate", this.onMessageCreate.bind(this)); // Bind the context of `this`
-    
-    
 
     client = this.bot;
   }
 
   fetchChannelById(channelId) {
     // Direct Messages have a different method to fetch channels
-    if (channelId.startsWith('DM')) {
-      return client.users.cache.get(channelId.replace('DM-', '')).createDM();
+    if (channelId.startsWith("DM")) {
+      return client.users.cache.get(channelId.replace("DM-", "")).createDM();
     }
-  
+
     // For guild channels, iterate through the guilds as before
     let channelObj = null;
     client.guilds.cache.forEach((guild) => {
@@ -158,7 +156,7 @@ class DiscordBot {
     const messageAuthorIsBot = message.author.bot;
     const authorIsMe = message.author.username === "coachartie";
 
-    console.log('message received: ', message.content);
+    console.log("message received: ", message.content);
 
     if (!botMentionOrChannel || authorIsMe || messageAuthorIsBot) return;
 
@@ -174,8 +172,9 @@ class DiscordBot {
     // we need the channel to be the actual discord channel object
     // so we can send messages to it
     const isDM = !message.guild;
-    const channel = isDM ? message.channel : this.fetchChannelById(message.channel.id);
-    
+    const channel = isDM
+      ? message.channel
+      : this.fetchChannelById(message.channel.id);
 
     let messages = await this.processMessageChain(processedPrompt, {
       username,

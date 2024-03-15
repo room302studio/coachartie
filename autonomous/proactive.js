@@ -34,7 +34,7 @@ const proactive = {
 
       // perform the proactive task
       const processedMessage = await this.performProactiveTask(
-        potentialTasks.join("\n")
+        potentialTasks.join("\n"),
       );
 
       await bot.sendMessage(processedMessage, channel);
@@ -52,14 +52,14 @@ const proactive = {
           content: PROACTIVE_IDEA_BRAINSTORM,
         },
       ],
-      { username: "proactive-cron-job", channel }
+      { username: "proactive-cron-job", channel },
     );
 
     // then we take the processed messsage and split it by newline
     const potentialTaskArray =
       processedMessages[processedMessages.length - 1].content.split("\n");
 
-    logger.info(`Listed potential tasks: ${potentialTaskArray}`)
+    logger.info(`Listed potential tasks: ${potentialTaskArray}`);
 
     return potentialTaskArray;
   },
@@ -67,7 +67,7 @@ const proactive = {
     logger.info("Choosing a proactive task", potentialTaskArray);
     // Choose a proactive task to perform
     const task = chance.pickone(potentialTaskArray);
-    logger.info(`Chose proactive task: ${task}`)
+    logger.info(`Chose proactive task: ${task}`);
     return task;
   },
   performProactiveTask: async function (proactiveTask) {
@@ -82,7 +82,7 @@ const proactive = {
           content: `# Brainstormed Task To-do List\n${proactiveTask}\n${PROACTIVE_PERFORM_TASK}`,
         },
       ],
-      { username: "proactive-cron-job", channel }
+      { username: "proactive-cron-job", channel },
     );
 
     return processedMessages[processedMessages.length - 1].content;

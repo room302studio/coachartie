@@ -72,7 +72,7 @@ async function findPotentialMeetingTimes(emailString, timeMin, timeMax) {
       // If none of the busy times overlap with the potential time, add it to the potential times array
       if (
         !busyTimes.some(
-          (time) => time.start <= formattedTime && time.end >= formattedTime
+          (time) => time.start <= formattedTime && time.end >= formattedTime,
         )
       ) {
         potentialTimes.push(formattedTime);

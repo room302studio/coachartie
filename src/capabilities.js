@@ -1,45 +1,43 @@
 const fs = require("fs");
 const path = require("path");
-const { getPromptsFromSupabase } = require("../helpers");
+const { getPromptsFromSupabase, capabilityRegex } = require("../helpers");
 const winston = require("winston");
 
 const logger = require("../src/logger.js")("capabilities");
-
-const capabilityRegex = /(\w+):(\w+)\(([^]*?)\)/; // captures newlines in the  third argument
 
 // an example capability
 const callSomething = "callSomething:callSomething()";
 
 const capabilityFile = fs.readFileSync(
-  path.join(__dirname, "../capabilities/_manifest.json")
+  path.join(__dirname, "../capabilities/_manifest.json"),
 );
 
 // parse the json
 const capabilities = JSON.parse(capabilityFile);
 
 (async () => {
-const { CAPABILITY_PROMPT_INTRO } = getPromptsFromSupabase();
+  const { CAPABILITY_PROMPT_INTRO } = await getPromptsFromSupabase();
 
-// capability prompt
-// to tell the robot all the capabilities it has and what they do
-// Prepare information in capabilities array
-const prepareCapabilities = [];
-for (const capabilitySlug in capabilities) {
-  const capability = capabilities[capabilitySlug];
-  const methods = capability.methods?.map((method) => {
-    return `\n ${method.name}: ${method.description} call like: ${
-      capability.slug
-    }:${method.name}(${method.parameters.map((d) => d.name).join(",")})`;
-  });
+  // capability prompt
+  // to tell the robot all the capabilities it has and what they do
+  // Prepare information in capabilities array
+  const prepareCapabilities = [];
+  for (const capabilitySlug in capabilities) {
+    const capability = capabilities[capabilitySlug];
+    const methods = capability.methods?.map((method) => {
+      return `\n ${method.name}: ${method.description} call like: ${
+        capability.slug
+      }:${method.name}(${method.parameters.map((d) => d.name).join(",")})`;
+    });
 
-  const capabilityInfo = `\n## ${capability.slug}: ${capability.description} 
+    const capabilityInfo = `\n## ${capability.slug}: ${capability.description} 
 ${methods}`;
 
-  prepareCapabilities.push(capabilityInfo);
-}
+    prepareCapabilities.push(capabilityInfo);
+  }
 
-// Combine everything to build the prompt message
-const capabilityPrompt = `
+  // Combine everything to build the prompt message
+  const capabilityPrompt = `
 ${CAPABILITY_PROMPT_INTRO}
 
 These are all of your capabilities:
@@ -63,7 +61,7 @@ async function callCapabilityMethod(
   capabilitySlug,
   methodName,
   args,
-  messages
+  messages,
 ) {
   logger.info(`⚡️ Calling capability method: ${capabilitySlug}.${methodName}`);
 
@@ -81,11 +79,11 @@ async function callCapabilityMethod(
     const capabilityResponse = await capability.handleCapabilityMethod(
       methodName,
       args,
-      messages
+      messages,
     );
     if (!capabilityResponse) {
       throw new Error(
-        `Capability ${capabilitySlug} did not return a response.`
+        `Capability ${capabilitySlug} did not return a response.`,
       );
     }
 

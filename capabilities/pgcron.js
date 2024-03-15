@@ -7,17 +7,18 @@ const { supabase, destructureArgs } = require("../helpers");
  * @returns {Promise<void>} - A promise that resolves when the task is scheduled successfully.
  */
 async function scheduleSupabaseTask(schedule, command) {
-  const { data, error } = await supabase
-    .rpc('schedule_task', { _schedule: schedule, _command: command })
-  
+  const { data, error } = await supabase.rpc("schedule_task", {
+    _schedule: schedule,
+    _command: command,
+  });
+
   if (error) {
-    console.error('Error scheduling task:', error);
+    console.error("Error scheduling task:", error);
     return;
   }
 
-  console.log('Scheduled task data:', data);
+  console.log("Scheduled task data:", data);
 }
-
 
 /**
  * Lists the cron jobs currently scheduled with pg_cron in Supabase.
@@ -26,18 +27,18 @@ async function scheduleSupabaseTask(schedule, command) {
  */
 async function listJobs() {
   try {
-    const { data, error } = await supabase.rpc('cron.list');
+    const { data, error } = await supabase.rpc("cron.list");
 
     if (error) {
-      console.error('Error listing jobs with pg_cron:', error.message);
+      console.error("Error listing jobs with pg_cron:", error.message);
       throw error;
     }
 
-    console.log('Successfully listed jobs:', data);
+    console.log("Successfully listed jobs:", data);
     return `Successfully listed jobs: ${data}`;
   } catch (err) {
-    console.error('Failed to list jobs:', err.message);
-    throw new Error('Failed to list jobs with pg_cron');
+    console.error("Failed to list jobs:", err.message);
+    throw new Error("Failed to list jobs with pg_cron");
   }
 }
 
@@ -49,18 +50,18 @@ async function listJobs() {
  */
 async function deleteJob(name) {
   try {
-    const { data, error } = await supabase.rpc('cron.delete', { name });
+    const { data, error } = await supabase.rpc("cron.delete", { name });
 
     if (error) {
-      console.error('Error deleting job with pg_cron:', error.message);
+      console.error("Error deleting job with pg_cron:", error.message);
       throw error;
     }
 
-    console.log('Successfully deleted job:', data);
+    console.log("Successfully deleted job:", data);
     return `Successfully deleted job: ${name}`;
   } catch (err) {
-    console.error('Failed to delete job:', err.message);
-    throw new Error('Failed to delete job with pg_cron');
+    console.error("Failed to delete job:", err.message);
+    throw new Error("Failed to delete job with pg_cron");
   }
 
   if (error) throw new Error(error.message);
@@ -77,25 +78,27 @@ async function deleteJob(name) {
  */
 async function updateJob(name, schedule, command) {
   try {
-    const { data, error } = await supabase.rpc('cron.update', { name, schedule, command });
+    const { data, error } = await supabase.rpc("cron.update", {
+      name,
+      schedule,
+      command,
+    });
 
     if (error) {
-      console.error('Error updating job with pg_cron:', error.message);
+      console.error("Error updating job with pg_cron:", error.message);
       throw error;
     }
 
-    console.log('Successfully updated job:', data);
+    console.log("Successfully updated job:", data);
     return `Successfully updated job: ${name}`;
   } catch (err) {
-    console.error('Failed to update job:', err.message);
-    throw new Error('Failed to update job with pg_cron');
+    console.error("Failed to update job:", err.message);
+    throw new Error("Failed to update job with pg_cron");
   }
 
   if (error) throw new Error(error.message);
   return `Successfully updated job: ${name}`;
 }
-
-
 
 module.exports = {
   handleCapabilityMethod: async (method, args) => {
@@ -117,7 +120,7 @@ module.exports = {
         return arg.slice(1, -1);
       }
       // if it's an object, parse it
-      if (arg.startsWith('{') && arg.endsWith('}')) {
+      if (arg.startsWith("{") && arg.endsWith("}")) {
         return JSON.parse(arg);
       }
 
@@ -128,11 +131,7 @@ module.exports = {
 
       // otherwise, return the arg as is
       return arg;
-    }
-    );
-
-
-
+    });
 
     if (method === "createJob") {
       // return await createJob(arg1, arg2);
@@ -148,6 +147,5 @@ module.exports = {
     } else if (method === "updateJob") {
       return await updateJob(arg1, arg2, arg3);
     }
-
   },
 };

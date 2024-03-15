@@ -43,7 +43,7 @@ app.post("/api/message", async (req, res) => {
         content: message,
       },
     ],
-    username
+    username,
   );
 
   res.json({ response: processedMessage });
@@ -62,7 +62,7 @@ app.post("/api/message-image", async (req, res) => {
         image: image,
       },
     ],
-    { username }
+    { username },
   );
 
   res.json({ response: processedMessage });
@@ -158,7 +158,7 @@ async function processMissiveRequest(body) {
   const latestMessageAttachments = body?.latest_message?.attachments;
   logger.info(`Latest message ID: ${latestMessageId}`);
   logger.info(
-    `Latest message attachments: ${JSON.stringify(latestMessageAttachments)}`
+    `Latest message attachments: ${JSON.stringify(latestMessageAttachments)}`,
   );
 
   // we also need to check if there is an attachment, and if there is, we need to process it and turn it into text
@@ -170,16 +170,13 @@ async function processMissiveRequest(body) {
   const latestMessageHtmlBody = fullLatestMessage?.messages?.body;
 
   // now we need to strip out all the newlines, HTML tags, and any styles/css
-  const latestMessageTextBody = latestMessageHtmlBody?.replace(`\n`, " ").replace(
-    /<style([\s\S]*?)<\/style>/gi,
-    ""
-  )
-  .replace(/<script([\s\S]*?)<\/script>/gi, "")
-  .replace(/<[^>]+>/gi, "")
-  
-  logger.info(
-    `Latest message text body: ${latestMessageTextBody}`
-  );
+  const latestMessageTextBody = latestMessageHtmlBody
+    ?.replace(`\n`, " ")
+    .replace(/<style([\s\S]*?)<\/style>/gi, "")
+    .replace(/<script([\s\S]*?)<\/script>/gi, "")
+    .replace(/<[^>]+>/gi, "");
+
+  logger.info(`Latest message text body: ${latestMessageTextBody}`);
 
   // now lets add that as a system message
   formattedMessages.push({
@@ -195,7 +192,7 @@ async function processMissiveRequest(body) {
   formattedMessages.push({
     role: "system",
     content: `Latest message in conversation: ${jsonToMarkdownList(
-      latestMessageMinusBody
+      latestMessageMinusBody,
     )}`,
   });
 
@@ -203,11 +200,11 @@ async function processMissiveRequest(body) {
   const conversationMessages = await listMessages(conversationId);
 
   logger.info(
-    `${conversationMessages.length} messages found in conversation ${conversationId}`
+    `${conversationMessages.length} messages found in conversation ${conversationId}`,
   );
   logger.info(`Conversation messages: ${JSON.stringify(conversationMessages)}`);
   logger.info(
-    `${conversationMessages.length} messages found in conversation ${conversationId}`
+    `${conversationMessages.length} messages found in conversation ${conversationId}`,
   );
 
   // add the previous conversationMessages to the formattedMessages array
@@ -217,7 +214,7 @@ async function processMissiveRequest(body) {
         role: "system",
         content: jsonToMarkdownList(m),
       };
-    })
+    }),
   );
 
   // check for any attachments in ANY of the conversation messages also
@@ -237,12 +234,12 @@ async function processMissiveRequest(body) {
         const isInMemory = await hasRecentMemoryOfResource(resourceId); // check if we have ANY memory of this resource
         if (isInMemory) {
           logger.info(
-            `Memory of resource ${resourceId} found, adding to formattedMessages`
+            `Memory of resource ${resourceId} found, adding to formattedMessages`,
           );
           // if it is in the memory, let's grab all of the memories of it and add them to the formattedMessages array
           const resourceMemories = await getResourceMemories(resourceId);
           logger.info(
-            `${resourceMemories.length} memories found for resource ${resourceId}`
+            `${resourceMemories.length} memories found for resource ${resourceId}`,
           );
           formattedMessages.push(
             ...resourceMemories.map((m) => {
@@ -252,7 +249,7 @@ async function processMissiveRequest(body) {
               };
               // logger.info(`Adding message to formattedMessages: ${JSON.stringify(msg)}`);
               return msg;
-            })
+            }),
           );
         } else {
           logger.info(`No memory of resource ${resourceId} found`);
@@ -269,7 +266,7 @@ async function processMissiveRequest(body) {
               // add the filename to the description
               `Attachment ${body.comment.attachment.filename}: ${attachmentDescription}`,
               "attachment",
-              resourceId
+              resourceId,
             );
 
             // add the description of the attachment to the formattedMessages array
@@ -301,7 +298,7 @@ async function processMissiveRequest(body) {
 
     if (!isInMemory) {
       logger.info(
-        `No memory of resource ${resourceId} found, fetching description ${attachment.url}`
+        `No memory of resource ${resourceId} found, fetching description ${attachment.url}`,
       );
       // we don't have any memory of this resource, so we need to store it
       // we need to use the vision API to get a description of the image
@@ -318,7 +315,7 @@ async function processMissiveRequest(body) {
           // add the filename to the description
           `Attachment ${body.comment.attachment.filename}: ${attachmentDescription}`,
           "attachment",
-          resourceId
+          resourceId,
         );
 
         // add the description of the attachment to the formattedMessages array
@@ -331,14 +328,14 @@ async function processMissiveRequest(body) {
       }
     } else {
       logger.info(
-        `Memory of resource ${resourceId} found, adding to formattedMessages`
+        `Memory of resource ${resourceId} found, adding to formattedMessages`,
       );
 
       try {
         // if it is in the memory, let's grab all of the memories of it and add them to the formattedMessages array
         const resourceMemories = await getResourceMemories(resourceId);
         logger.info(
-          `${resourceMemories.length} memories found for resource ${resourceId}`
+          `${resourceMemories.length} memories found for resource ${resourceId}`,
         );
         formattedMessages.push(
           ...resourceMemories.map((m) => {
@@ -346,7 +343,7 @@ async function processMissiveRequest(body) {
               role: "system",
               content: m.value,
             };
-          })
+          }),
         );
       } catch (error) {
         logger.error(`Error fetching resource memories: ${error.message}`);
@@ -357,7 +354,7 @@ async function processMissiveRequest(body) {
       // if it is in the memory, let's grab all of the memories of it and add them to the formattedMessages array
       const resourceMemories = await getResourceMemories(resourceId);
       logger.info(
-        `${resourceMemories.length} memories found for resource ${resourceId}`
+        `${resourceMemories.length} memories found for resource ${resourceId}`,
       );
       formattedMessages.push(
         ...resourceMemories.map((m) => {
@@ -365,7 +362,7 @@ async function processMissiveRequest(body) {
             role: "system",
             content: m.value,
           };
-        })
+        }),
       );
     } catch (error) {
       logger.error(`Error fetching resource memories: ${error.message}`);
@@ -376,7 +373,7 @@ async function processMissiveRequest(body) {
   const contextMessages = await getChannelMessageHistory(conversationId);
 
   logger.info(
-    `${contextMessages.length} context messages found in conversation ${conversationId}`
+    `${contextMessages.length} context messages found in conversation ${conversationId}`,
   );
 
   // add the contextMessages to the formattedMessages array
@@ -388,7 +385,7 @@ async function processMissiveRequest(body) {
       };
 
       return obj;
-    })
+    }),
   );
 
   // add the webhook description to the formattedMessages array
@@ -402,7 +399,7 @@ async function processMissiveRequest(body) {
     role: "user",
     // content: `Webhook contents: ${JSON.stringify(body)}`,
     content: `During this conversation, I might reference some of this information: ${jsonToMarkdownList(
-      body
+      body,
     )}`,
   });
 
@@ -508,7 +505,7 @@ function jsonToMarkdownList(jsonObj, indentLevel = 0) {
     if (typeof value === "object" && value !== null) {
       str += `${indentSpaces}- **${key}**:\n${jsonToMarkdownList(
         value,
-        indentLevel + 1
+        indentLevel + 1,
       )}`;
     } else {
       str += `${indentSpaces}- ${key}: ${value}\n`;

@@ -361,7 +361,7 @@ class GithubCoach {
     title,
     headBranch,
     baseBranch,
-    description
+    description,
   ) {
     const response = await this.octokit.pulls.create({
       owner: process.env.GITHUB_USER,
@@ -425,7 +425,7 @@ module.exports = {
         return await githubCoach.listUserProjects(...destructuredArgs);
       case "listProjectColumnsAndCards":
         return await githubCoach.listProjectColumnsAndCards(
-          ...destructuredArgs
+          ...destructuredArgs,
         );
       case "addDraftIssueToProject":
         return await githubCoach.addDraftIssueToProject(...destructuredArgs);

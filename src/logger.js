@@ -19,7 +19,7 @@ module.exports = function (serviceName) {
               : "";
             const { level, message, timestamp, ...meta } = info;
             return `${timestamp} ${serviceName} ${lineNumber} : ${message}`;
-          })
+          }),
         ),
       }),
       new winston.transports.File({
@@ -29,7 +29,7 @@ module.exports = function (serviceName) {
           winston.format.printf((info) => {
             const { level, message, timestamp, ...meta } = info;
             return `${timestamp} ${level}: ${message}`;
-          })
+          }),
         ),
       }),
       new winston.transports.File({
@@ -40,7 +40,7 @@ module.exports = function (serviceName) {
             const { level, message, timestamp, ...meta } = info;
 
             return `${timestamp} ${level}: ${message}`;
-          })
+          }),
         ),
       }),
     ],

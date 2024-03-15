@@ -86,13 +86,13 @@ Process Response: Use the updated todo item returned by the function to verify t
 /**
  * Lists all todo items in the database.
  * This capability allows for the retrieval of all todo items from the database. It is a simple function that returns an array of all todo items, which can be used for display, processing, or further manipulation.
-* When to Use: Utilize this capability when you need to display all the todo items in a project, or when you need to process or manipulate the entire list of todos.
+ * When to Use: Utilize this capability when you need to display all the todo items in a project, or when you need to process or manipulate the entire list of todos.
  * How to Use:
  * Call the Function: Execute the listTodos function. Handle the promise to catch any errors and process the array of todo items returned.
  * Process Response: Use the array of todo items for display, processing, or further manipulation as needed.
  * @param {number} projectId - ID of the project to list todos for.
  * @returns {Promise<Object[]>} A promise that resolves to an array of all todo items.
- * 
+ *
  */
 async function listTodos() {
   const { data, error } = await supabase.from("todos").select("*");
@@ -105,7 +105,7 @@ module.exports = {
   handleCapabilityMethod: async (method, args) => {
     // const desArgs = destructureArgs(args);
     // const [arg1, arg2] = desArgs;
-    console.log('args', args);
+    console.log("args", args);
     const [arg1, arg2] = destructureArgs(args);
     console.log(`⚡️ Calling capability method: supabasetodo.${method}`);
     // console.log(`⚡️ With arguments: ${JSON.stringify(desArgs)}`);
