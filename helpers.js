@@ -50,12 +50,14 @@ async function getConfigFromSupabase() {
   // turn the array of objects into a big object that can be destructured
   const configArray = data;
   // get all the keys and values
-  const configKeys = configArray.map((config) => config.key);
-  const configValues = configArray.map((config) => config.value);
+  const configKeys = configArray.map((config) => config.config_key);
+  const configValues = configArray.map((config) => config.config_value);
   // return an object with all the keys and values
-  return Object.fromEntries(
+  const config = Object.fromEntries(
     configKeys.map((_, i) => [configKeys[i], configValues[i]]),
   );
+  logger.info(`Config: ${JSON.stringify(config, null, 2)}`);
+  return config;
 }
 
 /**

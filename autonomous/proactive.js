@@ -1,8 +1,7 @@
 const cron = require("node-cron");
 const Chance = require("chance");
 const chance = new Chance();
-const { processMessageChain } = require("../src/chain");
-const { getPromptsFromSupabase } = require("../helpers");
+// const { getPromptsFromSupabase } = require("../helpers");
 // const {
 //   PROACTIVE_IDEA_BRAINSTORM,
 //   PROACTIVE_PERFORM_TASK,
@@ -41,6 +40,7 @@ const proactive = {
     });
   },
   listPotentialTasks: async function () {
+    const { processMessageChain } = await require("../src/chain");
     logger.info("Listing potential tasks");
     // Pull recent memories and messages and identify some proactive steps
     const channel = this.channel;
@@ -71,6 +71,7 @@ const proactive = {
     return task;
   },
   performProactiveTask: async function (proactiveTask) {
+    const { processMessageChain } = await require("../src/chain");
     const channel = this.channel;
 
     logger.info("Performing proactive task", proactiveTask);

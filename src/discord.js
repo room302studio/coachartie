@@ -4,7 +4,7 @@ const {
   splitAndSendMessage,
   displayTypingIndicator,
 } = require("../helpers.js");
-const { processMessageChain } = require("./chain.js");
+
 const vision = require("./vision.js");
 const createLogger = require("./logger.js");
 const logger = createLogger("discord");
@@ -136,6 +136,7 @@ class DiscordBot {
    * @param {string} username - The username of the message author.
    */
   async processMessageChain(prompt, { username, channel, guild }) {
+    const { processMessageChain } = await require("./chain.js");
     return await processMessageChain(
       [
         {
@@ -152,6 +153,7 @@ class DiscordBot {
    * @param {object} message - The message to respond to.
    */
   async respondToMessage(message) {
+    
     const botMentionOrChannel = detectBotMentionOrChannel(message);
     const messageAuthorIsBot = message.author.bot;
     const authorIsMe = message.author.username === "coachartie";

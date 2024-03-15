@@ -6,6 +6,7 @@ const {
   trimResponseIfNeeded,
   isExceedingTokenLimit,
   getUniqueEmoji,
+  getConfigFromSupabase
 } = require("../helpers");
 // const {
 //   generateAndStoreRememberCompletion,
@@ -19,13 +20,15 @@ const { storeUserMessage } = require("./remember");
 const logger = require("../src/logger.js")("chain");
 
 // TODO: Swap out with getConfigFromSupabase
-const {
-  TOKEN_LIMIT,
-  WARNING_BUFFER,
-  MAX_CAPABILITY_CALLS,
-  MAX_RETRY_COUNT,
-} = require("../config");
+// const {
+//   TOKEN_LIMIT,
+//   WARNING_BUFFER,
+//   MAX_CAPABILITY_CALLS,
+//   MAX_RETRY_COUNT,
+// } = require("../config");
 
+module.exports = (async () => {
+  const { TOKEN_LIMIT, WARNING_BUFFER, MAX_CAPABILITY_CALLS, MAX_RETRY_COUNT } = await getConfigFromSupabase();
 /**
  * Processes a message chain.
  *
@@ -313,8 +316,14 @@ async function processMessage(
   return messages;
 }
 
-module.exports = {
+// module.exports = {
+//   processMessageChain,
+//   processMessage,
+//   processCapability,
+// };
+return {
   processMessageChain,
   processMessage,
   processCapability,
 };
+})();

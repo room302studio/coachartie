@@ -1,5 +1,5 @@
 const dotenv = require("dotenv");
-const { MEMORIES_TABLE_NAME, MESSAGES_TABLE_NAME } = require("../config");
+
 const { openai } = require("./openai");
 const { CohereClient } = require("cohere-ai");
 const logger = require("../src/logger.js")("remember");
@@ -10,6 +10,8 @@ const cohere = new CohereClient({
 });
 const port = process.env.EXPRESS_PORT;
 dotenv.config();
+
+const { MEMORIES_TABLE_NAME, MESSAGES_TABLE_NAME } = require("../config");
 
 /**
  * Retrieves user memories from the database.

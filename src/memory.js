@@ -9,11 +9,12 @@ const chance = require("chance").Chance();
 const vision = require("./vision.js");
 const logger = require("../src/logger.js")("memory");
 const preambleLogger = require("../src/logger.js")("preamble");
+const { getPromptsFromSupabase, getConfigFromSupabase } = require("../helpers");
 
-// 📜 prompts: our guidebook of conversational cues
-const prompts = require("../prompts");
-const { PROMPT_REMEMBER, PROMPT_CAPABILITY_REMEMBER, PROMPT_REMEMBER_INTRO } = prompts;
-const { REMEMBER_MODEL } = require("../config");
+module.exports = (async () => {
+  const { PROMPT_REMEMBER, PROMPT_CAPABILITY_REMEMBER, PROMPT_REMEMBER_INTRO } = await getPromptsFromSupabase();
+
+  const { REMEMBER_MODEL } = await getConfigFromSupabase();
 
 /**
  * Generates a completion and stores it in the database
@@ -110,6 +111,10 @@ async function generateAndStoreCompletion(
   return rememberText;
 }
 
-module.exports = {
-  generateAndStoreCompletion,
-};
+// module.exports = {
+//   generateAndStoreCompletion,
+// };
+  return {
+    generateAndStoreCompletion,
+  };
+})();
