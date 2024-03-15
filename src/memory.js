@@ -83,7 +83,7 @@ async function generateAndStoreCompletion(
     },
     {
       role: "user",
-      content: `# User (${username}): ${prompt} \n # Robot (Artie): ${response.content}`,
+      content: `# User (${username}): ${prompt} \n # Robot (Artie): ${response}`,
     },
     {
       role: "user",

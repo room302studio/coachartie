@@ -307,7 +307,7 @@ async function processChunks(chunks, data, limit = 2, userPrompt = "") {
         await sleep(500);
 
         logger.info(`📝  Sending chunk ${i + index + 1} of ${chunkLength}...`);
-        logger.info("📝  Chunk text:", chunk);
+        logger.info(`Chunk text: ${chunk}`);
 
         const completion = await openai.createChatCompletion({
           model: "gpt-3.5-turbo-16k",

@@ -240,8 +240,7 @@ async function processMessage(
   logger.info(`Processing Message in chain.js`);
 
   const {
-    generateAndStoreRememberCompletion,
-    generateAndStoreCapabilityCompletion,
+    generateAndStoreCompletion,
   } = await memoryFunctionsPromise;
 
   if (doesMessageContainCapability(lastMessage)) {
@@ -251,12 +250,14 @@ async function processMessage(
       messages = await processCapability(messages, capabilityMatch);
 
       // store a memory of the capability call
-      await generateAndStoreCapabilityCompletion(
+      await generateAndStoreCompletion(
         lastMessage,
         messages[messages.length - 1].content,
         capabilityMatch[1],
         { username, channel, guild },
         messages,
+        true, // mark as capability
+        capabilityMatch[1],
       );
     } catch (error) {
       logger.info(`Error processing capability: ${error}`);
@@ -302,7 +303,7 @@ async function processMessage(
     content: aiResponse,
   });
 
-  generateAndStoreRememberCompletion(
+  generateAndStoreCompletion(
     prompt,
     aiResponse,
     { username, channel, guild },
