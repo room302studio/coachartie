@@ -9,7 +9,7 @@ const chance = require("chance").Chance();
 const vision = require("./vision.js");
 const logger = require("../src/logger.js")("memory");
 const preambleLogger = require("../src/logger.js")("preamble");
-const { getPromptsFromSupabase, getConfigFromSupabase } = require("../helpers");
+const { getPromptsFromSupabase, getConfigFromSupabase, } = require("../helpers");
 
 module.exports = (async () => {
   const { PROMPT_REMEMBER, PROMPT_CAPABILITY_REMEMBER, PROMPT_REMEMBER_INTRO } = await getPromptsFromSupabase();
@@ -94,12 +94,12 @@ async function generateAndStoreCompletion(
 
   preambleLogger.info(`📜 Preamble messages ${JSON.stringify(completeMessages)}`);
 
-  const rememberCompletion = await openai.createChatCompletion({
-    model: REMEMBER_MODEL,
-    presence_penalty: 0.1,
-    max_tokens: 256,
-    messages: completeMessages,
-  });
+  // const rememberCompletion = await openai.createChatCompletion({
+  //   model: REMEMBER_MODEL,
+  //   presence_penalty: 0.1,
+  //   max_tokens: 256,
+  //   messages: completeMessages,
+  // });
 
   const rememberText = rememberCompletion.data.choices[0].message.content;
   logger.info(`🧠 Interaction memory: ${rememberText} for ${username} in ${channel} in ${guild}`);

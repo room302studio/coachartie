@@ -10,6 +10,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.18.0",
     "@discordjs/voice": "^0.16.0",
     "@google-cloud/speech": "^5.5.0",
     "@nem035/gpt-3-encoder": "^1.1.7",

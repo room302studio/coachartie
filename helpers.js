@@ -16,6 +16,10 @@ const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_API_KEY,
 );
+// import Anthropic from '@anthropic-ai/sdk';
+const Anthropic = require("@anthropic-ai/sdk");
+
+const anthropic = new Anthropic();
 
 const capabilityRegex = /(\w+):(\w+)\(([^]*?)\)/; // captures newlines in the  third argument
 
@@ -608,7 +612,8 @@ async function generateAiCompletion(prompt, username, messages, config) {
 }
 
 // const completionModel = "gemini";
-const completionModel = "openai";
+// const completionModel = "openai";
+const completionModel = "claude";
 
 /**
  * Creates a chat completion using the specified messages, temperature, and presence penalty.
@@ -651,7 +656,34 @@ async function createChatCompletion(
       temperature,
       presence_penalty,
     );
+  } else if (completionModel = "claude") {
+    const res = await createClaudeCompletion(messages, temperature);
+    // return res.content.text
+    // right now we return the text but we need to make it look like a normal openai resposne so the downstream stuff works the same
+    return {
+      data: {
+        choices: [
+          {
+            message: {
+              role: 'assistant',
+              content: res.content.text,
+            },
+          },
+        ],
+      },
+    };
   }
+}
+
+async function createClaudeCompletion(messages, temperature) {
+  return await anthropic.messages.create({
+    model: 'claude-2.1',
+    max_tokens: MAX_OUTPUT_TOKENS,
+    // messages: [
+    //   {"role": "user", "content": "Hello, world"}
+    // ]
+    messages
+  });
 }
 
 async function createGeminiCompletion(messages, temperature, presence_penalty) {
