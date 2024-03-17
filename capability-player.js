@@ -1,7 +1,11 @@
 const readline = require('readline');
+const fs = require('fs');
+const path = require('path');
 const { processCapability } = require('./src/chain');
-const { destructureArgs } = require('./helpers');
-const capabilityManifest = require('./capabilities/_manifest.json');
+
+// Load and parse the capability manifest
+const capabilityManifestPath = path.join(__dirname, 'capabilities', '_manifest.json');
+const capabilityManifest = JSON.parse(fs.readFileSync(capabilityManifestPath, 'utf8'));
 
 // Create readline interface for command line input
 const rl = readline.createInterface({
@@ -9,6 +13,9 @@ const rl = readline.createInterface({
   output: process.stdout
 });
 
+let lastCommand = null;
+
+// Function to display capabilities and their methods
 function displayCapabilities() {
   console.log('Available capabilities and their methods:');
   Object.entries(capabilityManifest).forEach(([capability, methods]) => {
@@ -41,6 +48,7 @@ function askQuestion(query) {
 // Simulate processing a message as done in chain.js
 async function processInputAsMessage(input) {
   const capabilityMatch = input.match(/(\w+):(\w+)\(([^)]*)\)/);
+  lastCommand = input;
   if (!capabilityMatch) {
     console.log('Invalid format. Please use the format: capabilitySlug:methodName(args)');
     return;
@@ -66,11 +74,21 @@ async function main() {
   displayCapabilities();
 
   while (true) {
-    const input = await askQuestion('Enter capability and method (format: capabilitySlug:methodName(args)): ');
+    let query = '\nEnter capability and method (format: capability:methodName(args)), or type "rerun" to execute the last command: ';
+    if (lastCommand) {
+      query += `\nLast command was: "${lastCommand}". `;
+    }
+    query += '\nYour choice (or type "exit" to quit): ';
+
+    const input = await askQuestion(query);
 
     if (input.toLowerCase() === 'exit') break;
-
-    await processInputAsMessage(input);
+    if (input.toLowerCase() === 'rerun' && lastCommand) {
+      console.log(`Re-running: ${lastCommand}`);
+      await processInputAsMessage(lastCommand);
+    } else if (input.trim()) {
+      await processInputAsMessage(input);
+    }
   }
 
   rl.close(); // Close readline interface
