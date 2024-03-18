@@ -94,12 +94,12 @@ async function generateAndStoreCompletion(
 
   preambleLogger.info(`📜 Preamble messages ${JSON.stringify(completeMessages)}`);
 
-  // const rememberCompletion = await openai.createChatCompletion({
-  //   model: REMEMBER_MODEL,
-  //   presence_penalty: 0.1,
-  //   max_tokens: 256,
-  //   messages: completeMessages,
-  // });
+  const rememberCompletion = await openai.createChatCompletion({
+    model: REMEMBER_MODEL,
+    presence_penalty: 0.1,
+    max_tokens: 256,
+    messages: completeMessages,
+  });
 
   const rememberText = rememberCompletion.data.choices[0].message.content;
   logger.info(`🧠 Interaction memory: ${rememberText} for ${username} in ${channel} in ${guild}`);

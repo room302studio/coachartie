@@ -19,7 +19,9 @@ const supabase = createClient(
 // import Anthropic from '@anthropic-ai/sdk';
 const Anthropic = require("@anthropic-ai/sdk");
 
-const anthropic = new Anthropic();
+const anthropic = new Anthropic(
+  {apiKey: process.env.ANTHROPIC_API_KEY}
+);
 
 const capabilityRegex = /(\w+):(\w+)\(([^]*?)\)/; // captures newlines in the  third argument
 
@@ -604,7 +606,7 @@ async function generateAiCompletion(prompt, username, messages, config) {
   } catch (err) {
     logger.info(`Error creating chat completion ${err}`);
   }
-  // logger.info(`${JSON.stringify(completion, null, 2)}`);
+  logger.info(`Raw completion response: ${JSON.stringify(completion, null, 2)}`);
   const aiResponse = completion.data.choices[0].message.content;
   logger.info("🤖 AI Response:", aiResponse);
   messages.push(aiResponse);
@@ -656,8 +658,11 @@ async function createChatCompletion(
       temperature,
       presence_penalty,
     );
-  } else if (completionModel = "claude") {
+  } else if (completionModel === "claude") {
     const res = await createClaudeCompletion(messages, temperature);
+
+    console.log('---')
+    console.log('res', res)
     // return res.content.text
     // right now we return the text but we need to make it look like a normal openai resposne so the downstream stuff works the same
     return {
@@ -666,7 +671,7 @@ async function createChatCompletion(
           {
             message: {
               role: 'assistant',
-              content: res.content.text,
+              content: res.content[0].text,
             },
           },
         ],
@@ -676,14 +681,42 @@ async function createChatCompletion(
 }
 
 async function createClaudeCompletion(messages, temperature) {
-  return await anthropic.messages.create({
+
+  // the first thing we need to do is go through all of our messages, and make sure the role is "user" - no matter what (some of them come in as `system` from the openai style)
+  messages = messages.map((message) => {
+    message.role = "user";
+    return message;
+  });
+
+  // if there are multiple user messages next to each other, we just concat them into a single message- the messages MUST alternate user/assistant/user
+  messages = messages.reduce((acc, message) => {
+    if (acc.length === 0) {
+      acc.push(message);
+    } else {
+      const lastMessage = acc[acc.length - 1];
+      if (lastMessage.role === message.role) {
+        lastMessage.content += " " + message.content;
+      } else {
+        acc.push(message);
+      }
+    }
+    return acc;
+  }, []);  
+
+  const claudeCompletion =  await anthropic.messages.create({
     model: 'claude-2.1',
-    max_tokens: MAX_OUTPUT_TOKENS,
+    // max_tokens: MAX_OUTPUT_TOKENS,
+    max_tokens: 2048,
     // messages: [
     //   {"role": "user", "content": "Hello, world"}
     // ]
     messages
   });
+
+  console.log('🐭', JSON.stringify(claudeCompletion))
+
+  return claudeCompletion;
+  
 }
 
 async function createGeminiCompletion(messages, temperature, presence_penalty) {
