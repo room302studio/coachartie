@@ -106,6 +106,8 @@ async function generateAndStoreCompletion(
     });
   });
 
+  const capabilityResponse = response;
+
   // if the response has a .image, we need to send that through the vision API to see what it actually is
   if (capabilityResponse.image) {
     // const imageUrl = message.attachments.first().url;
@@ -179,9 +181,6 @@ async function generateAndStoreCompletion(
   return rememberText;
 }
 
-// module.exports = {
-//   generateAndStoreCompletion,
-// };
   return {
     generateAndStoreCompletion,
   };
