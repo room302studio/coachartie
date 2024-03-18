@@ -1,6 +1,144 @@
 {
   "_generate-manifest": [],
+  "calculator": [
+    {
+      "name": "calculator:add()",
+      "description": "Adds up an array of numbers. Returns: The sum of the numbers.",
+      "parameters": [
+        {
+          "name": "numbers",
+          "description": "The array of numbers to be added."
+        }
+      ]
+    },
+    {
+      "name": "calculator:subtract()",
+      "description": "Subtracts the numbers in the array. Returns: The result of subtracting the numbers.",
+      "parameters": [
+        {
+          "name": "numbers",
+          "description": "The array of numbers to subtract."
+        }
+      ]
+    },
+    {
+      "name": "calculator:multiply()",
+      "description": "Multiplies an array of numbers. Returns: The product of the numbers.",
+      "parameters": [
+        {
+          "name": "numbers",
+          "description": "The array of numbers to multiply."
+        }
+      ]
+    },
+    {
+      "name": "calculator:divide()",
+      "description": "Divides an array of numbers. Returns: The result of dividing the numbers.",
+      "parameters": [
+        {
+          "name": "numbers",
+          "description": "The array of numbers to be divided."
+        }
+      ]
+    },
+    {
+      "name": "calculator:pow()",
+      "description": "Calculates the power of numbers. Returns: The result of the power calculation.",
+      "parameters": [
+        {
+          "name": "numbers",
+          "description": "The numbers to calculate the power of."
+        }
+      ]
+    },
+    {
+      "name": "calculator:sqrt()",
+      "description": "Calculates the square root of each number in the given array. Returns: The array of square roots.",
+      "parameters": [
+        {
+          "name": "numbers",
+          "description": "The array of numbers to calculate the square root for."
+        }
+      ]
+    },
+    {
+      "name": "calculator:log()",
+      "description": "Calculates the logarithm of an array of numbers. Returns: The result of the logarithm calculation.",
+      "parameters": [
+        {
+          "name": "numbers",
+          "description": "The array of numbers to calculate the logarithm for."
+        }
+      ]
+    }
+  ],
   "chance": [],
+  "calendar": [
+    {
+      "name": "calendar:listAllCalendars()",
+      "description": "This function uses the Google Calendar API to retrieve a list of all calendars available to the authenticated user. Returns: An array of calendar summaries and IDs.",
+      "exceptions": [
+        "If no calendars are found or an error occurs."
+      ]
+    },
+    {
+      "name": "calendar:accessEvent()",
+      "description": "Retrieves a specific event from a Google Calendar. Returns: A promise that resolves to the event object.",
+      "parameters": [
+        {
+          "name": "calendarId",
+          "description": "The ID of the calendar."
+        },
+        {
+          "name": "eventId",
+          "description": "The ID of the event."
+        }
+      ]
+    },
+    {
+      "name": "calendar:addPersonToEvent()",
+      "description": "Adds a person to an event in the Google Calendar. Returns: A promise that resolves to the updated event.",
+      "parameters": [
+        {
+          "name": "calendarId",
+          "description": "The ID of the calendar."
+        },
+        {
+          "name": "eventId",
+          "description": "Th e ID of the event."
+        },
+        {
+          "name": "attendeeEmail",
+          "description": "The email address of the attendee to be added."
+        }
+      ]
+    },
+    {
+      "name": "calendar:createEvent()",
+      "description": "Creates a new event in the specified calendar. Returns: A promise that resolves to the created event.",
+      "parameters": [
+        {
+          "name": "calendarId",
+          "description": "The ID of the calendar."
+        },
+        {
+          "name": "event",
+          "description": "The event object to be created."
+        }
+      ]
+    },
+    {
+      "name": "calendar:listEventsThisWeek()",
+      "description": "Retrieves a list of events occurring within the current week for the specified calendar. Returns: A promise that resolves to the list of events.",
+      "parameters": [
+        {
+          "name": "calendarId",
+          "description": "The ID of the calendar to retrieve events from."
+        }
+      ]
+    }
+  ],
+  "discord-events": [],
   "drive": [
     {
       "name": "drive:getDriveInstance()",
@@ -40,6 +178,22 @@
         {
           "name": "text",
           "description": "The text to use as the content of the new document."
+        }
+      ]
+    }
+  ],
+  "evaluate": [
+    {
+      "name": "evaluate:runCodeInSandbox()",
+      "description": "Runs the provided code in a sandboxed environment. Returns: The result of the code execution.",
+      "parameters": [
+        {
+          "name": "code",
+          "description": "The code to be executed."
+        },
+        {
+          "name": "sandbox",
+          "description": "The sandbox object to provide the execution context."
         }
       ]
     }
@@ -272,19 +426,18 @@
       ]
     }
   ],
-  "evaluate": [
+  "js": [
     {
-      "name": "evaluate:runCodeInSandbox()",
-      "description": "Runs the provided code in a sandboxed environment. Returns: The result of the code execution.",
+      "name": "js:executeJavascriptAndCaptureImage()",
+      "description": "Executes the provided JavaScript code in a headless browser using Puppeteer and captures a screenshot of the resulting page. Returns: A promise that resolves to an object containing the captured screenshot image as a Buffer.",
       "parameters": [
         {
-          "name": "code",
-          "description": "The code to be executed."
-        },
-        {
-          "name": "sandbox",
-          "description": "The sandbox object to provide the execution context."
+          "name": "javascriptCode",
+          "description": "The JavaScript code to be executed in the browser."
         }
+      ],
+      "exceptions": [
+        "If an error occurs while executing the JavaScript code and capturing the image."
       ]
     }
   ],
@@ -307,7 +460,93 @@
       ]
     }
   ],
-  "discord-events": [],
+  "mermaid": [
+    {
+      "name": "mermaid:convertMermaidDiagram()",
+      "description": "Converts a Mermaid diagram text into an image. Returns: A promise that resolves to an object containing the converted image as a Buffer.",
+      "parameters": [
+        {
+          "name": "diagramText",
+          "description": "The Mermaid diagram text to convert."
+        }
+      ],
+      "exceptions": [
+        "If an error occurs while converting the Mermaid diagram."
+      ]
+    }
+  ],
+  "pgcron": [
+    {
+      "name": "pgcron:createJob()",
+      "description": "Creates a new job using pg_cron to schedule it in Supabase. Returns: A promise that resolves to a success message when the job is successfully scheduled.",
+      "parameters": [
+        {
+          "name": "name",
+          "description": "The name of the job."
+        },
+        {
+          "name": "description",
+          "description": "The description of the job (optional)."
+        },
+        {
+          "name": "webhookUrl",
+          "description": "The URL to send the HTTP POST request."
+        },
+        {
+          "name": "headers",
+          "description": "The headers to include in the HTTP POST request (optional)."
+        },
+        {
+          "name": "body",
+          "description": "The body of the HTTP POST request (optional)."
+        }
+      ],
+      "exceptions": [
+        "If there is an error scheduling the job."
+      ]
+    },
+    {
+      "name": "pgcron:listJobs()",
+      "description": "Lists the cron jobs currently scheduled with pg_cron in Supabase. Returns: A promise that resolves to a success message with the list of jobs.",
+      "exceptions": [
+        "If there is an error listing the jobs."
+      ]
+    },
+    {
+      "name": "pgcron:deleteJob()",
+      "description": "Deletes a job scheduled with pg_cron in Supabase. Returns: A promise that resolves to a success message when the job is successfully deleted.",
+      "parameters": [
+        {
+          "name": "name",
+          "description": "The name of the job to delete."
+        }
+      ],
+      "exceptions": [
+        "If there is an error deleting the job."
+      ]
+    },
+    {
+      "name": "pgcron:updateJob()",
+      "description": "Updates a job scheduled with pg_cron in Supabase. Returns: A promise that resolves to a success message when the job is successfully updated.",
+      "parameters": [
+        {
+          "name": "name",
+          "description": "The name of the job to update."
+        },
+        {
+          "name": "schedule",
+          "description": "The new schedule for the job."
+        },
+        {
+          "name": "command",
+          "description": "The new command for the job."
+        }
+      ],
+      "exceptions": [
+        "If there is an error updating the job."
+      ]
+    }
+  ],
   "schedule": [
     {
       "name": "schedule:auth()",
@@ -334,21 +573,6 @@
     {
       "name": "schedule:schedule()",
       "description": "Exports an object with a method to handle capability methods"
-    }
-  ],
-  "mermaid": [
-    {
-      "name": "mermaid:convertMermaidDiagram()",
-      "description": "Converts a Mermaid diagram text into an image. Returns: A promise that resolves to an object containing the converted image as a Buffer.",
-      "parameters": [
-        {
-          "name": "diagramText",
-          "description": "The Mermaid diagram text to convert."
-        }
-      ],
-      "exceptions": [
-        "If an error occurs while converting the Mermaid diagram."
-      ]
     }
   ],
   "scratchfile": [
@@ -387,170 +611,83 @@
       ]
     }
   ],
-  "calendar": [
+  "stablediffusion": [
     {
-      "name": "calendar:listAllCalendars()",
-      "description": "This function uses the Google Calendar API to retrieve a list of all calendars available to the authenticated user. Returns: An array of calendar summaries and IDs.",
-      "exceptions": [
-        "If no calendars are found or an error occurs."
-      ]
-    },
-    {
-      "name": "calendar:accessEvent()",
-      "description": "Retrieves a specific event from a Google Calendar. Returns: A promise that resolves to the event object.",
-      "parameters": [
-        {
-          "name": "calendarId",
-          "description": "The ID of the calendar."
-        },
-        {
-          "name": "eventId",
-          "description": "The ID of the event."
-        }
-      ]
-    },
-    {
-      "name": "calendar:addPersonToEvent()",
-      "description": "Adds a person to an event in the Google Calendar. Returns: A promise that resolves to the updated event.",
-      "parameters": [
-        {
-          "name": "calendarId",
-          "description": "The ID of the calendar."
-        },
-        {
-          "name": "eventId",
-          "description": "Th e ID of the event."
-        },
-        {
-          "name": "attendeeEmail",
-          "description": "The email address of the attendee to be added."
-        }
-      ]
-    },
-    {
-      "name": "calendar:createEvent()",
-      "description": "Creates a new event in the specified calendar. Returns: A promise that resolves to the created event.",
-      "parameters": [
-        {
-          "name": "calendarId",
-          "description": "The ID of the calendar."
-        },
-        {
-          "name": "event",
-          "description": "The event object to be created."
-        }
-      ]
-    },
-    {
-      "name": "calendar:listEventsThisWeek()",
-      "description": "Retrieves a list of events occurring within the current week for the specified calendar. Returns: A promise that resolves to the list of events.",
-      "parameters": [
-        {
-          "name": "calendarId",
-          "description": "The ID of the calendar to retrieve events from."
-        }
-      ]
-    }
-  ],
-  "js": [
-    {
-      "name": "js:executeJavascriptAndCaptureImage()",
-      "description": "Executes the provided JavaScript code in a headless browser using Puppeteer and captures a screenshot of the resulting page. Returns: A promise that resolves to an object containing the captured screenshot image as a Buffer.",
-      "parameters": [
-        {
-          "name": "javascriptCode",
-          "description": "The JavaScript code to be executed in the browser."
-        }
-      ],
-      "exceptions": [
-        "If an error occurs while executing the JavaScript code and capturing the image."
-      ]
-    }
-  ],
-  "wikipedia": [
-    {
-      "name": "wikipedia:askWikipedia()",
-      "description": "This function is used to search Wikipedia for a given query.\nIt uses the Wikipedia API to perform the search and then uses OpenAI to evaluate the search results. Returns: A promise that resolves to a string containing the evaluated search results.",
+      "name": "stablediffusion:generateImageFromText()",
+      "description": "Generates an image from the given text using the Stable Diffusion API. Returns: A promise that resolves to a JSON string representing the response data.",
       "parameters": [
         {
           "name": "args",
-          "description": "An array containing the arguments passed to the function."
+          "description": "The arguments for generating the image."
         }
       ],
       "exceptions": [
-        "If an error occurs while contacting Wikipedia or OpenAI."
+        "If an error occurs during the API request."
       ]
     }
   ],
-  "calculator": [
+  "supabasetodo": [
     {
-      "name": "calculator:add()",
-      "description": "Adds up an array of numbers. Returns: The sum of the numbers.",
+      "name": "supabasetodo:createTodo()",
+      "description": "Creates a new todo item in the database. This capability allows for the creation of a new todo item within a specified project. It supports optional details such as description, status, priority, due date, external URLs, and attachments, making it flexible for various use cases. The function defaults to setting the todo's status to \"To Do\" if not specified, ensuring a new todo is actionable immediately upon creation.\nWhen to Use: Use this capability when a new task arises that needs tracking within a project's context. It's suitable for user-driven todo creation based on input or automated task generation from project activities or milestones.\nHow to Use:\nPrepare Todo Details: Construct an object containing the details of the todo to be created, including the mandatory projectId and name fields, along with any other optional information.\nCall the Function: Invoke the createTodo function with the prepared object. Handle the promise returned by the function to deal with the newly created todo or to catch any errors.\nProcess Response: On successful creation, use the returned todo item for display, further processing, or confirmation to the user. Returns: A promise that resolves to a success message.",
       "parameters": [
         {
-          "name": "numbers",
-          "description": "The array of numbers to be added."
+          "name": "name",
+          "description": "The name of the todo item."
+        },
+        {
+          "name": "description",
+          "description": "The description of the todo item."
         }
       ]
     },
     {
-      "name": "calculator:subtract()",
-      "description": "Subtracts the numbers in the array. Returns: The result of subtracting the numbers.",
+      "name": "supabasetodo:deleteTodo()",
+      "description": "Deletes a todo item from the database.\nThis capability allows for the deletion of a specified todo item from the database. It is a straightforward function that requires only the ID of the todo item to be deleted. This capability is essential for maintaining the relevance and accuracy of the todo list by removing completed, cancelled, or outdated tasks.\nWhen to Use: Utilize this capability when a todo item is no longer needed or relevant. This could be after the completion of a task, cancellation of a project, or any situation where a todo does not need to be tracked anymore.\nHow to Use:\nDetermine Todo ID: Identify the ID of the todo item that needs to be deleted.\nCall the Function: Execute the deleteTodo function with the identified todo ID. Manage the promise to address any errors and confirm deletion.\nVerify Deletion: The function returns a boolean value indicating the success of the deletion operation. Use this to provide feedback to the user or to update the application state accordingly. Returns: A promise that resolves to true if the deletion was successful, false otherwise.",
       "parameters": [
         {
-          "name": "numbers",
-          "description": "The array of numbers to subtract."
+          "name": "todoId",
+          "description": "ID of the todo to be deleted."
         }
       ]
     },
     {
-      "name": "calculator:multiply()",
-      "description": "Multiplies an array of numbers. Returns: The product of the numbers.",
+      "name": "supabasetodo:updateTodo()",
+      "description": "Updates an existing todo item in the database. Returns: A promise that resolves to the updated todo item.",
       "parameters": [
         {
-          "name": "numbers",
-          "description": "The array of numbers to multiply."
+          "name": "todoId",
+          "description": "ID of the todo to be updated."
+        },
+        {
+          "name": "updates",
+          "description": "Object containing the fields to update."
         }
       ]
     },
     {
-      "name": "calculator:divide()",
-      "description": "Divides an array of numbers. Returns: The result of dividing the numbers.",
+      "name": "supabasetodo:listTodos()",
+      "description": "Lists all todo items in the database.\nThis capability allows for the retrieval of all todo items from the database. It is a simple function that returns an array of all todo items, which can be used for display, processing, or further manipulation.\nWhen to Use: Utilize this capability when you need to display all the todo items in a project, or when you need to process or manipulate the entire list of todos.\nHow to Use:\nCall the Function: Execute the listTodos function. Handle the promise to catch any errors and process the array of todo items returned.\nProcess Response: Use the array of todo items for display, processing, or further manipulation as needed. Returns: A promise that resolves to an array of all todo items.",
       "parameters": [
         {
-          "name": "numbers",
-          "description": "The array of numbers to be divided."
+          "name": "projectId",
+          "description": "ID of the project to list todos for."
         }
       ]
-    },
+    }
+  ],
+  "svg": [
     {
-      "name": "calculator:pow()",
-      "description": "Calculates the power of numbers. Returns: The result of the power calculation.",
+      "name": "svg:convertSvgToImage()",
+      "description": "Converts an SVG string to an image using Puppeteer. Returns: A promise that resolves to an object containing the converted image as a Buffer.",
       "parameters": [
         {
-          "name": "numbers",
-          "description": "The numbers to calculate the power of."
+          "name": "svgString",
+          "description": "The SVG string to convert."
         }
-      ]
-    },
-    {
-      "name": "calculator:sqrt()",
-      "description": "Calculates the square root of each number in the given array. Returns: The array of square roots.",
-      "parameters": [
-        {
-          "name": "numbers",
-          "description": "The array of numbers to calculate the square root for."
-        }
-      ]
-    },
-    {
-      "name": "calculator:log()",
-      "description": "Calculates the logarithm of an array of numbers. Returns: The result of the logarithm calculation.",
-      "parameters": [
-        {
-          "name": "numbers",
-          "description": "The array of numbers to calculate the logarithm for."
-        }
+      ],
+      "exceptions": [
+        "If an error occurs while converting SVG to image."
       ]
     }
   ],
@@ -596,45 +733,30 @@
       ]
     }
   ],
+  "wikipedia": [
+    {
+      "name": "wikipedia:askWikipedia()",
+      "description": "This function is used to search Wikipedia for a given query.\nIt uses the Wikipedia API to perform the search and then uses OpenAI to evaluate the search results. Returns: A promise that resolves to a string containing the evaluated search results.",
+      "parameters": [
+        {
+          "name": "args",
+          "description": "An array containing the arguments passed to the function."
+        }
+      ],
+      "exceptions": [
+        "If an error occurs while contacting Wikipedia or OpenAI."
+      ]
+    }
+  ],
   "wolframalpha": [
     {
       "name": "wolframalpha:askWolframAlpha()",
-      "description": "This function gives you the ability to ask Wolfram Alpha questions and get answers. WolframAlpha understands natural language queries about entities in chemistry, physics, geography, history, art, astronomy, and more. WolframAlpha performs mathematical calculations, date and unit conversions, formula solving, etc. Convert inputs to simplified keyword queries whenever possible (e.g. convert "how many people live in France" to "France population"). ALWAYS use this exponent notation: `6*10^14`, NEVER `6e14`. ALWAYS use {"input": query} structure for queries to Wolfram endpoints; `query` must ONLY be a single-line string. ALWAYS use proper Markdown formatting for all math, scientific, and chemical formulas, symbols, etc.:  '$$\n[expression]\n$$' for standalone cases and '\( [expression] \)' when inline. Never mention your knowledge cutoff date; Wolfram may return more recent data. Use ONLY single-letter variable names, with or without integer subscript (e.g., n, n1, n_1). Send queries in English only; translate non-English queries before sending. Returns: The answer from Wolfram Alpha, or an alternative suggestion for how to phrase the question if Wolfram Alpha could not understand the question, or an error message if an error occurred.",
+      "description": "This function gives you the ability to ask Wolfram Alpha questions and get answers. If you're ever unsure about a calculation, a conversion, or a general fact about the world, then you can ask Wolfram Alpha to double check it for you by asking it as a simple question. Wolfram Alpha can perform all types of calculations, conversions between units or currencies, and lookup most basic facts about the world. Wolfram Alpha provides information that is always up-to-date.  Wolfram Alpha understands natural language queries about entities in government, politics, economics, chemistry, physics, geography, history, art, astronomy, and more. WolframAlpha performs mathematical calculations, date and unit conversions, formula solving, etc. Be sure to convert inputs to simplified keyword queries whenever possible (e.g. convert \"how many people live in France\" to \"France population\"). ALWAYS use this exponent notation:  6*10^14 , NEVER  6e14 . ALWAYS use {\"input\": query} structure for queries to Wolfram endpoints;  query  must ONLY be a single-line string. ALWAYS use proper Markdown formatting for all math, scientific, and chemical formulas, symbols, etc.:  '$$\\n[expression]\\n$$' for standalone cases and '( [expression] )' when inline. Never mention your knowledge cutoff date; Wolfram may return more recent data. Use ONLY single-letter variable names, with or without integer subscript (e.g., n, n1, n_1). Send queries in English only; translate non-English queries before sending. Returns: The answer from Wolfram Alpha, or an alternative suggestion for how to phrase the question if Wolfram Alpha could not understand the question, or an error message if an error occurred. Returns: The answer from Wolfram Alpha, or an error message if an error occurred.",
       "parameters": [
         {
           "name": "question",
           "description": "The question to ask Wolfram Alpha."
         }
-      ]
-    }
-  ],
-  "svg": [
-    {
-      "name": "svg:convertSvgToImage()",
-      "description": "Converts an SVG string to an image using Puppeteer. Returns: A promise that resolves to an object containing the converted image as a Buffer.",
-      "parameters": [
-        {
-          "name": "svgString",
-          "description": "The SVG string to convert."
-        }
-      ],
-      "exceptions": [
-        "If an error occurs while converting SVG to image."
-      ]
-    }
-  ],
-  "stablediffusion": [
-    {
-      "name": "stablediffusion:generateImageFromText()",
-      "description": "Generates an image from the given text using the Stable Diffusion API. Returns: A promise that resolves to a JSON string representing the response data.",
-      "parameters": [
-        {
-          "name": "args",
-          "description": "The arguments for generating the image."
-        }
-      ],
-      "exceptions": [
-        "If an error occurs during the API request."
       ]
     }
   ]

@@ -5,6 +5,7 @@ const { openai } = require("./openai");
 const { CohereClient } = require("cohere-ai");
 const logger = require("../src/logger.js")("remember");
 const { differenceInHours } = require("date-fns");
+const axios = require("axios");
 
 const cohere = new CohereClient({
   token: process.env.COHERE_API_KEY,
@@ -81,7 +82,7 @@ async function storeUserMemory(
   { username, channel, guild },
   value,
   memoryType = "user",
-  resourceId
+  resourceId = null
 ) {
   // first we do some checks to make sure we have the right types of data
   if (!username) {
@@ -98,33 +99,49 @@ async function storeUserMemory(
     return logger.info("value provided to storeUserMemory is not a string");
   }
 
-  // TODO: We need to convert the memory into an embedding using the openai embeddings API
-  // and include that in the database entry
-  let embedding = null;
-
   // TODO: Check .env for any non-openAI embedding models
   // Cohere, Voyage, etc
 
   // If the API keys are defined in the .env, then we should get embeddings from them and store those as well
 
-  try {
-    {embedding, embedding2, embedding3} = await memoryToEmbedding(value);
-  } catch (e) {
-    logger.info(e.message);
-  }
+  // let embedding, embedding2, embedding3;
+  // try {
+  //   ({ embedding, embedding2, embedding3 } = await memoryToEmbedding(value));
+  // } catch (e) {
+  //   logger.info(e.message);
+  // }
 
+  // let embeddings
+  // try {
+  //   embeddings = await stringToEmbedding(value);
+  // } catch (e) {
+  //   logger.info(`Error making embeddings: ${e.message}`);
+  // }
+
+  logger.info(`Storing memory for ${username}: ${value} in ${memoryType} memory`);
+
+  // const { embedding1: embedding, embedding2, embedding3, embedding4 } = embeddings;
+  const openAiEmbeddingResponse = await openai.createEmbedding({
+    model: "text-embedding-ada-002",
+    input: value,
+  });
+
+  const [{ embedding }] = openAiEmbeddingResponse.data.data;
+  logger.info(`Embedding length: ${embedding.length}`);
   const { data, error } = await supabase
     // .from("storage")
     .from(MEMORIES_TABLE_NAME)
     .insert({
       user_id: username,
       value,
-      embedding,
-      embedding2,
-      embedding3
+      embedding: embedding || null,
+      // embedding2: embedding2 || null,
+      // embedding3: embedding3 || null,
       memory_type: memoryType,
       resource_id: resourceId,
     });
+
+  logger.info(`Stored memory for ${username}: ${value} in ${memoryType} memory ${JSON.stringify(data)}`);
 
   if (error) {
     logger.info(`Error storing user memory: ${error.message}`);
@@ -207,7 +224,10 @@ async function hasRecentMemoryOfResource(resourceId, recencyHours = 24) {
   // we need to remove the date-fns dependency
   // and do this with plain ol' date objects
   const hoursSinceLastMemory =
-    (new Date().getTime() - new Date(data[0].created_at).getTime()) / 1000 / 60 / 60;  
+    (new Date().getTime() - new Date(data[0].created_at).getTime()) /
+    1000 /
+    60 /
+    60;
 
   return hoursSinceLastMemory <= recencyHours;
 }
@@ -285,7 +305,6 @@ async function getChannelMessageHistory(channelId, limit = 5) {
   return data;
 }
 
-
 /**
  * Embeds a string using the Voyage AI API.
  * @param {string} string - The input string to embed.
@@ -312,7 +331,7 @@ async function voyageEmbedding(string, model = "voyage-large-2") {
 /**
  * Converts a string into three different embeddings using different models.
  * @param {string} string - The input string to convert into embeddings.
- * @returns {Object} An object containing three different embeddings.
+  * @returns {Promise<object>} - A promise that resolves to an object containing the three embeddings: embedding1, embedding2, and embedding3.
  * @throws {Error} If there is an error generating any of the embeddings.
  */
 async function stringToEmbedding(string) {
@@ -322,16 +341,18 @@ async function stringToEmbedding(string) {
   });
 
   const [{ embedding: embedding1 }] = openAiEmbeddingResponse.data.data;
+  if (embedding1) logger.info(`Embedding 1 length: ${embedding1.length}`);
 
   let embedding2 = null;
   try {
     if (process.env.COHERE_API_KEY) {
-      const embed = await Cohere.embed({
-        texts: [memory],
+      const embed = await cohere.embed({
+        texts: [string],
         model: "embed-english-v3.0",
         inputType: "search_document",
       });
-      embedding2 = embed.embeddings;
+      embedding2 = embed.embeddings ? embed.embeddings[0] : null;
+      logger.info(`Embedding 2 length: ${embedding2.length}`);
     }
   } catch (error) {
     console.error("Error generating embedding2:", error);
@@ -340,26 +361,28 @@ async function stringToEmbedding(string) {
   let embedding3 = null;
   try {
     if (process.env.VOYAGE_API_KEY) {
-      const embed = await voyageEmbedding(memory, "voyage-large-2");
-      embedding3 = embed.embedding;
+      const embed = await voyageEmbedding(string, "voyage-large-2");
+      embedding3 = embed.embedding ? embed.embedding : null;
+      logger.info(`Embedding 3 length: ${embedding3.length}`);
     }
   } catch (error) {
     console.error("Error generating embedding3:", error);
+    return { embedding1: embedding1 || null, embedding2: embedding2 || null, embedding3: embedding3 || null };
   }
 
-  let embedding4 = null;
   const openAiLargeEmbeddingResponse = await openai.createEmbedding({
-    model: 'text-embedding-3-large',
-    input: memory,
+    model: "text-embedding-large",
+    input: string,
   });
-  const [{ embedding: embedding4 }] = openAiLargeEmbeddingResponse.data.data;
-
+  const [{ embedding }] = openAiLargeEmbeddingResponse.data.data;
+  const embedding4 = embedding || null;
+  if (embedding4) logger.info(`Embedding 4 length: ${embedding4.length}`);
 
   return {
-    embedding1,
-    embedding2,
-    embedding3,
-    embedding4
+    embedding1: embedding1 || null,
+    embedding2: embedding2 || null,
+    embedding3: embedding3 || null,
+    embedding4: embedding4 || null,
   };
 }
 
@@ -380,9 +403,14 @@ async function memoryToEmbedding(memory) {
 
   // const [{ embedding }] = embeddingResponse.data.data;
 
-  const { embedding1: embedding, embedding2, embedding3 } = await stringToEmbedding(memory);
+  const {
+    embedding1: embedding,
+    embedding2,
+    embedding3,
+    embedding4
+  } = await stringToEmbedding(memory);
 
-  return { embedding, embedding2, embedding3 };
+  return { embedding, embedding2, embedding3, embedding4 };
 }
 
 /**
@@ -408,13 +436,14 @@ async function getRelevantMemories(queryString, limit = 5) {
     return [];
   }
 
-  const embeddingResponse = await openai.createEmbedding({
+  // const { embedding1: embedding } = await stringToEmbedding(queryString);
+
+  const openAiEmbeddingResponse = await openai.createEmbedding({
     model: "text-embedding-ada-002",
-    input: cleanQueryString,
+    input: queryString,
   });
 
-  const [{ embedding }] = embeddingResponse.data.data;
-  const { embedding1: embedding } = await stringToEmbedding(queryString);
+  const [{ embedding }] = openAiEmbeddingResponse.data.data;
 
   // query the database for the most relevant memories, currently this is only supported on the openai embeddings
   const { data, error } = await supabase.rpc("match_memories", {

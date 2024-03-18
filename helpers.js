@@ -17,6 +17,12 @@ const {
 } = require("./src/remember.js");
 const logger = require("./src/logger.js")("helpers");
 const completionLogger = require("./src/logger.js")("completion");
+const { createClient } = require("@supabase/supabase-js");
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_API_KEY,
+);
 
 /**
  * Replaces the robot id with the robot name in a given string.
@@ -741,6 +747,8 @@ async function addPreambleToMessages(username, prompt, messages) {
   return [...preamble, ...messages.flat()];
 }
 
+// const { listTodos } = require("./capabilities/supabasetodo.js")
+
 /**
  * Assembles the message preamble for a given username.
  * @param {string} username - The username for which the message preamble is being assembled.
@@ -754,16 +762,32 @@ async function assembleMessagePreamble(username) {
   addSystemPrompt(messages);
   addCapabilityPromptIntro(messages);
   addCapabilityManifestMessage(messages);
-
-  // add the user's messages
+  await addTodosToMessages(messages);
   await addUserMessages(username, messages);
-  // add the memories about the user
   await addUserMemories(username, messages);
   // add memories relevant to the user's message
   await addRelevantMemories(username, messages);
   // add some general memories from all interactions
   await addGeneralMemories(messages);
   return messages;
+}
+
+async function listTodos() {
+  const { data, error } = await supabase.from("todos").select("*");
+
+  if (error) throw new Error(error.message);
+  return data
+}
+
+async function addTodosToMessages(messages) {
+  const todos = await listTodos();
+  console.log('returning todos', todos)
+  const todoString = JSON.stringify(todos);
+  messages.push({
+    role: "system",
+    content: `Here are your todos: 
+${todoString}`,
+  });  
 }
 
 /**

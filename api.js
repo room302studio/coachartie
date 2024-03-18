@@ -154,8 +154,8 @@ async function processMissiveRequest(body) {
   }
 
   // Take a look at the latest message in the conversation
-  const latestMessageId = body.latest_message.id;
-  const latestMessageAttachments = body.latest_message.attachments;
+  const latestMessageId = body.latest_message?.id;
+  const latestMessageAttachments = body?.latest_message?.attachments;
   logger.info(`Latest message ID: ${latestMessageId}`);
   logger.info(
     `Latest message attachments: ${JSON.stringify(latestMessageAttachments)}`
@@ -170,7 +170,7 @@ async function processMissiveRequest(body) {
   const latestMessageHtmlBody = fullLatestMessage?.messages?.body;
 
   // now we need to strip out all the newlines, HTML tags, and any styles/css
-  const latestMessageTextBody = latestMessageHtmlBody.replace(`\n`, " ").replace(
+  const latestMessageTextBody = latestMessageHtmlBody?.replace(`\n`, " ").replace(
     /<style([\s\S]*?)<\/style>/gi,
     ""
   )
@@ -223,7 +223,7 @@ async function processMissiveRequest(body) {
   // check for any attachments in ANY of the conversation messages also
   // and if there are any memories of them, add them to the formattedMessages array
   conversationMessages.forEach((message) => {
-    logger.info(`Checking message ${message.id} for attachments`);
+    logger.info(`Checking message ${message?.id} for attachments`);
     const attachments = message.attachment;
 
     // log the keys available in message
@@ -232,7 +232,7 @@ async function processMissiveRequest(body) {
 
     if (attachments) {
       attachments.forEach(async (attachment) => {
-        const resourceId = attachment.id;
+        const resourceId = attachment?.id;
         logger.info(`Checking for memories of resource ${resourceId}`);
         const isInMemory = await hasRecentMemoryOfResource(resourceId); // check if we have ANY memory of this resource
         if (isInMemory) {

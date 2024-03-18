@@ -476,7 +476,7 @@ function randomUserAgent() {
   ];
 
   const pickedUserAgent = chance.pickone(potentialUserAgents);
-  logger.info("📝  Picked User Agent: ", pickedUserAgent);
+  logger.info(`📝  Picked User Agent: ${pickedUserAgent}`)
 
   // use chance.choose to pick a random user agent
   return pickedUserAgent;
