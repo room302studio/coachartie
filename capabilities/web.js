@@ -1,12 +1,9 @@
 const dotenv = require("dotenv");
 const { Configuration, OpenAIApi } = require("openai");
 const puppeteer = require("puppeteer");
-// const { fstat } = require("fs");
-// const { fs } = require("fs");
-const {
-  WEBPAGE_UNDERSTANDER_PROMPT,
-  WEBPAGE_CHUNK_UNDERSTANDER_PROMPT,
-} = require("../prompts");
+const { getPromptsFromSupabase } = require("../helpers");
+const { WEBPAGE_UNDERSTANDER_PROMPT, WEBPAGE_CHUNK_UNDERSTANDER_PROMPT } =
+  getPromptsFromSupabase();
 const { encode, decode } = require("@nem035/gpt-3-encoder");
 // import chance
 const chance = require("chance").Chance();
@@ -20,6 +17,7 @@ const path = require("path");
 const crypto = require("crypto");
 const logger = require("../src/logger.js")("web");
 
+// TODO: Pull this in from config
 // const CHUNK_TOKEN_AMOUNT = 7000
 const CHUNK_TOKEN_AMOUNT = 10952;
 
@@ -309,7 +307,7 @@ async function processChunks(chunks, data, limit = 2, userPrompt = "") {
         await sleep(500);
 
         logger.info(`📝  Sending chunk ${i + index + 1} of ${chunkLength}...`);
-        logger.info("📝  Chunk text:", chunk);
+        logger.info(`Chunk text: ${chunk}`);
 
         const completion = await openai.createChatCompletion({
           model: "gpt-3.5-turbo-16k",
@@ -412,15 +410,15 @@ async function fetchAndSummarizeUrl(url, userPrompt = "") {
       chunkResponses = JSON.parse(
         fs.readFileSync(
           path.join(__dirname, `../cache/${cacheKey}.json`),
-          "utf8"
-        )
+          "utf8",
+        ),
       );
     } else {
       chunkResponses = await processChunks(chunks, data);
       // Cache the chunks
       fs.writeFileSync(
         path.join(__dirname, `../cache/${cacheKey}.json`),
-        JSON.stringify(chunkResponses)
+        JSON.stringify(chunkResponses),
       );
     }
 
@@ -476,7 +474,7 @@ function randomUserAgent() {
   ];
 
   const pickedUserAgent = chance.pickone(potentialUserAgents);
-  logger.info(`📝  Picked User Agent: ${pickedUserAgent}`)
+  logger.info(`📝  Picked User Agent: ${pickedUserAgent}`);
 
   // use chance.choose to pick a random user agent
   return pickedUserAgent;

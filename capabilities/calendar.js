@@ -54,7 +54,7 @@ async function listAllCalendars() {
     }
 
     const calendars = response.data.items.map(
-      ({ summary, id }) => `${summary} (${id})`
+      ({ summary, id }) => `${summary} (${id})`,
     );
     return calendars;
   } catch (error) {
@@ -117,7 +117,7 @@ async function createEvent(calendarId, event) {
           value: "room302.studio",
         },
       },
-    })
+    }),
   );
 
   await batch.execute();

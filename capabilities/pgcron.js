@@ -51,8 +51,8 @@ async function listJobs() {
     console.log('Jobs:', data);
     return JSON.stringify(data, null, 2);
   } catch (err) {
-    console.error('Failed to list jobs:', err.message);
-    throw new Error('Failed to list jobs with pg_cron');
+    console.error("Failed to list jobs:", err.message);
+    throw new Error("Failed to list jobs with pg_cron");
   }
 }
 
@@ -64,18 +64,18 @@ async function listJobs() {
  */
 async function deleteJob(name) {
   try {
-    const { data, error } = await supabase.rpc('cron.delete', { name });
+    const { data, error } = await supabase.rpc("cron.delete", { name });
 
     if (error) {
-      console.error('Error deleting job with pg_cron:', error.message);
+      console.error("Error deleting job with pg_cron:", error.message);
       throw error;
     }
 
-    console.log('Successfully deleted job:', data);
+    console.log("Successfully deleted job:", data);
     return `Successfully deleted job: ${name}`;
   } catch (err) {
-    console.error('Failed to delete job:', err.message);
-    throw new Error('Failed to delete job with pg_cron');
+    console.error("Failed to delete job:", err.message);
+    throw new Error("Failed to delete job with pg_cron");
   }
 }
 
@@ -89,18 +89,22 @@ async function deleteJob(name) {
  */
 async function updateJob(name, schedule, command) {
   try {
-    const { data, error } = await supabase.rpc('cron.update', { name, schedule, command });
+    const { data, error } = await supabase.rpc("cron.update", {
+      name,
+      schedule,
+      command,
+    });
 
     if (error) {
-      console.error('Error updating job with pg_cron:', error.message);
+      console.error("Error updating job with pg_cron:", error.message);
       throw error;
     }
 
-    console.log('Successfully updated job:', data);
+    console.log("Successfully updated job:", data);
     return `Successfully updated job: ${name}`;
   } catch (err) {
-    console.error('Failed to update job:', err.message);
-    throw new Error('Failed to update job with pg_cron');
+    console.error("Failed to update job:", err.message);
+    throw new Error("Failed to update job with pg_cron");
   }
 }
 
@@ -124,7 +128,7 @@ module.exports = {
         return arg.slice(1, -1);
       }
       // if it's an object, parse it
-      if (arg.startsWith('{') && arg.endsWith('}')) {
+      if (arg.startsWith("{") && arg.endsWith("}")) {
         return JSON.parse(arg);
       }
 

@@ -1,24 +1,18 @@
-const { createClient } = require("@supabase/supabase-js");
 const dotenv = require("dotenv");
-const { MEMORIES_TABLE_NAME, MESSAGES_TABLE_NAME } = require("../config");
+
 const { openai } = require("./openai");
 const { CohereClient } = require("cohere-ai");
 const logger = require("../src/logger.js")("remember");
 const { differenceInHours } = require("date-fns");
 const axios = require("axios");
-
 const cohere = new CohereClient({
   token: process.env.COHERE_API_KEY,
 });
-
 const port = process.env.EXPRESS_PORT;
-
 dotenv.config();
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_API_KEY
-);
+const { MEMORIES_TABLE_NAME, MESSAGES_TABLE_NAME } = require("../config");
+const { supabase } = require("../helpers");
 
 /**
  * Retrieves user memories from the database.
@@ -32,6 +26,7 @@ async function getUserMemory(userId, limit = 5) {
     return [];
   }
   logger.info("💾 Querying database for memories related to user:", userId);
+  
   const { data, error } = await supabase
     .from(MEMORIES_TABLE_NAME)
     .select("*")
@@ -55,6 +50,7 @@ async function getUserMemory(userId, limit = 5) {
  * @returns {Promise<Array<Object>>} - A promise that resolves to an array of memory objects.
  */
 async function getAllMemories(limit = 5) {
+  const { supabase } = require("../helpers");
   const { data, error } = await supabase
     .from(MEMORIES_TABLE_NAME)
     .select("*")
@@ -82,7 +78,7 @@ async function storeUserMemory(
   { username, channel, guild },
   value,
   memoryType = "user",
-  resourceId = null
+  resourceId = null,
 ) {
   // first we do some checks to make sure we have the right types of data
   if (!username) {
@@ -118,7 +114,9 @@ async function storeUserMemory(
   //   logger.info(`Error making embeddings: ${e.message}`);
   // }
 
-  logger.info(`Storing memory for ${username}: ${value} in ${memoryType} memory`);
+  logger.info(
+    `Storing memory for ${username}: ${value} in ${memoryType} memory`,
+  );
 
   // const { embedding1: embedding, embedding2, embedding3, embedding4 } = embeddings;
   const openAiEmbeddingResponse = await openai.createEmbedding({
@@ -128,6 +126,8 @@ async function storeUserMemory(
 
   const [{ embedding }] = openAiEmbeddingResponse.data.data;
   logger.info(`Embedding length: ${embedding.length}`);
+
+  const { supabase } = require("../helpers");
   const { data, error } = await supabase
     // .from("storage")
     .from(MEMORIES_TABLE_NAME)
@@ -141,7 +141,11 @@ async function storeUserMemory(
       resource_id: resourceId,
     });
 
-  logger.info(`Stored memory for ${username}: ${value} in ${memoryType} memory ${JSON.stringify(data)}`);
+  logger.info(
+    `Stored memory for ${username}: ${value} in ${memoryType} memory ${JSON.stringify(
+      data,
+    )}`,
+  );
 
   if (error) {
     logger.info(`Error storing user memory: ${error.message}`);
@@ -155,6 +159,7 @@ async function storeUserMemory(
  * @returns {Promise<Array<Object>>} - A promise that resolves to an array of memory objects.
  **/
 async function getResourceMemories(resourceId, limit = 5) {
+  const { supabase } = require("../helpers");
   const { data, error } = await supabase
     .from(MEMORIES_TABLE_NAME)
     .select("*")
@@ -177,6 +182,7 @@ async function getResourceMemories(resourceId, limit = 5) {
  * @returns {Promise<boolean>} - True if there is a memory of the file, false otherwise.
  */
 async function hasMemoryOfResource(resourceId) {
+  const { supabase } = require("../helpers");
   const { data, error } = await supabase
     .from(MEMORIES_TABLE_NAME)
     .select("created_at")
@@ -204,6 +210,8 @@ async function hasRecentMemoryOfResource(resourceId, recencyHours = 24) {
   if (!hasMemory) {
     return false;
   }
+
+  const { supabase } = require("../helpers");
 
   const { data, error } = await supabase
     .from(MEMORIES_TABLE_NAME)
@@ -242,6 +250,8 @@ async function hasRecentMemoryOfResource(resourceId, recencyHours = 24) {
  * @returns {Promise<object>} - A promise that resolves to the stored message data.
  */
 async function storeUserMessage({ username, channel, guild }, value) {
+  const { supabase } = require("../helpers");
+  console.log("does supabase exist?", supabase);
   const { data, error } = await supabase
     // .from("messages")
     .from(MESSAGES_TABLE_NAME)
@@ -323,7 +333,7 @@ async function voyageEmbedding(string, model = "voyage-large-2") {
         "Content-Type": "application/json",
         Authorization: `Bearer ${process.env.VOYAGE_API_KEY}`,
       },
-    }
+    },
   );
   return response.data;
 }
@@ -331,7 +341,7 @@ async function voyageEmbedding(string, model = "voyage-large-2") {
 /**
  * Converts a string into three different embeddings using different models.
  * @param {string} string - The input string to convert into embeddings.
-  * @returns {Promise<object>} - A promise that resolves to an object containing the three embeddings: embedding1, embedding2, and embedding3.
+ * @returns {Promise<object>} - A promise that resolves to an object containing the three embeddings: embedding1, embedding2, and embedding3.
  * @throws {Error} If there is an error generating any of the embeddings.
  */
 async function stringToEmbedding(string) {
@@ -367,7 +377,11 @@ async function stringToEmbedding(string) {
     }
   } catch (error) {
     console.error("Error generating embedding3:", error);
-    return { embedding1: embedding1 || null, embedding2: embedding2 || null, embedding3: embedding3 || null };
+    return {
+      embedding1: embedding1 || null,
+      embedding2: embedding2 || null,
+      embedding3: embedding3 || null,
+    };
   }
 
   const openAiLargeEmbeddingResponse = await openai.createEmbedding({
@@ -407,7 +421,7 @@ async function memoryToEmbedding(memory) {
     embedding1: embedding,
     embedding2,
     embedding3,
-    embedding4
+    embedding4,
   } = await stringToEmbedding(memory);
 
   return { embedding, embedding2, embedding3, embedding4 };

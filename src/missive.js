@@ -370,7 +370,6 @@ async function listUsers() {
   return data;
 }
 
-
 module.exports = {
   listConversations,
   listConversationMessages,
