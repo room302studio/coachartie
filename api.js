@@ -447,11 +447,14 @@ async function processMissiveRequest(body) {
         conversation: conversationId,
         notification: {
           title: BOT_NAME,
-          body: lastMessage.content,
+          // body: lastMessage.content,
+          body: '',
         },
-        text: lastMessage.content,
+        // text: lastMessage.content,
         username: BOT_NAME,
+        markdown: lastMessage.content,
       },
+      
     }),
   });
 
