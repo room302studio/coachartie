@@ -4,44 +4,52 @@ dotenv.config();
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_API_KEY,
+  { db: { schema: 'cron' } }
 );
 const { destructureArgs } = require("../helpers");
 
 /**
- * Schedule a task in Supabase.
- * @param {string} schedule - The schedule for the task.
- * @param {string} command - The command to be executed by the task.
- * @returns {Promise<void>} - A promise that resolves when the task is scheduled successfully.
+ * Creates a new cron job with pg_cron in Supabase.
+ * @param {string} schedule - The schedule for the cron job (e.g., '0 0 * * *' for daily at midnight).
+ * @param {string} command - The command to be executed by the cron job.
+ * @returns {Promise<{ data: any, error: Error | null }>} - A promise that resolves with the result of the cron job creation.
  */
-async function scheduleSupabaseTask(schedule, command) {
+async function createJob(schedule, command) {
+  const randomJobName = `job-${Math.floor(Math.random() * 1000000)}`;
   const { data, error } = await supabase
-    .rpc('schedule_task', { _schedule: schedule, _command: command })
-  
+    .rpc('schedule', {
+      command: command,
+      job_name: randomJobName,
+      schedule: schedule
+    });
+
   if (error) {
-    console.error('Error scheduling task:', error);
-    return;
+    console.error('Error creating job with pg_cron:', error);
+    throw error;
   }
 
-  console.log('Scheduled task data:', data);
+  console.log('Job created:', data);
+  return `Job created: ${data}`;
 }
-
 
 /**
  * Lists the cron jobs currently scheduled with pg_cron in Supabase.
- * @returns {Promise<string>} A promise that resolves to a success message with the list of jobs.
- * @throws {Error} If there is an error listing the jobs.
+ * @returns {Promise<{ data: any, error: Error | null }>} A promise that resolves with the list of cron jobs.
  */
 async function listJobs() {
   try {
-    const { data, error } = await supabase.rpc('cron.list');
+    const { data, error } = await supabase
+      .from('job')
+      .select('*')
+      .limit(100);
 
     if (error) {
-      console.error('Error listing jobs with pg_cron:', error.message);
+      console.error('Error listing jobs with pg_cron:', error);
       throw error;
     }
 
-    console.log('Successfully listed jobs:', data);
-    return `Successfully listed jobs: ${data}`;
+    console.log('Jobs:', data);
+    return JSON.stringify(data, null, 2);
   } catch (err) {
     console.error('Failed to list jobs:', err.message);
     throw new Error('Failed to list jobs with pg_cron');
@@ -69,9 +77,6 @@ async function deleteJob(name) {
     console.error('Failed to delete job:', err.message);
     throw new Error('Failed to delete job with pg_cron');
   }
-
-  if (error) throw new Error(error.message);
-  return `Successfully deleted job: ${name}`;
 }
 
 /**
@@ -97,12 +102,7 @@ async function updateJob(name, schedule, command) {
     console.error('Failed to update job:', err.message);
     throw new Error('Failed to update job with pg_cron');
   }
-
-  if (error) throw new Error(error.message);
-  return `Successfully updated job: ${name}`;
 }
-
-
 
 module.exports = {
   handleCapabilityMethod: async (method, args) => {
@@ -135,19 +135,10 @@ module.exports = {
 
       // otherwise, return the arg as is
       return arg;
-    }
-    );
-
-
-
+    });
 
     if (method === "createJob") {
-      // return await createJob(arg1, arg2);
-      // we need to use our new fancy processedArgs
-      // return await createJob(processedArgs[0], processedArgs[1], processedArgs[2], processedArgs[3], processedArgs[4]);
-
-      // lets do the simplest possible thing first
-      return await scheduleSupabaseTask(processedArgs[0], processedArgs[1]);
+      return await createJob(processedArgs[0], processedArgs[1]);
     } else if (method === "listJobs") {
       return await listJobs();
     } else if (method === "deleteJob") {
@@ -155,6 +146,5 @@ module.exports = {
     } else if (method === "updateJob") {
       return await updateJob(arg1, arg2, arg3);
     }
-
   },
 };
