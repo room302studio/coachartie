@@ -12,6 +12,7 @@ const port = process.env.EXPRESS_PORT;
 dotenv.config();
 
 const { MEMORIES_TABLE_NAME, MESSAGES_TABLE_NAME } = require("../config");
+const { supabase } = require("../helpers");
 
 /**
  * Retrieves user memories from the database.
@@ -25,7 +26,7 @@ async function getUserMemory(userId, limit = 5) {
     return [];
   }
   logger.info("💾 Querying database for memories related to user:", userId);
-  const { supabase } = require("../helpers");
+  
   const { data, error } = await supabase
     .from(MEMORIES_TABLE_NAME)
     .select("*")

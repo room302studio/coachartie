@@ -36,7 +36,7 @@ const capabilityRegex = /(\w+):(\w+)\(([^]*?)\)/; // captures newlines in the  t
  * @returns {Promise<Object>} An object containing different prompts.
  * @example {
  *  PROMPT_REMEMBER: "In order to remember, you must first forget.",
- *  PROMPT_CAPABILITY_REMEMBER: "I remember that I can",
+*  PROMPT_CAPABILITY_REMEMBER: "I remember that I can",
  *
  */
 async function getPromptsFromSupabase() {

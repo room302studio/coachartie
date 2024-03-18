@@ -6,7 +6,8 @@ const {
   trimResponseIfNeeded,
   isExceedingTokenLimit,
   getUniqueEmoji,
-  getConfigFromSupabase
+  getConfigFromSupabase,
+  supabase
 } = require("../helpers");
 // const {
 //   generateAndStoreRememberCompletion,
