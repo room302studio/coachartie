@@ -13,6 +13,14 @@ const { destructureArgs } = require("../helpers");
  * @param {string} schedule - The schedule for the cron job (e.g., '0 0 * * *' for daily at midnight).
  * @param {string} command - The command to be executed by the cron job.
  * @returns {Promise<{ data: any, error: Error | null }>} - A promise that resolves with the result of the cron job creation.
+ * @example createJob('0 0 * * *', 'DELETE FROM table WHERE created_at < NOW() - INTERVAL '1 month';') -- Deletes old records from a table every day at midnight.
+ *   -- Makes a webhook request to the specified URL every day at midnight.
+ * @example createJob('0 0 * * *', 'select
+      net.http_post(
+          url:='https://project-ref.supabase.co/functions/v1/function-name',
+          headers:='{"Content-Type": "application/json", "Authorization": "Bearer YOUR_ANON_KEY"}'::jsonb,
+          body:=concat('{"time": "', now(), '"}')::jsonb
+      ) as request_id;')
  */
 async function createJob(schedule, command) {
   const randomJobName = `job-${Math.floor(Math.random() * 1000000)}`;
