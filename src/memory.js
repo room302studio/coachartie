@@ -42,7 +42,7 @@ async function generateAndStoreCompletion(
   const generalMemories = await getAllMemories(userMemoryCount);
   const relevantMemories = isCapability ? await getRelevantMemories(capabilityName) : [];
 
-  const memories = [...userMemories, ...generalMemories, ...relevantMemories];
+  let memories = [...userMemories, ...generalMemories, ...relevantMemories];
 
   memories.forEach((memory) => {
     memoryMessages.push({
@@ -94,18 +94,9 @@ async function generateAndStoreCompletion(
 
   preambleLogger.info(`📜 Preamble messages ${JSON.stringify(completeMessages)}`);
 
-  const rememberCompletion = await openai.createChatCompletion({
-    model: REMEMBER_MODEL,
-    presence_penalty: 0.1,
-    max_tokens: 256,
-    messages: completeMessages,
-  });
-
-  const rememberText = rememberCompletion.data.choices[0].message.content;
-  logger.info(`🧠 Interaction memory: ${rememberText} for ${username} in ${channel} in ${guild}`);
 
   // de-dupe memories
-  const memories = [...userMemories, ...generalMemories, ...relevantMemories];
+  memories = [...userMemories, ...generalMemories, ...relevantMemories];
 
   // turn user memories into chatbot messages
   memories.forEach((memory) => {
