@@ -153,7 +153,6 @@ class DiscordBot {
    * @param {object} message - The message to respond to.
    */
   async respondToMessage(message) {
-    
     const botMentionOrChannel = detectBotMentionOrChannel(message);
     const messageAuthorIsBot = message.author.bot;
     const authorIsMe = message.author.username === "coachartie";
@@ -194,7 +193,8 @@ class DiscordBot {
     const lastMsgIsBuffer = lastMessage.image;
 
     if (lastMsgIsBuffer) {
-      logger.info("last message is a buffer");
+      console.log("!!!! last message is a buffer");
+      logger.info("!!!! last message is a buffer");
       // Send the image as an attachment
       // message.channel.send({
       //   files: [{
@@ -203,7 +203,7 @@ class DiscordBot {
       //   }]
       // });
       // stop typing interval
-      this.sendAttachment(lastMessage.image, channel);
+      await this.sendAttachment(lastMessage.image, channel);
     }
 
     if (lastMessage.content) {

@@ -36,7 +36,7 @@ const capabilityRegex = /(\w+):(\w+)\(([^]*?)\)/; // captures newlines in the  t
  * @returns {Promise<Object>} An object containing different prompts.
  * @example {
  *  PROMPT_REMEMBER: "In order to remember, you must first forget.",
-*  PROMPT_CAPABILITY_REMEMBER: "I remember that I can",
+ *  PROMPT_CAPABILITY_REMEMBER: "I remember that I can",
  *
  */
 async function getPromptsFromSupabase() {
@@ -1112,26 +1112,31 @@ async function addRelevantMemories(username, messages) {
 
   const queryString = lastUserMessage.content;
   logger.info(
-    `🔧 Querying for relevant memories for ${username}: ${queryString}`
+    `🔧 Querying for relevant memories for ${username}: ${queryString}`,
   );
 
   try {
     const relevantMemories = await getRelevantMemories(
       queryString,
-      relevantMemoryCount
+      relevantMemoryCount,
     );
     logger.info(
-      `🔧 Retrieving ${relevantMemoryCount} relevant memories for ${queryString}`
+      `🔧 Retrieving ${relevantMemoryCount} relevant memories for ${queryString}`,
     );
 
-    relevantMemories.forEach((memory) => {
-      // log out the memories
-      logger.info("relevant memory " + JSON.stringify(memory));
-      messages.push({
-        role: "system",
-        content: `${memory.created_at}: ${memory.value}`,
+    console.log('ANOTHER RELEVANT MEMORIES')
+    console.log(JSON.stringify(relevantMemories, null, 2))
+
+    if (relevantMemories.length === 0) {
+      relevantMemories.forEach((memory) => {
+        // log out the memories
+        logger.info("relevant memory " + JSON.stringify(memory));
+        messages.push({
+          role: "system",
+          content: `${memory.created_at}: ${memory.value}`,
+        });
       });
-    });
+    }
   } catch (err) {
     logger.info(err);
   }

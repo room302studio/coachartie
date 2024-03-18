@@ -4,7 +4,7 @@ dotenv.config();
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_API_KEY,
-  { db: { schema: 'cron' } }
+  { db: { schema: "cron" } },
 );
 const { destructureArgs } = require("../helpers");
 
@@ -13,22 +13,29 @@ const { destructureArgs } = require("../helpers");
  * @param {string} schedule - The schedule for the cron job (e.g., '0 0 * * *' for daily at midnight).
  * @param {string} command - The command to be executed by the cron job.
  * @returns {Promise<{ data: any, error: Error | null }>} - A promise that resolves with the result of the cron job creation.
+ * @example createJob('0 0 * * *', 'DELETE FROM table WHERE created_at < NOW() - INTERVAL '1 month';') -- Deletes old records from a table every day at midnight.
+ *   -- Makes a webhook request to the specified URL every day at midnight.
+ * @example createJob('0 0 * * *', 'select
+      net.http_post(
+          url:='https://project-ref.supabase.co/functions/v1/function-name',
+          headers:='{"Content-Type": "application/json", "Authorization": "Bearer YOUR_ANON_KEY"}'::jsonb,
+          body:=concat('{"time": "', now(), '"}')::jsonb
+      ) as request_id;')
  */
 async function createJob(schedule, command) {
   const randomJobName = `job-${Math.floor(Math.random() * 1000000)}`;
-  const { data, error } = await supabase
-    .rpc('schedule', {
-      command: command,
-      job_name: randomJobName,
-      schedule: schedule
-    });
+  const { data, error } = await supabase.rpc("schedule", {
+    command: command,
+    job_name: randomJobName,
+    schedule: schedule,
+  });
 
   if (error) {
-    console.error('Error creating job with pg_cron:', error);
+    console.error("Error creating job with pg_cron:", error);
     throw error;
   }
 
-  console.log('Job created:', data);
+  console.log("Job created:", data);
   return `Job created: ${data}`;
 }
 
@@ -38,17 +45,14 @@ async function createJob(schedule, command) {
  */
 async function listJobs() {
   try {
-    const { data, error } = await supabase
-      .from('job')
-      .select('*')
-      .limit(100);
+    const { data, error } = await supabase.from("job").select("*").limit(100);
 
     if (error) {
-      console.error('Error listing jobs with pg_cron:', error);
+      console.error("Error listing jobs with pg_cron:", error);
       throw error;
     }
 
-    console.log('Jobs:', data);
+    console.log("Jobs:", data);
     return JSON.stringify(data, null, 2);
   } catch (err) {
     console.error('Failed to list jobs:', err.message);

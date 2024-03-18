@@ -41,13 +41,18 @@ module.exports = (async () => {
 
     const userMemories = await getUserMemory(username, userMemoryCount);
     const generalMemories = await getAllMemories(userMemoryCount);
-    const relevantMemories = isCapability
-      ? await getRelevantMemories(capabilityName)
-      : [];
+    // const relevantMemories = isCapability
+    //   ? await getRelevantMemories(capabilityName)
+    //   : [];
+    let relevantMemories = await getRelevantMemories(prompt, userMemoryCount);
 
-    let memories = [...userMemories, ...generalMemories, ...relevantMemories];
+    if(!relevantMemories) {
+      relevantMemories = [];
+    }
 
-    memories.forEach(async (memory) => {
+    let memories = [...userMemories, ...generalMemories];
+
+    memories.forEach((memory) => {
       memoryMessages.push({
         role: "system",
         content: `${memory.created_at}: ${memory.value}  `,
@@ -61,12 +66,6 @@ module.exports = (async () => {
       response.content = `${response.content}\n\nDescription of user-provided image: ${imageDescription}`;
       delete response.image;
     }
-
-    memoryMessages.forEach((message) => {
-      if (message.image) {
-        delete message.image;
-      }
-    });
 
     const completeMessages = [
       ...conversationHistory,
@@ -88,16 +87,28 @@ module.exports = (async () => {
         content: isCapability ? PROMPT_CAPABILITY_REMEMBER : PROMPT_REMEMBER,
       },
     ];
+    // make sure none of the completeMessages have an image
+    // completeMessages.forEach((message) => {
+    //   if (message.image) {
+    //     delete message.image;
+    //   }
+    // });
 
     preambleLogger.info(
       `📜 Preamble messages ${JSON.stringify(completeMessages)}`,
     );
 
+    console.log('RELEVANT MEMORIES!!!!')
+    console.log(JSON.stringify(relevantMemories))
+    // if relevant memories is an empty object, make it an empty array
+    if (relevantMemories === {}) {
+      relevantMemories = [];
+    }
     // de-dupe memories
     memories = [...userMemories, ...generalMemories, ...relevantMemories];
 
     // turn user memories into chatbot messages
-    memories.forEach(async (memory) => {
+    memories.forEach((memory) => {
       memoryMessages.push({
         role: "system",
         content: `${memory.created_at}: ${memory.value}  `,
@@ -114,42 +125,71 @@ module.exports = (async () => {
       // const imageDescription = await vision.fetchImageDescription();
       // return `${prompt}\n\nDescription of user-provided image: ${imageDescription}`;
 
-      const completeMessages = [
-        ...conversationHistory,
-        ...memoryMessages,
-        {
-          role: "system",
-          content: "---",
-        },
-        {
-          role: "system",
-          content: PROMPT_REMEMBER_INTRO,
-        },
-        {
-          role: "user",
-          content: `# User (${username}): ${prompt} \n # Robot (Artie): ${response}`,
-        },
-        {
-          role: "user",
-          content: isCapability ? PROMPT_CAPABILITY_REMEMBER : PROMPT_REMEMBER,
-        },
-      ];
-
-      preambleLogger.info(
-        `📜 Preamble messages ${JSON.stringify(completeMessages)}`,
-      );
-
-      const rememberCompletion = await openai.createChatCompletion({
-        model: REMEMBER_MODEL,
-        presence_penalty: 0.1,
-        max_tokens: 256,
-        messages: completeMessages,
-      });
-
-      const rememberText = rememberCompletion.choices[0].message.content;
-
-      return rememberText;
+      // first we need to turn the image into a base64 string
+      const base64Image = capabilityResponse.image.split(";base64,").pop();
+      // then we need to send it to the vision API
+      vision.setImageBase64(base64Image);
+      const imageDescription = await vision.fetchImageDescription();
+      // then we need to add the description to the response
     }
+
+    // if (conversationHistory.length > 0) {
+    //   // make sure none of the messages in conversation history have an image
+    //   conversationHistory.forEach((message) => {
+    //     if (message.image) {
+    //       delete message.image;
+    //     }
+    //   });
+    // }
+
+    // make sure none of the memory messages have an image
+    // memoryMessages.forEach((message) => {
+    //   if (message.image) {
+    //     delete message.image;
+    //   }
+    // });
+
+    const rememberCompletion = await openai.createChatCompletion({
+      model: REMEMBER_MODEL,
+      // temperature: 1.1,
+      // top_p: 0.9,
+      presence_penalty: 0.1,
+      max_tokens: 256,
+      messages: [
+        ...memoryMessages,
+        ...conversationHistory,
+        {
+          role: "system",
+          content: "Take a deep breath and take things step by step.",
+        },
+        {
+          role: "system",
+          content: `You previously ran the capability: ${capabilityName} and got the response: ${capabilityResponse}`,
+        },
+        {
+          role: "user",
+          content: `${prompt}`,
+        },
+        {
+          role: "assistant",
+          content: `${capabilityResponse}`,
+        },
+        {
+          role: "user",
+          content: `${PROMPT_CAPABILITY_REMEMBER}`,
+        },
+      ],
+    });
+
+    const rememberText = rememberCompletion.data.choices[0].message.content;
+
+    // if the remember text is ✨ AKA empty, we don't wanna store it
+    if (rememberText === "✨") return rememberText;
+    // if remember text length is 0 or less, we don't wanna store it
+    if (rememberText.length <= 0) return rememberText;
+    await storeUserMemory({ username: "capability" }, rememberText);
+
+    return rememberText;
   }
 
   return {
