@@ -4,7 +4,7 @@ dotenv.config();
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_API_KEY,
-  { db: { schema: 'cron' } }
+  { db: { schema: "cron" } },
 );
 const { destructureArgs } = require("../helpers");
 
@@ -16,19 +16,18 @@ const { destructureArgs } = require("../helpers");
  */
 async function createJob(schedule, command) {
   const randomJobName = `job-${Math.floor(Math.random() * 1000000)}`;
-  const { data, error } = await supabase
-    .rpc('schedule', {
-      command: command,
-      job_name: randomJobName,
-      schedule: schedule
-    });
+  const { data, error } = await supabase.rpc("schedule", {
+    command: command,
+    job_name: randomJobName,
+    schedule: schedule,
+  });
 
   if (error) {
-    console.error('Error creating job with pg_cron:', error);
+    console.error("Error creating job with pg_cron:", error);
     throw error;
   }
 
-  console.log('Job created:', data);
+  console.log("Job created:", data);
   return `Job created: ${data}`;
 }
 
@@ -38,17 +37,14 @@ async function createJob(schedule, command) {
  */
 async function listJobs() {
   try {
-    const { data, error } = await supabase
-      .from('job')
-      .select('*')
-      .limit(100);
+    const { data, error } = await supabase.from("job").select("*").limit(100);
 
     if (error) {
-      console.error('Error listing jobs with pg_cron:', error);
+      console.error("Error listing jobs with pg_cron:", error);
       throw error;
     }
 
-    console.log('Jobs:', data);
+    console.log("Jobs:", data);
     return JSON.stringify(data, null, 2);
   } catch (err) {
     console.error("Failed to list jobs:", err.message);

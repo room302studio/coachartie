@@ -21,12 +21,13 @@ const { supabase } = require("../helpers");
  * @returns {Promise<Array>} - A promise that resolves to an array of user memories.
  */
 async function getUserMemory(userId, limit = 5) {
+  const { supabase } = require("../helpers");
   if (!userId) {
     logger.info("No userId provided to getUserMemory");
     return [];
   }
   logger.info("💾 Querying database for memories related to user:", userId);
-  
+
   const { data, error } = await supabase
     .from(MEMORIES_TABLE_NAME)
     .select("*")
@@ -434,6 +435,11 @@ async function memoryToEmbedding(memory) {
  * @returns {Promise<Array>} - A promise that resolves to an array of relevant memories.
  */
 async function getRelevantMemories(queryString, limit = 5) {
+  const { supabase } = require("../helpers");
+  // make sure queryString is a string
+  if (typeof queryString !== "string") {
+    return logger.info("No query string provided to getRelevantMemories");
+  }
   // queryStrings look like: <@1086489885269037128> What you do remember about to-do lists?
   // we need to clean the query string so that it's not too long
   let cleanQueryString = queryString.replace(/<@.*>/, "").trim();
@@ -470,6 +476,11 @@ async function getRelevantMemories(queryString, limit = 5) {
   if (error) {
     logger.info("Error fetching relevant user memory:", error);
     return null;
+  }
+
+  // if data is an empty object, make it an empty array
+  if (Object.keys(data).length === 0) {
+    return [];
   }
 
   return data;
