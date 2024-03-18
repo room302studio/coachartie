@@ -448,6 +448,7 @@ async function processMissiveRequest(body) {
         notification: {
           title: BOT_NAME,
           // body: lastMessage.content,
+          body: 'test',
         },
         // text: lastMessage.content,
         username: BOT_NAME,
