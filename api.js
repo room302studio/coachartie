@@ -1,6 +1,5 @@
 const express = require("express");
 const app = express();
-const { processMessageChain } = await require("./src/chain");
 const {
   getChannelMessageHistory,
   hasRecentMemoryOfResource,
@@ -33,6 +32,7 @@ app.use(express.json());
 /* Basic, simple Coach Artie messaging */
 
 app.post("/api/message", async (req, res) => {
+  const { processMessageChain } = await require("./src/chain");
   const message = req.body.message;
   const username = req.body.username || "API User";
 
@@ -50,6 +50,7 @@ app.post("/api/message", async (req, res) => {
 });
 
 app.post("/api/message-image", async (req, res) => {
+  const { processMessageChain } = await require("./src/chain");
   const message = req.body.message;
   const image = req.body.image;
   const username = req.body.username || "API User";
@@ -129,6 +130,7 @@ async function listMessages(emailMessageId) {
 }
 
 async function processMissiveRequest(body) {
+  const { processMessageChain } = await require("./src/chain");
   let formattedMessages = []; // the array of messages we will send to processMessageChain
   // everything gets added to this
 
@@ -458,6 +460,7 @@ async function processMissiveRequest(body) {
 }
 
 app.post("/api/missive-reply", async (req, res) => {
+  const { processMessageChain } = await require("./src/chain");
   const passphrase = process.env.WEBHOOK_PASSPHRASE; // Assuming PASSPHRASE is the environment variable name
   // Generate HMAC hash of the request body to verify authenticity
   const hmac = createHmac("sha256", passphrase);
