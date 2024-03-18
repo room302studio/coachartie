@@ -9,111 +9,237 @@ const chance = require("chance").Chance();
 const vision = require("./vision.js");
 const logger = require("../src/logger.js")("memory");
 const preambleLogger = require("../src/logger.js")("preamble");
-const { getPromptsFromSupabase, getConfigFromSupabase, } = require("../helpers");
+const { getPromptsFromSupabase, getConfigFromSupabase } = require("../helpers");
 
 module.exports = (async () => {
-  const { PROMPT_REMEMBER, PROMPT_CAPABILITY_REMEMBER, PROMPT_REMEMBER_INTRO } = await getPromptsFromSupabase();
+  const { PROMPT_REMEMBER, PROMPT_CAPABILITY_REMEMBER, PROMPT_REMEMBER_INTRO } =
+    await getPromptsFromSupabase();
 
   const { REMEMBER_MODEL } = await getConfigFromSupabase();
 
-/**
- * Generates a completion and stores it in the database
- * @param {string} prompt - The prompt to generate a response for
- * @param {string} response - The robot's response to the prompt
- * @param {string} username - The username of the user to generate a completion for
- * @param {Array} conversationHistory - The entire conversation history up to the point of the user's last message
- * @param {boolean} isCapability - Whether the completion is for a capability or not
- * @param {string} capabilityName - The name of the capability (if applicable)
- *
- * @returns {string} - The completion text
- */
-async function generateAndStoreCompletion(
-  prompt,
-  response,
-  { username = "", channel = "", guild = "" },
-  conversationHistory = [],
-  isCapability = false,
-  capabilityName = ""
-) {
-  const userMemoryCount = chance.integer({ min: 4, max: 24 });
-  const memoryMessages = [];
+  /**
+   * Generates a completion and stores it in the database
+   * @param {string} prompt - The prompt to generate a response for
+   * @param {string} response - The robot's response to the prompt
+   * @param {string} username - The username of the user to generate a completion for
+   * @param {Array} conversationHistory - The entire conversation history up to the point of the user's last message
+   * @param {boolean} isCapability - Whether the completion is for a capability or not
+   * @param {string} capabilityName - The name of the capability (if applicable)
+   *
+   * @returns {string} - The completion text
+   */
+  async function generateAndStoreCompletion(
+    prompt,
+    response,
+    { username = "", channel = "", guild = "" },
+    conversationHistory = [],
+    isCapability = false,
+    capabilityName = ""
+  ) {
+    const userMemoryCount = chance.integer({ min: 4, max: 24 });
+    const memoryMessages = [];
 
-  const userMemories = await getUserMemory(username, userMemoryCount);
-  const generalMemories = await getAllMemories(userMemoryCount);
-  const relevantMemories = isCapability ? await getRelevantMemories(capabilityName) : [];
+    const userMemories = await getUserMemory(username, userMemoryCount);
+    const generalMemories = await getAllMemories(userMemoryCount);
+    const relevantMemories = isCapability
+      ? await getRelevantMemories(capabilityName)
+      : [];
 
-  const memories = [...userMemories, ...generalMemories, ...relevantMemories];
+    const memories = [...userMemories, ...generalMemories, ...relevantMemories];
 
-  memories.forEach((memory) => {
-    memoryMessages.push({
-      role: "system",
-      content: `You remember from a previous interaction at ${memory.created_at}: ${memory.value}`,
+    memories.forEach((memory) => {
+      memoryMessages.push({
+        role: "system",
+        content: `${memory.created_at}: ${memory.value}  `,
+      });
     });
-  });
 
-  if (response.image) {
-    const base64Image = response.image.split(";base64,").pop();
-    vision.setImageBase64(base64Image);
-    const imageDescription = await vision.fetchImageDescription();
-    response.content = `${response.content}\n\nDescription of user-provided image: ${imageDescription}`;
-    delete response.image;
+    if (response.image) {
+      const base64Image = response.image.split(";base64,").pop();
+      vision.setImageBase64(base64Image);
+      const imageDescription = await vision.fetchImageDescription();
+      response.content = `${response.content}\n\nDescription of user-provided image: ${imageDescription}`;
+      delete response.image;
+    }
+
+    conversationHistory.forEach((message) => {
+      if (message.image) {
+        delete message.image;
+      }
+    });
+
+    memoryMessages.forEach((message) => {
+      if (message.image) {
+        delete message.image;
+      }
+    });
+
+    const completeMessages = [
+      ...conversationHistory,
+      ...memoryMessages,
+      {
+        role: "system",
+        content: "---",
+      },
+      {
+        role: "system",
+        content: PROMPT_REMEMBER_INTRO,
+      },
+      {
+        role: "user",
+        content: `# User (${username}): ${prompt} \n # Robot (Artie): ${response}`,
+      },
+      {
+        role: "user",
+        content: isCapability ? PROMPT_CAPABILITY_REMEMBER : PROMPT_REMEMBER,
+      },
+    ];
+
+    preambleLogger.info(
+      `📜 Preamble messages ${JSON.stringify(completeMessages)}`
+    );
+
+    const rememberCompletion = await openai.createChatCompletion({
+      model: REMEMBER_MODEL,
+      presence_penalty: 0.1,
+      max_tokens: 256,
+      messages: completeMessages,
+    });
+
+    const rememberText = rememberCompletion.data.choices[0].message.content;
+    logger.info(
+      `🧠 Interaction memory: ${rememberText} for ${username} in ${channel} in ${guild}`
+    );
+
+    // if the remember text is ✨ AKA empty, we don't wanna store it
+    if (rememberText === "✨") return rememberText;
+    // if remember text length is 0 or less, we don't wanna store it
+    if (rememberText.length <= 0) return rememberText;
+    await storeUserMemory({ username }, rememberText);
+
+    return rememberText;
   }
 
-  conversationHistory.forEach((message) => {
-    if (message.image) {
-      delete message.image;
+  /**
+   * Generates and stores capability completion.
+   * @param {string} prompt - The prompt for the capability completion.
+   * @param {string} capabilityResponse - The response generated by the capability.
+   * @param {string} capabilityName - The name of the capability.
+   * @param {Object} options - Additional options for generating and storing capability completion.
+   * @param {string} options.username - The username associated with the capability completion.
+   * @param {Array} conversationHistory - The conversation history.
+   * @returns {Promise<string>} - The generated capability completion text.
+   */
+  async function generateAndStoreCapabilityCompletion(
+    prompt,
+    capabilityResponse,
+    capabilityName,
+    { username = "", channel = "", guild = "" },
+    conversationHistory = []
+  ) {
+    // logger.info("🔧 Generating and storing capability usage");
+    // logger.info("🔧 Prompt:", prompt);
+    // logger.info("🔧 Response:", capabilityResponse);
+    const userMemoryCount = chance.integer({ min: 1, max: 6 });
+    const memoryMessages = [];
+
+    // get user memories
+    logger.info(
+      `🔧 Enhancing memory with ${userMemoryCount} memories from ${username}`
+    );
+    const userMemories = await getUserMemory(username, userMemoryCount);
+
+    const generalMemories = await getAllMemories(userMemoryCount);
+
+    const relevantMemories = await getRelevantMemories(capabilityName);
+
+    // de-dupe memories
+    const memories = [...userMemories, ...generalMemories, ...relevantMemories];
+
+    // turn user memories into chatbot messages
+    memories.forEach((memory) => {
+      memoryMessages.push({
+        role: "system",
+        content: `${memory.created_at}: ${memory.value}  `,
+      });
+    });
+
+    // if the response has a .image, we need to send that through the vision API to see what it actually is
+    if (capabilityResponse.image) {
+      // const imageUrl = message.attachments.first().url;
+      // logger.info(imageUrl);
+      // vision.setImageUrl(imageUrl);
+      // const imageDescription = await vision.fetchImageDescription();
+      // return `${prompt}\n\nDescription of user-provided image: ${imageDescription}`;
+
+      // first we need to turn the image into a base64 string
+      const base64Image = capabilityResponse.image.split(";base64,").pop();
+      // then we need to send it to the vision API
+      vision.setImageBase64(base64Image);
+      const imageDescription = await vision.fetchImageDescription();
+      // then we need to add the description to the response
     }
-  });
 
-  memoryMessages.forEach((message) => {
-    if (message.image) {
-      delete message.image;
-    }
-  });
+    // make sure none of the messages in conversation history have an image
+    conversationHistory.forEach((message) => {
+      if (message.image) {
+        delete message.image;
+      }
+    });
 
-  const completeMessages = [
-    ...conversationHistory,
-    ...memoryMessages,
-    {
-      role: "system",
-      content: "---",
-    },
-    {
-      role: "system",
-      content: PROMPT_REMEMBER_INTRO,
-    },
-    {
-      role: "user",
-      content: `# User (${username}): ${prompt} \n # Robot (Artie): ${response}`,
-    },
-    {
-      role: "user",
-      content: isCapability ? PROMPT_CAPABILITY_REMEMBER : PROMPT_REMEMBER,
-    },
-  ];
+    // make sure none of the memory messages have an image
+    memoryMessages.forEach((message) => {
+      if (message.image) {
+        delete message.image;
+      }
+    });
 
-  preambleLogger.info(`📜 Preamble messages ${JSON.stringify(completeMessages)}`);
+    const rememberCompletion = await openai.createChatCompletion({
+      model: REMEMBER_MODEL,
+      // temperature: 1.1,
+      // top_p: 0.9,
+      presence_penalty: 0.1,
+      max_tokens: 256,
+      messages: [
+        ...memoryMessages,
+        ...conversationHistory,
+        {
+          role: "system",
+          content: "Take a deep breath and take things step by step.",
+        },
+        {
+          role: "system",
+          content: `You previously ran the capability: ${capabilityName} and got the response: ${capabilityResponse}`,
+        },
+        {
+          role: "user",
+          content: `${prompt}`,
+        },
+        {
+          role: "assistant",
+          content: `${capabilityResponse}`,
+        },
+        {
+          role: "user",
+          content: `${PROMPT_CAPABILITY_REMEMBER}`,
+        },
+      ],
+    });
 
-  const rememberCompletion = await openai.createChatCompletion({
-    model: REMEMBER_MODEL,
-    presence_penalty: 0.1,
-    max_tokens: 256,
-    messages: completeMessages,
-  });
+    const rememberText = rememberCompletion.data.choices[0].message.content;
 
-  const rememberText = rememberCompletion.data.choices[0].message.content;
-  logger.info(`🧠 Interaction memory: ${rememberText} for ${username} in ${channel} in ${guild}`);
+    // if the remember text is ✨ AKA empty, we don't wanna store it
+    if (rememberText === "✨") return rememberText;
+    // if remember text length is 0 or less, we don't wanna store it
+    if (rememberText.length <= 0) return rememberText;
+    await storeUserMemory({ username: "capability" }, rememberText);
 
-  if (rememberText !== "✨" && rememberText.length > 0) {
-    await storeUserMemory({ username: isCapability ? "capability" : username }, rememberText);
+    return rememberText;
   }
 
-  return rememberText;
-}
-
-// module.exports = {
-//   generateAndStoreCompletion,
-// };
+  // module.exports = {
+  //   generateAndStoreCompletion,
+  // };
   return {
     generateAndStoreCompletion,
   };

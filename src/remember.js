@@ -433,9 +433,19 @@ async function memoryToEmbedding(memory) {
  * @returns {Promise<Array>} - A promise that resolves to an array of relevant memories.
  */
 async function getRelevantMemories(queryString, limit = 5) {
-  logger.info(`Querying ${limit} relevant memories for: ${queryString}`);
-  // turn the queryString into an embedding
-  if (!queryString) {
+  // queryStrings look like: <@1086489885269037128> What you do remember about to-do lists?
+  // we need to clean the query string so that it's not too long
+  let cleanQueryString = queryString.replace(/<@.*>/, "").trim();
+  cleanQueryString = cleanQueryString.replace(/<.*>/, "").trim();
+  cleanQueryString = cleanQueryString.replace(/\?/, "").trim();
+  cleanQueryString = cleanQueryString.replace(/!/, "").trim();
+  cleanQueryString = cleanQueryString.replace(/:/, "").trim();
+  cleanQueryString = cleanQueryString.replace(/\./, "").trim();
+  cleanQueryString = cleanQueryString.replace(/,/, "").trim();
+
+  logger.info("Looking for memories relevant to" + cleanQueryString);
+  // turn the cleanQueryString into an embedding
+  if (!cleanQueryString) {
     return [];
   }
 
@@ -451,7 +461,8 @@ async function getRelevantMemories(queryString, limit = 5) {
   // query the database for the most relevant memories, currently this is only supported on the openai embeddings
   const { data, error } = await supabase.rpc("match_memories", {
     query_embedding: embedding,
-    match_threshold: 0.78,
+    // match_threshold: 0.78,
+    match_threshold: 0.85,
     match_count: limit,
   });
 
