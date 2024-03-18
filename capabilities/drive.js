@@ -1,8 +1,8 @@
 const { google, batchUpdate } = require("googleapis");
 const { destructureArgs } = require("../helpers");
-const logger = require("../src/logger");
+const logger = require("../src/logger")("drive")
 require("dotenv").config();
-const keyFile = `.${process.env.GOOGLE_KEY_PATH}`
+const keyFile = `./${process.env.GOOGLE_KEY_PATH}`
 const scopes = [
   "https://www.googleapis.com/auth/drive",
   "https://www.googleapis.com/auth/calendar",

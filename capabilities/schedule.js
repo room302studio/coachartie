@@ -3,7 +3,7 @@ const { destructureArgs } = require("../helpers");
 const { eachDayOfInterval, set, format } = require("date-fns");
 
 require("dotenv").config();
-const keyFile = `.${process.env.GOOGLE_KEY_PATH}`
+const keyFile = `./${process.env.GOOGLE_KEY_PATH}`
 const scopes = [
   "https://www.googleapis.com/auth/drive",
   "https://www.googleapis.com/auth/calendar",
