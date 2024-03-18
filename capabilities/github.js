@@ -92,7 +92,8 @@ class GithubCoach {
       username: username,
       per_page: 100,
     });
-    return response.data.map((repo) => `${repo.name} - ${repo.description}`);
+    logger.info("listUserRepos response", response);
+    return response.data.map((repo) => `${repo.name} - ${repo?.description}`);
   }
 
   /**
@@ -132,7 +133,8 @@ class GithubCoach {
       return "No projects found for this user.";
     }
 
-    return projects.map((project) => project.name);
+    // return projects.map((project) => project.name);
+    return JSON.stringify(projects);
   }
 
   /**
@@ -268,6 +270,24 @@ class GithubCoach {
       content: Buffer.from(content).toString("base64"),
     });
     return response.data;
+  }
+
+  /**
+   * Adds an issue to a repository.
+   * @param {string} ownerName - The name of the owner.
+   * @param {string} repositoryName - The name of the repository.
+   * @param {string} issueTitle - The title of the issue.
+   * @param {string} issueBody - The body of the issue.
+   * @returns {Promise<Object>} - A promise that resolves to the created issue data.
+   */
+  async addIssueToRepo(ownerName, repositoryName, issueTitle, issueBody) {
+    const response = await this.octokit.issues.create({
+      owner: ownerName,
+      repo: repositoryName,
+      title: issueTitle,
+      body: issueBody,
+    });
+    return JSON.stringify(response.data);
   }
 
   /**
