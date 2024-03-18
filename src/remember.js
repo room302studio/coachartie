@@ -21,6 +21,7 @@ const { supabase } = require("../helpers");
  * @returns {Promise<Array>} - A promise that resolves to an array of user memories.
  */
 async function getUserMemory(userId, limit = 5) {
+  const { supabase } = require("../helpers");
   if (!userId) {
     logger.info("No userId provided to getUserMemory");
     return [];

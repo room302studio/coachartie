@@ -34,7 +34,7 @@ module.exports = (async () => {
     { username = "", channel = "", guild = "" },
     conversationHistory = [],
     isCapability = false,
-    capabilityName = ""
+    capabilityName = "",
   ) {
     const userMemoryCount = chance.integer({ min: 4, max: 24 });
     const memoryMessages = [];
@@ -45,12 +45,13 @@ module.exports = (async () => {
       ? await getRelevantMemories(capabilityName)
       : [];
 
-  let memories = [...userMemories, ...generalMemories, ...relevantMemories];
+    let memories = [...userMemories, ...generalMemories, ...relevantMemories];
 
-  memories.forEach((memory) => {
-    memoryMessages.push({
-      role: "system",
-      content: `${memory.created_at}: ${memory.value}  `,
+    memories.forEach(async (memory) => {
+      memoryMessages.push({
+        role: "system",
+        content: `${memory.created_at}: ${memory.value}  `,
+      });
     });
 
     if (response.image) {
@@ -61,55 +62,11 @@ module.exports = (async () => {
       delete response.image;
     }
 
-  memoryMessages.forEach((message) => {
-    if (message.image) {
-      delete message.image;
-    }
-  });
-
-  const completeMessages = [
-    ...conversationHistory,
-    ...memoryMessages,
-    {
-      role: "system",
-      content: "---",
-    },
-    {
-      role: "system",
-      content: PROMPT_REMEMBER_INTRO,
-    },
-    {
-      role: "user",
-      content: `# User (${username}): ${prompt} \n # Robot (Artie): ${response}`,
-    },
-    {
-      role: "user",
-      content: isCapability ? PROMPT_CAPABILITY_REMEMBER : PROMPT_REMEMBER,
-    },
-  ];
-
-  preambleLogger.info(`📜 Preamble messages ${JSON.stringify(completeMessages)}`);
-
-
-  // de-dupe memories
-  memories = [...userMemories, ...generalMemories, ...relevantMemories];
-
-  // turn user memories into chatbot messages
-  memories.forEach((memory) => {
-    memoryMessages.push({
-      role: "system",
-      content: `${memory.created_at}: ${memory.value}  `,
+    memoryMessages.forEach((message) => {
+      if (message.image) {
+        delete message.image;
+      }
     });
-
-  const capabilityResponse = response;
-
-  // if the response has a .image, we need to send that through the vision API to see what it actually is
-  if (capabilityResponse.image) {
-    // const imageUrl = message.attachments.first().url;
-    // logger.info(imageUrl);
-    // vision.setImageUrl(imageUrl);
-    // const imageDescription = await vision.fetchImageDescription();
-    // return `${prompt}\n\nDescription of user-provided image: ${imageDescription}`;
 
     const completeMessages = [
       ...conversationHistory,
@@ -133,18 +90,67 @@ module.exports = (async () => {
     ];
 
     preambleLogger.info(
-      `📜 Preamble messages ${JSON.stringify(completeMessages)}`
+      `📜 Preamble messages ${JSON.stringify(completeMessages)}`,
     );
 
-    const rememberCompletion = await openai.createChatCompletion({
-      model: REMEMBER_MODEL,
-      presence_penalty: 0.1,
-      max_tokens: 256,
-      messages: completeMessages,
+    // de-dupe memories
+    memories = [...userMemories, ...generalMemories, ...relevantMemories];
+
+    // turn user memories into chatbot messages
+    memories.forEach(async (memory) => {
+      memoryMessages.push({
+        role: "system",
+        content: `${memory.created_at}: ${memory.value}  `,
+      });
     });
 
-  return rememberText;
-}
+    const capabilityResponse = response;
+
+    // if the response has a .image, we need to send that through the vision API to see what it actually is
+    if (capabilityResponse.image) {
+      // const imageUrl = message.attachments.first().url;
+      // logger.info(imageUrl);
+      // vision.setImageUrl(imageUrl);
+      // const imageDescription = await vision.fetchImageDescription();
+      // return `${prompt}\n\nDescription of user-provided image: ${imageDescription}`;
+
+      const completeMessages = [
+        ...conversationHistory,
+        ...memoryMessages,
+        {
+          role: "system",
+          content: "---",
+        },
+        {
+          role: "system",
+          content: PROMPT_REMEMBER_INTRO,
+        },
+        {
+          role: "user",
+          content: `# User (${username}): ${prompt} \n # Robot (Artie): ${response}`,
+        },
+        {
+          role: "user",
+          content: isCapability ? PROMPT_CAPABILITY_REMEMBER : PROMPT_REMEMBER,
+        },
+      ];
+
+      preambleLogger.info(
+        `📜 Preamble messages ${JSON.stringify(completeMessages)}`,
+      );
+
+      const rememberCompletion = await openai.createChatCompletion({
+        model: REMEMBER_MODEL,
+        presence_penalty: 0.1,
+        max_tokens: 256,
+        messages: completeMessages,
+      });
+
+      const rememberText = rememberCompletion.choices[0].message.content;
+
+      return rememberText;
+    }
+  }
 
   return {
     generateAndStoreCompletion,
