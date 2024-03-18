@@ -2,7 +2,8 @@ const { google } = require("googleapis");
 const { destructureArgs } = require("../helpers");
 const { eachDayOfInterval, set, format } = require("date-fns");
 
-const keyFile = "./auth/coach-artie-e95c8660132f.json"; // Path to JSON file
+require("dotenv").config();
+const keyFile = `.${process.env.GOOGLE_KEY_PATH}`
 const scopes = [
   "https://www.googleapis.com/auth/drive",
   "https://www.googleapis.com/auth/calendar",

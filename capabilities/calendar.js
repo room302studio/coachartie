@@ -4,10 +4,7 @@ const logger = require("../src/logger.js")("capabilities");
 const dotenv = require("dotenv");
 dotenv.config();
 
-const calendarId =
-  "c_68a9d315e0cf3fb511a20865664e0be79980781571c78e39eb05c7f2f10e4180@group.calendar.google.com";
-
-const keyFile = "./auth/coach-artie-e95c8660132f.json"; // Path to JSON file
+const keyFile = `.${process.env.GOOGLE_KEY_PATH}`
 const scopes = [
   "https://www.googleapis.com/auth/drive",
   "https://www.googleapis.com/auth/calendar",
