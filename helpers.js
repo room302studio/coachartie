@@ -9,8 +9,14 @@ dotenv.config();
 const { encode, decode } = require("@nem035/gpt-3-encoder");
 // TODO: Swap out for getConfigFromSupabase
 const { RESPONSE_LIMIT, TOKEN_LIMIT, MAX_OUTPUT_TOKENS } = require("./config");
-const { getUserMemory, getUserMessageHistory } = require("./src/remember.js");
+const {
+  getUserMemory,
+  getUserMessageHistory,
+  getAllMemories,
+  getRelevantMemories,
+} = require("./src/remember.js");
 const logger = require("./src/logger.js")("helpers");
+const completionLogger = require("./src/logger.js")("completion");
 const { createClient } = require("@supabase/supabase-js");
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -592,6 +598,12 @@ async function generateAiCompletion(prompt, username, messages, config) {
   messages = messages.filter((message) => message.content);
 
   try {
+    // Do a verbose log of the chat completion parameters and messages
+    completionLogger.info("🔧 Chat completion created");
+    completionLogger.info("🔧 Temperature: " + temperature);
+    completionLogger.info("🔧 Presence Penalty: " + presence_penalty);
+    completionLogger.info("🔧 Messages: " + JSON.stringify(messages));
+
     completion = await createChatCompletion(
       messages,
       temperature,
@@ -602,7 +614,8 @@ async function generateAiCompletion(prompt, username, messages, config) {
   }
   // logger.info(`${JSON.stringify(completion, null, 2)}`);
   const aiResponse = completion.data.choices[0].message.content;
-  logger.info("🤖 AI Response:", aiResponse);
+  logger.info("🔧 AI Response: " + aiResponse);
+  completionLogger.info("🔧 AI Response: " + aiResponse);
   messages.push(aiResponse);
   return { messages, aiResponse };
 }
@@ -846,7 +859,10 @@ async function assembleMessagePreamble(username) {
   await addTodosToMessages(messages);
   await addUserMessages(username, messages);
   await addUserMemories(username, messages);
-
+  // add memories relevant to the user's message
+  await addRelevantMemories(username, messages);
+  // add some general memories from all interactions
+  await addGeneralMemories(messages);
   return messages;
 }
 
@@ -962,7 +978,7 @@ async function addCapabilityManifestMessage(messages) {
  * @returns {Promise<void>} - A promise that resolves when the user messages have been added to the array.
  */
 async function addUserMessages(username, messages) {
-  const userMessageCount = chance.integer({ min: 4, max: 32 });
+  const userMessageCount = chance.integer({ min: 10, max: 32 });
   logger.info(
     `🔧 Retrieving ${userMessageCount} previous messages for ${username}`,
   );
@@ -994,7 +1010,7 @@ async function addUserMessages(username, messages) {
  * @returns {Promise<void>} - A promise that resolves when the user memories are added to the messages array.
  */
 async function addUserMemories(username, messages) {
-  const userMemoryCount = chance.integer({ min: 4, max: 24 });
+  const userMemoryCount = chance.integer({ min: 8, max: 32 });
   try {
     const userMemories = await getUserMemory(username, userMemoryCount);
     logger.info(`🔧 Retrieving ${userMemoryCount} memories for ${username}`);
@@ -1002,6 +1018,74 @@ async function addUserMemories(username, messages) {
       messages.push({
         role: "system",
         content: `You remember from a previous interaction on ${memory.created_at}: ${memory.value}`,
+      });
+    });
+  } catch (err) {
+    logger.info(err);
+  }
+}
+
+/**
+ * Adds relevant memories to the messages array.
+ * @param {string} username - The username of the user.
+ * @param {Array} messages - The array of messages to add relevant memories to.
+ * @returns {Promise<void>} - A promise that resolves when the relevant memories are added to the messages array.
+ */
+async function addRelevantMemories(username, messages) {
+  const relevantMemoryCount = chance.integer({ min: 6, max: 32 });
+
+  // get the last user message to use as the query for relevant memories
+  const lastUserMessage = messages
+    .slice()
+    .reverse()
+    .find((message) => message.role === "user");
+
+  if (!lastUserMessage) {
+    logger.info(`No last user message found for ${username}`);
+    return;
+  }
+
+  const queryString = lastUserMessage.content;
+  logger.info(
+    `🔧 Querying for relevant memories for ${username}: ${queryString}`
+  );
+
+  try {
+    const relevantMemories = await getRelevantMemories(
+      queryString,
+      relevantMemoryCount
+    );
+    logger.info(
+      `🔧 Retrieving ${relevantMemoryCount} relevant memories for ${queryString}`
+    );
+
+    relevantMemories.forEach((memory) => {
+      // log out the memories
+      logger.info("relevant memory " + JSON.stringify(memory));
+      messages.push({
+        role: "system",
+        content: `${memory.created_at}: ${memory.value}`,
+      });
+    });
+  } catch (err) {
+    logger.info(err);
+  }
+}
+
+/**
+ * Adds general memories to the messages array.
+ * @param {Array} messages - The array of messages to add general memories to.
+ * @returns {Promise<void>} - A promise that resolves when the general memories are added to the messages array.
+ */
+async function addGeneralMemories(messages) {
+  const generalMemoryCount = chance.integer({ min: 2, max: 8 });
+  try {
+    const generalMemories = await getAllMemories(generalMemoryCount);
+    logger.info(`🔧 Retrieving ${generalMemoryCount} general memories`);
+    generalMemories.forEach((memory) => {
+      messages.push({
+        role: "system",
+        content: `${memory.created_at}: ${memory.value}`,
       });
     });
   } catch (err) {

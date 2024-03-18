@@ -47,7 +47,7 @@ async function generateAndStoreCompletion(
   memories.forEach((memory) => {
     memoryMessages.push({
       role: "system",
-      content: `You remember from a previous interaction at ${memory.created_at}: ${memory.value}`,
+      content: `${memory.created_at}: ${memory.value}  `,
     });
   });
 
@@ -104,9 +104,86 @@ async function generateAndStoreCompletion(
   const rememberText = rememberCompletion.data.choices[0].message.content;
   logger.info(`🧠 Interaction memory: ${rememberText} for ${username} in ${channel} in ${guild}`);
 
-  if (rememberText !== "✨" && rememberText.length > 0) {
-    await storeUserMemory({ username: isCapability ? "capability" : username }, rememberText);
+  // de-dupe memories
+  const memories = [...userMemories, ...generalMemories, ...relevantMemories];
+
+  // turn user memories into chatbot messages
+  memories.forEach((memory) => {
+    memoryMessages.push({
+      role: "system",
+      content: `${memory.created_at}: ${memory.value}  `,
+    });
+  });
+
+  // if the response has a .image, we need to send that through the vision API to see what it actually is
+  if (capabilityResponse.image) {
+    // const imageUrl = message.attachments.first().url;
+    // logger.info(imageUrl);
+    // vision.setImageUrl(imageUrl);
+    // const imageDescription = await vision.fetchImageDescription();
+    // return `${prompt}\n\nDescription of user-provided image: ${imageDescription}`;
+
+    // first we need to turn the image into a base64 string
+    const base64Image = capabilityResponse.image.split(";base64,").pop();
+    // then we need to send it to the vision API
+    vision.setImageBase64(base64Image);
+    const imageDescription = await vision.fetchImageDescription();
+    // then we need to add the description to the response
   }
+
+  // make sure none of the messages in conversation history have an image
+  conversationHistory.forEach((message) => {
+    if (message.image) {
+      delete message.image;
+    }
+  });
+
+  // make sure none of the memory messages have an image
+  memoryMessages.forEach((message) => {
+    if (message.image) {
+      delete message.image;
+    }
+  });
+
+  const rememberCompletion = await openai.createChatCompletion({
+    model: REMEMBER_MODEL,
+    // temperature: 1.1,
+    // top_p: 0.9,
+    presence_penalty: 0.1,
+    max_tokens: 256,
+    messages: [
+      ...memoryMessages,
+      ...conversationHistory,
+      {
+        role: "system",
+        content: "Take a deep breath and take things step by step.",
+      },
+      {
+        role: "system",
+        content: `You previously ran the capability: ${capabilityName} and got the response: ${capabilityResponse}`,
+      },
+      {
+        role: "user",
+        content: `${prompt}`,
+      },
+      {
+        role: "assistant",
+        content: `${capabilityResponse}`,
+      },
+      {
+        role: "user",
+        content: `${PROMPT_CAPABILITY_REMEMBER}`,
+      },
+    ],
+  });
+
+  const rememberText = rememberCompletion.data.choices[0].message.content;
+
+  // if the remember text is ✨ AKA empty, we don't wanna store it
+  if (rememberText === "✨") return rememberText;
+  // if remember text length is 0 or less, we don't wanna store it
+  if (rememberText.length <= 0) return rememberText;
+  await storeUserMemory({ username: "capability" }, rememberText);
 
   return rememberText;
 }
