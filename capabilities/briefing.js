@@ -2,7 +2,7 @@ const dotenv = require("dotenv");
 const dateFns = require("date-fns");
 dotenv.config();
 const axios = require("axios");
-const { getAllMemories, getRelevantMemories, getMemoriesBetweenDates } = require("../src/remember");
+const { getRelevantMemories, getMemoriesBetweenDates, getMemoriesByString } = require("../src/remember");
 const logger = require("../src/logger")("briefing")
 const { listEventsThisWeek, listEventsBetweenDates } = require("./calendar.js"); // Adjust the path as necessary
 
@@ -66,17 +66,22 @@ async function makeWeeklyBriefing() {
     // Look for any todos that have been completed
     // List all todo changes from this week (added, edited, deleted)
     const todoChanges = await listTodoChanges();
+    logger.info(`Found ${todoChanges.length} todo changes this week`);
 
     // Read the calendar for the previous + upcoming week
     const calendarEntries = await readCalendar();
+    logger.info(`Found ${calendarEntries.length} calendar entries this week`);
 
     let projectSummaries = [];
     for (const projectMemories of projects) {
       const projectSummary = await generateProjectSummary({ projectMemories, projectMemoryMap, todoChanges, calendarEntries });
 
+      logger.info(`Generated project summary for ${projectMemories.label}: ${projectSummary}`);
+
       // add the project summary to the project summaries
       projectSummaries.push(projectSummary);
     }
+    logger.info(`Generated ${projectSummaries.length} project summaries`);
 
     // Generate meta-summary based on project summaries
     const metaSummary = await generateMetaSummary({
@@ -112,7 +117,7 @@ async function makeWeeklyBriefing() {
  */
 async function makeDailyBriefing() {
   try {
-    // Placeholder for daily briefing logic
+    const 
     return "Daily briefing done!";
   } catch (error) {
     throw new Error(`Error occurred while trying to make daily briefing: ${error}`);
@@ -121,12 +126,19 @@ async function makeDailyBriefing() {
 
 /**
  * Makes a briefing on one particular project.
- * @param {String} project - The project to make a briefing on.
+ * @param {String} project - The project name to make a briefing on.
  */
-async function makeProjectBriefing(project) {
+async function makeProjectBriefing(projectName) {
   try {
     // Placeholder for project briefing logic
-    return `Briefing for project ${project} done!`;
+    const processedMemories = await getRelevantMemories(projectName);
+    const memoriesMentioningProject = await getMemoriesByString(projectName);
+    const todoChanges = await listTodoChanges();
+    const calendarEntries = await readCalendar();
+    const projectMemoryMap = await identifyProjectsInMemories(processedMemories);
+
+    const projectSummary = await generateProjectSummary({ project, projectMemoryMap, todoChanges, calendarEntries, memoriesMentioningProject });
+    return projectSummary;
   } catch (error) {
     throw new Error(`Error occurred while trying to make project briefing: ${error}`);
   }
@@ -287,30 +299,51 @@ async function readCalendar() {
  * @returns {Promise<Array>} A promise that resolves to an array of project summaries.
  * @example await generateProjectSummary({ project, projectMemoryMap, todoChanges, calendarEntries });
  */
-async function generateProjectSummary({ project, projectMemoryMap, todoChanges, calendarEntries }) {
+async function generateProjectSummary({ project, projectMemoryMap, todoChanges, calendarEntries, memoriesMentioningProject }) {
   // Placeholder for project summary generation logic
-  const completion = createChatCompletion([
-    {
+  let messages = []
+
+  if (project && project.label) {
+    messages.push({
       role: "user",
       content: `I want to generate a summary for project ${project.label}`,
-    },
-    {
+    });
+  }
+
+  if (projectMemoryMap && projectMemoryMap[project.label]) {
+    messages.push({
       role: "user",
       content: `Here are the memories for project ${project.label}: ${projectMemoryMap[project.label].map((memory) => memory.content).join("\n")}`,
-    },
-    {
+    });
+  }
+
+  if (todoChanges && todoChanges.length > 0) {
+    messages.push({
       role: "user",
       content: `Here are the todo changes for project ${project.label}: ${todoChanges.map((todo) => todo.content).join("\n")}`,
-    },
-    {
+    });
+  }
+
+  if (memoriesMentioningProject && memoriesMentioningProject.length > 0) {
+    messages.push({
+      role: "user",
+      content: `These memories reference the project: ${memoriesMentioningProject.map((memory) => memory.content).join("\n")}`,
+    });
+  }
+
+  if (calendarEntries && Object.keys(calendarEntries).length > 0) {
+    messages.push({
       role: "user",
       content: `Here are the calendar entries for project ${project.label}: ${JSON.stringify(calendarEntries)}`,
-    },
-    {
-      role: "user",
-      content: `Can you please generate a summary for project ${project.label}?Be as detailed as possible.`,
-    },
-  ]);
+    });
+  }
+
+  messages.push({
+    role: "user",
+    content: `Can you please generate a summary for project ${project.label}? Be as detailed as possible.`,
+  });
+
+  const completion = createChatCompletion(messages)
   console.log(completion);
   return completion
 }
@@ -321,6 +354,20 @@ async function generateProjectSummary({ project, projectMemoryMap, todoChanges, 
  * @returns {Promise<String>} A promise that resolves to a string containing the meta-summary.
  */
 async function generateMetaSummary({ projectSummaries, todoChanges, calendarEntries }) {
+  // make sure all the things exist
+  if(!projectSummaries || projectSummaries.length === 0) {
+    throw new Error("No project summaries found, can't generate a meta-summary");
+  }
+
+  if(!todoChanges || todoChanges.length === 0) {
+    throw new Error("No todo changes found, can't generate a meta-summary");
+  }
+
+  if(!calendarEntries || Object.keys(calendarEntries).length === 0) {
+    throw new Error("No calendar entries found, can't generate a meta-summary");
+  }
+
+  
   const metaSummaryCompletion = createChatCompletion([
     {
       role: "user",

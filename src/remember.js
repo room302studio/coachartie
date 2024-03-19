@@ -516,6 +516,28 @@ async function getRelevantMemories(queryString, limit = 5) {
   return data;
 }
 
+/**
+ * A plain old string search across memories
+ * @param {string} queryString - The query string to search for relevant memories.
+ */
+async function getMemoriesByString(queryString) {
+  const { supabase } = require("../helpers");
+  if (typeof queryString !== "string") {
+    return logger.info("No query string provided to getRelevantMemories");
+  }
+  const { data, error } = await supabase
+    .from(MEMORIES_TABLE_NAME)
+    .select("*")
+    .ilike("value", `%${queryString}%`);
+
+  if (error) {
+    logger.info("Error fetching relevant user memory:", error);
+    return null;
+  }
+
+  return data;
+}
+
 module.exports = {
   getUserMemory,
   getUserMessageHistory,
@@ -527,5 +549,6 @@ module.exports = {
   getResourceMemories,
   hasMemoryOfResource,
   hasRecentMemoryOfResource,
-  getMemoriesBetweenDates
+  getMemoriesBetweenDates,
+  getMemoriesByString,
 };
