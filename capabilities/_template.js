@@ -1,39 +1,32 @@
-const axios = require("axios");
 const dotenv = require("dotenv");
 dotenv.config();
+const axios = require("axios");
 
 const { destructureArgs } = require("../helpers");
 
 async function handleCapabilityMethod(method, args) {
   const [arg1] = destructureArgs(args);
 
-  if (method === "askWolframAlpha") {
-    return askWolframAlpha(arg1);
+  if (method === "makeExternalRequest") {
+    return await makeExternalRequest(arg1);
   } else {
-    throw new Error(
-      `Method ${method} not supported by Wolfram Alpha capability.`
-    );
+    throw new Error(`Method ${method} not supported by this capability.`);
   }
 }
 
+// This jsdoc documentation is parsed and passed to the robot capabilities through the manifest
 /**
  * @async
- * @function askWolframAlpha
- * @param {string} question - The question to ask Wolfram Alpha.
- * @returns {Promise<string>} The answer from Wolfram Alpha, or an error message if an error occurred.
+ * @function makeExternalRequest
+ * @param {string} url - The URL to make an external request to.
+ * @returns {Promise<string>} The response from the external API, or an error message if an error occurred.
  */
-async function askWolframAlpha(question) {
-  const wolframAppId = process.env.WOLFRAM_APP_ID;
-  // const [question] = destructureArgs(args);
-
-  const encodedQuestion = encodeURIComponent(question);
-  const wolframUrl = `https://www.wolframalpha.com/api/v1/llm-api?input=${encodedQuestion}&appid=${wolframAppId}`;
-
+async function makeExternalRequest(url) {
   try {
-    const response = await axios.get(wolframUrl);
+    const response = await axios.get(url);
     return response.data;
   } catch (error) {
-    throw new Error(`Error occurred while contacting Wolfram Alpha: ${error}`);
+    throw new Error(`Error occurred while making external request: ${error}`);
   }
 }
 

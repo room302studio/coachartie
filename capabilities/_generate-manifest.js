@@ -17,6 +17,7 @@ for (const file of files) {
   const capabilityName = path.basename(file, ".js");
 
   // if the file is _template.js ignore it
+  if (capabilityName === "_template") continue;
 
   console.log(`Generating manifest for ${capabilityName}`);
 
