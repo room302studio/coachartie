@@ -13,25 +13,24 @@ async function handleCapabilityMethod(method, args) {
   const [arg1] = destructureArgs(args);
 
   if (method === "makeWeeklyBriefing") {
-    return await makeWeeklyBriefing(arg1);
-    // TODO:
-    // - Rename to makeWeeklyBriefing
-    // - makeDailyProjectBriefing - last 24 hours into project conversation
-    // - makeDailyBriefing
-    //   - last 24 hours into same conversation as makeWeeklyBriefing,
-    //   - aggregated across all projects
-  } else {
+    return await makeWeeklyBriefing();
+  } else if (method === "makeDailyBriefing") {
+    return await makeDailyBriefing();
+  } else if (method === "makeProjectBriefing") {
+    return await makeProjectBriefing(arg1);
+  }
+  
+  else {
     throw new Error(`Method ${method} not supported by this capability.`);
   }
 }
 
-// This jsdoc documentation is parsed and passed to the robot capabilities through the manifest
+
 /**
- * @async
- * @function makeExternalRequest
- * @param {string} url - The URL to make an external request to.
- * @returns {Promise<string>} The response from the external API, or an error message if an error occurred.
- */
+ * Makes a weekly briefing.
+ * @returns {Promise<String>} A promise that resolves to a string indicating the status of the weekly briefing.
+ * @example await makeWeeklyBriefing();
+*/
 async function makeWeeklyBriefing() {
   try {
     // look for feedback on previous weekly summaries
@@ -40,7 +39,6 @@ async function makeWeeklyBriefing() {
 
     // Look at all memories from this week (timestamp comparison in memories table)
     // Turn this week's memories into a factlist/meta-summary
-    // const processedMemories = await processMemories();
     const weekStartDate = dateFns.startOfWeek(new Date());
     const weekEndDate = dateFns.endOfWeek(new Date());
     logger.info(`Looking for memories between ${weekStartDate} and ${weekEndDate}`);
@@ -109,6 +107,33 @@ async function makeWeeklyBriefing() {
 }
 
 /**
+ * Makes a daily briefing across all projects
+ * @returns {Promise<String>} A promise that resolves to a string indicating the status of the daily briefing.
+ */
+async function makeDailyBriefing() {
+  try {
+    // Placeholder for daily briefing logic
+    return "Daily briefing done!";
+  } catch (error) {
+    throw new Error(`Error occurred while trying to make daily briefing: ${error}`);
+  }
+}
+
+/**
+ * Makes a briefing on one particular project.
+ * @param {String} project - The project to make a briefing on.
+ */
+async function makeProjectBriefing(project) {
+  try {
+    // Placeholder for project briefing logic
+    return `Briefing for project ${project} done!`;
+  } catch (error) {
+    throw new Error(`Error occurred while trying to make project briefing: ${error}`);
+  }
+}
+
+
+/**
  * Retrieves feedback on previous weekly summaries.
  * @returns {Promise<Array>} A promise that resolves to an array of feedback items.
  */
@@ -131,15 +156,6 @@ async function retrieveFeedback() {
 }
 
 /**
- * Processes this week's memories into a factlist/meta-summary.
- * @returns {Promise<Array>} A promise that resolves to an array of processed memories.
- */
-async function processMemories() {
-  // Placeholder for memory processing logic
-  return []; // Return an empty array for now
-}
-
-/**
  * Identifies projects, project IDs, or project slugs mentioned in the memories.
  * @param {Array} processedMemories - The processed memories to identify projects in.
  * @returns {Promise<Array>} A promise that resolves to an array of project identifiers.
@@ -151,24 +167,45 @@ async function identifyProjectsInMemories(processedMemories) {
   const memoryContentOnly = processedMemories.map((memory) => memory.content);
 
   // Then we can look for any project slugs or project IDs in the content
-  // This will be a few regexes, and we prefer false positives over false negatives
-  let missiveIds = [];
-  let githubRepos = [];
-  let projectSlugs = [];
-
-  // Then we can go and look for each of them in the string
   const bigMemoryString = memoryContentOnly.join("\n");
 
   // create some messages with the string and some instructions
   const messages = [
     {
       role: "user",
+      // this is an example message to extract IDs out of
+      content: `We should add a new issue to coachartie - we had three conversations about it in #23ij2329, #sdijs, and #studio. We also had a long conversation about Project 2 in #studio.
+
+In the previous message I just sent, please identify any GitHub Repos, Issues, Missive Conversations, or Projects. Please respond in the following format, newline-delimited with no other text: 
+
+- Discussion on Project 1: Missive#fkdf993ek9k93k
+- Discussion on Project 2: Missive#fkdf993ek9k93k      
+      `},
+      {
+        role: "assistant",
+        content: `- Discussion on GitHub repo: GitHub#coachartie
+- Discussion on Coach Artie: Missive#23ij2329
+- Discussion on Coach Artie: Missive#sdijs
+- Discussion on Coach Artie: Discord#studio
+- Discussion on Project 2: Discord#studio`
+      },
+      {
+        role: "user",
+        content: `Perfect! Thank you!`
+      },
+    {
+      role: "user",
       content: bigMemoryString,
     },
     {
       role: "user",
-      content: "Find me all the Missive IDs in this string",      
-    }
+      content: `In the previous message I just sent, please identify any GitHub Repos, Issues, Missive Conversations, or Projects. Please respond in the following format, newline-delimited with no other text: 
+
+- Discussion on Project 1: Missive#fkdf993ek9k93k
+- Discussion on Project 2: Missive#fkdf993ek9k93k
+- Discussion on Project 3 in #studio: Discord#studio
+`
+    },
   ]
   
   // we can send the big string to an LLM and ask it to look for the "needles" of various IDs for conversations, repos, and projects
@@ -186,8 +223,11 @@ async function identifyProjectsInMemories(processedMemories) {
 
   const parsedResponse = response.split("\n").map((line) => {
     const [label, id] = line.split(": ");
-    return { label, id };
+    const [type, value] = id.split("#");
+    return { label, type, value, id };
   })
+
+  logger.info(`Parsed ID extraction from memories: ${JSON.stringify(parsedResponse, null, 2)}`);
 
   // make sure the parsedResponse has a length, if it doesn't, error out
   if (parsedResponse.length === 0) {
@@ -326,10 +366,19 @@ async function formatSummary(summary) {
 /**
  * Creates new posts or threads in communication platforms.
  * @param {String} message - The message to post.
+ * @param {String} service - The service to post the message to - could be either `discord` or `missive` so far
  * @returns {Promise<void>}
  */
-async function communicateSummary(message) {
+async function communicateSummary(message, service) {
   // Placeholder for communication logic
+  if(service === "discord") {
+    // figure out the correct Discord channel to post to
+    // post to discord
+  } else if (service === "missive") {
+    // Create a new conversation with a title like "Weekly Summary - Week of [date]"
+
+    // post to missive
+  }
 }
 
 /**
