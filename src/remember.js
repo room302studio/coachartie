@@ -45,6 +45,34 @@ async function getUserMemory(userId, limit = 5) {
 }
 
 /**
+ * Retrieves memories between two dates.
+ * @param {Date} startDate - The start date.
+ * @param {Date} endDate - The end date.
+ * @returns {Promise<Array<Object>>} - A promise that resolves to an array of memory objects.
+ */
+async function getMemoriesBetweenDates(startDate, endDate) {
+  if (!(startDate instanceof Date) || !(endDate instanceof Date)) {
+    logger.info("Invalid dates provided to getMemoriesBetweenDates");
+    return [];
+  }
+
+  const { supabase } = require("../helpers");
+  const { data, error } = await supabase
+    .from(MEMORIES_TABLE_NAME)
+    .select("*")
+    .gte("created_at", startDate.toISOString())
+    .lte("created_at", endDate.toISOString())
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    logger.info("Error fetching memories between dates:", error);
+    return [];
+  }
+
+  return data;
+}
+
+/**
  * Retrieves a specified number of memories from the database.
  *
  * @param {number} [limit=5] - The maximum number of memories to retrieve. Default is 5.
@@ -499,4 +527,5 @@ module.exports = {
   getResourceMemories,
   hasMemoryOfResource,
   hasRecentMemoryOfResource,
+  getMemoriesBetweenDates
 };
