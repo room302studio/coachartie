@@ -67,6 +67,8 @@ async function getAllMemories(limit = 5) {
   return data;
 }
 
+// TODO: Create new get memories that uses timestamp for cutoff
+
 /**
  * Stores a memory in the database
  * @param {string} userId
@@ -79,7 +81,7 @@ async function storeUserMemory(
   { username, channel, guild },
   value,
   memoryType = "user",
-  resourceId = null,
+  resourceId = null
 ) {
   // first we do some checks to make sure we have the right types of data
   if (!username) {
@@ -116,7 +118,7 @@ async function storeUserMemory(
   // }
 
   logger.info(
-    `Storing memory for ${username}: ${value} in ${memoryType} memory`,
+    `Storing memory for ${username}: ${value} in ${memoryType} memory`
   );
 
   // const { embedding1: embedding, embedding2, embedding3, embedding4 } = embeddings;
@@ -144,8 +146,8 @@ async function storeUserMemory(
 
   logger.info(
     `Stored memory for ${username}: ${value} in ${memoryType} memory ${JSON.stringify(
-      data,
-    )}`,
+      data
+    )}`
   );
 
   if (error) {
@@ -334,7 +336,7 @@ async function voyageEmbedding(string, model = "voyage-large-2") {
         "Content-Type": "application/json",
         Authorization: `Bearer ${process.env.VOYAGE_API_KEY}`,
       },
-    },
+    }
   );
   return response.data;
 }

@@ -1,17 +1,21 @@
 const dotenv = require("dotenv");
 dotenv.config();
 const axios = require("axios");
+const { getAllMemories } = require("../src/remember");
 
 const { destructureArgs } = require("../helpers");
 
 async function handleCapabilityMethod(method, args) {
   const [arg1] = destructureArgs(args);
 
-  if (method === "makeWeeklySummary") {
-    return await makeWeeklySummary(arg1);
+  if (method === "makeWeeklyBriefing") {
+    return await makeWeeklyBriefing(arg1);
     // TODO:
-    // - makeProjectSummary
-    // - make
+    // - Rename to makeWeeklyBriefing
+    // - makeDailyProjectBriefing - last 24 hours into project conversation
+    // - makeDailyBriefing
+    //   - last 24 hours into same conversation as makeWeeklyBriefing,
+    //   - aggregated across all projects
   } else {
     throw new Error(`Method ${method} not supported by this capability.`);
   }
@@ -24,14 +28,15 @@ async function handleCapabilityMethod(method, args) {
  * @param {string} url - The URL to make an external request to.
  * @returns {Promise<string>} The response from the external API, or an error message if an error occurred.
  */
-async function makeWeeklySummary() {
+async function makeWeeklyBriefing() {
   try {
     // const response = await axios.get(url);
     // return response.data;
 
     // look for feedback on previous weekly summaries
 
-    // Look at all memories from this week (timestamp comparison)
+    // Look at all memories from this week (timestamp comparison in memories table)
+    // Turn this week's memories into a factlist/meta-summary
 
     // Look for any projects / project IDs / project slugs
 
