@@ -51,6 +51,7 @@ async function makeWeeklyBriefing() {
 
     // Look for any projects / project IDs / project slugs
     const projects = await identifyProjectsInMemories(processedMemories);
+    // We now have an array of projects and identifying information about them
 
     const projectMemoryMap = {};
 
@@ -61,7 +62,7 @@ async function makeWeeklyBriefing() {
       projectMemoryMap[project.label] = projectMemories;
     }
 
-
+    // Now we've built information about projects, more world context
 
     // Look for any todos that have been completed
     // List all todo changes from this week (added, edited, deleted)
@@ -100,12 +101,14 @@ async function makeWeeklyBriefing() {
     // Create new post in new conversation (if missive)
     // and/or
     // Create new thread in private channel (if Discord)
-    await communicateSummary(formattedSummary);
+    // TODO: For when we do long-running capabilities
+    // await communicateSummary(formattedSummary);
 
     // Save an archived copy of this weekly summary into our database (as special memory?)
     await archiveSummary(formattedSummary);
 
-    return "Weekly summary done!";
+    // return "Weekly summary done!";
+    return formattedSummary;
   } catch (error) {
     throw new Error(`Error occurred while making external request: ${error}`);
   }
@@ -281,7 +284,9 @@ async function readCalendar() {
     // TODO: Get this from supabase config table
     const calendarId = "your_calendar_id_here"; // Replace with actual calendar ID
     // const events = await listEventsThisWeek(calendarId);
-    const events = await listEventsBetweenDates(calendarId, dateFns.startOfWeek(new Date()), dateFns.endOfWeek(new Date()));
+    // const events = await listEventsBetweenDates(calendarId, dateFns.startOfWeek(new Date()), dateFns.endOfWeek(new Date()));
+    // pull 1 week behind and 1 week ahead
+    const events = await listEventsBetweenDates(calendarId, dateFns.subWeeks(new Date(), 1), dateFns.addWeeks(new Date(), 1));
 
     return events;
   } catch (error) {
@@ -419,12 +424,21 @@ async function formatSummary(summary) {
 async function communicateSummary(message, service) {
   // Placeholder for communication logic
   if(service === "discord") {
+    // Look up the ID of the weekly summary from the config
+
+    // then send a message to that channel
+
     // figure out the correct Discord channel to post to
     // post to discord
-  } else if (service === "missive") {
+  } else if (service === "api") {
+    // AKA Missive
+    // 
     // Create a new conversation with a title like "Weekly Summary - Week of [date]"
 
     // post to missive
+  } else if (service === "github") {
+    // figure out any relevant repos / issues
+    // and send response there 
   }
 }
 
