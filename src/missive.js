@@ -335,6 +335,54 @@ async function listSharedLabels() {
   return data;
 }
 
+async function createSharedLabel(name, organization) {
+  const url = `${apiFront}/shared_labels`;
+  const options = {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      shared_labels: [
+        {
+          name,
+          organization,
+          share_with_organization: true,
+        },
+      ],
+    }),
+  };
+
+  const response = await fetch(url, options);
+  return await response.json();
+}
+
+
+async function createPost(conversationSubject, username, usernameIcon, organization, add_shared_labels, notificationTitle, notificationBody) {
+  const responsePost = await fetch(`${apiFront}/posts/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      posts: {
+        conversation_subject: conversationSubject,
+        notification: {
+          title: notificationTitle,
+          body: notificationBody,
+        },
+        username,
+        username_icon: usernameIcon,
+        organization,
+        add_shared_labels,
+      },
+    }),
+  });
+  return await response.json();
+}
+
 /*
 GET /v1/users
 
@@ -375,5 +423,7 @@ module.exports = {
   listConversationMessages,
   getMessage,
   listSharedLabels,
+  createSharedLabel,
+  createPost,
   listUsers,
 };
