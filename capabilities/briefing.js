@@ -2,12 +2,15 @@ const dotenv = require("dotenv");
 const dateFns = require("date-fns");
 dotenv.config();
 const axios = require("axios");
-const { getRelevantMemories, getMemoriesBetweenDates, getMemoriesByString } = require("../src/remember");
-const logger = require("../src/logger")("briefing")
+const {
+  getRelevantMemories,
+  getMemoriesBetweenDates,
+  getMemoriesByString,
+} = require("../src/remember");
+const logger = require("../src/logger")("briefing");
 const { listEventsThisWeek, listEventsBetweenDates } = require("./calendar.js"); // Adjust the path as necessary
 
-
-const { destructureArgs, countTokens, createChatCompletion } = require("../helpers");
+const { destructureArgs, countTokens } = require("../helpers");
 
 async function handleCapabilityMethod(method, args) {
   const [arg1] = destructureArgs(args);
@@ -18,19 +21,16 @@ async function handleCapabilityMethod(method, args) {
     return await makeDailyBriefing();
   } else if (method === "makeProjectBriefing") {
     return await makeProjectBriefing(arg1);
-  }
-  
-  else {
+  } else {
     throw new Error(`Method ${method} not supported by this capability.`);
   }
 }
-
 
 /**
  * Makes a weekly briefing.
  * @returns {Promise<String>} A promise that resolves to a string indicating the status of the weekly briefing.
  * @example await makeWeeklyBriefing();
-*/
+ */
 async function makeWeeklyBriefing() {
   try {
     // look for feedback on previous weekly summaries
@@ -41,28 +41,36 @@ async function makeWeeklyBriefing() {
     // Turn this week's memories into a factlist/meta-summary
     const weekStartDate = dateFns.startOfWeek(new Date());
     const weekEndDate = dateFns.endOfWeek(new Date());
-    logger.info(`Looking for memories between ${weekStartDate} and ${weekEndDate}`);
-    
+    logger.info(
+      `Looking for memories between ${weekStartDate} and ${weekEndDate}`
+    );
+
     const weekMemories = await getMemoriesBetweenDates(
       weekStartDate,
       weekEndDate
     );
 
-    console.log('✨')
+    console.log("✨");
     // console.log(weekMemories)
 
-    logger.info('Below is the weekMemories returned from supabase')
+    logger.info("Below is the weekMemories returned from supabase");
     logger.info(`${JSON.stringify(weekMemories, null, 2)}`);
 
     // we want to remove all the embeddings from each memory
     // and turn into a giant string for tokenization
     const cleanMemories = weekMemories.map((memory) => {
-      return memory.value
-    })
+      return memory.value;
+    });
 
-    const cleanMemoryString = cleanMemories.join('\n');
+    const cleanMemoryString = cleanMemories.join("\n");
 
-    logger.info(`${countTokens(cleanMemoryString)} tokens for all memories this week from ${weekStartDate} to ${weekEndDate} and ${weekMemories.length} memories`);
+    logger.info(
+      `${countTokens(
+        cleanMemoryString
+      )} tokens for all memories this week from ${weekStartDate} to ${weekEndDate} and ${
+        weekMemories.length
+      } memories`
+    );
 
     // Look for any projects / project IDs / project slugs
     // const projects = await identifyProjectsInMemories(weekMemories);
@@ -70,7 +78,7 @@ async function makeWeeklyBriefing() {
 
     // const projectMemoryMap = {};
 
-    // loop through each project, and get the relevant memories for it 
+    // loop through each project, and get the relevant memories for it
     // for (const project of projects) {
     //   const projectMemories = getRelevantMemories(project.label, 5);
     //   logger.info(`Found ${countTokens(projectMemories)} tokens for project ${project.label} across ${projectMemories.length} memories`);
@@ -100,18 +108,17 @@ async function makeWeeklyBriefing() {
     // logger.info(`Generated ${projectSummaries.length} project summaries`);
 
     // // Generate meta-summary based on project summaries
-    // const metaSummary = await generateMetaSummary({
-    //   projectSummaries,
-    //   todoChanges,
-    //   calendarEntries,
-    // });
+    const metaSummary = await generateMetaSummary({
+      weekMemories,
+      // projectSummaries,
+      // todoChanges,
+      // calendarEntries,
+    });
 
     // Take fact-based summary and run it through weekly summary prompt / template
     // TODO: Prompt engineering around turning list of facts across org into well-summarized document
     // for final user-facing message
     // const formattedSummary = await formatSummary(metaSummary);
-
-    
 
     // Create new post in new conversation (if missive)
     // and/or
@@ -121,10 +128,13 @@ async function makeWeeklyBriefing() {
 
     // Save an archived copy of this weekly summary into our database (as special memory?)
     // await archiveSummary(formattedSummary);
-    const formattedSummary = 'This is a formatted summary';
+    // const formattedSummary = 'This is a formatted summary';
+    // return metaSummary
+    // console.log(metaSummary);
+    return metaSummary;
 
     // return "Weekly summary done!";
-    return formattedSummary;
+    // return formattedSummary;
   } catch (error) {
     throw new Error(`Error occurred while making external request: ${error}`);
   }
@@ -138,7 +148,9 @@ async function makeDailyBriefing() {
   try {
     return "Daily briefing done!";
   } catch (error) {
-    throw new Error(`Error occurred while trying to make daily briefing: ${error}`);
+    throw new Error(
+      `Error occurred while trying to make daily briefing: ${error}`
+    );
   }
 }
 
@@ -153,15 +165,24 @@ async function makeProjectBriefing(projectName) {
     const memoriesMentioningProject = await getMemoriesByString(projectName);
     const todoChanges = await listTodoChanges();
     const calendarEntries = await readCalendar();
-    const projectMemoryMap = await identifyProjectsInMemories(processedMemories);
+    const projectMemoryMap = await identifyProjectsInMemories(
+      processedMemories
+    );
 
-    const projectSummary = await generateProjectSummary({ project, projectMemoryMap, todoChanges, calendarEntries, memoriesMentioningProject });
+    const projectSummary = await generateProjectSummary({
+      project,
+      projectMemoryMap,
+      todoChanges,
+      calendarEntries,
+      memoriesMentioningProject,
+    });
     return projectSummary;
   } catch (error) {
-    throw new Error(`Error occurred while trying to make project briefing: ${error}`);
+    throw new Error(
+      `Error occurred while trying to make project briefing: ${error}`
+    );
   }
 }
-
 
 /**
  * Retrieves feedback on previous weekly summaries.
@@ -191,6 +212,7 @@ async function retrieveFeedback() {
  * @returns {Promise<Array>} A promise that resolves to an array of project identifiers.
  */
 async function identifyProjectsInMemories(processedMemories) {
+  const { createChatCompletion } = require("../helpers");
   // Placeholder for project identification logic
   // We are going to get a bunch of memory objects
   // First let's extract all the content
@@ -210,19 +232,20 @@ In the previous message I just sent, please identify any GitHub Repos, Issues, M
 
 - Discussion on Project 1: Missive#fkdf993ek9k93k
 - Discussion on Project 2: Missive#fkdf993ek9k93k      
-      `},
-      {
-        role: "assistant",
-        content: `- Discussion on GitHub repo: GitHub#coachartie
+      `,
+    },
+    {
+      role: "assistant",
+      content: `- Discussion on GitHub repo: GitHub#coachartie
 - Discussion on Coach Artie: Missive#23ij2329
 - Discussion on Coach Artie: Missive#sdijs
 - Discussion on Coach Artie: Discord#studio
-- Discussion on Project 2: Discord#studio`
-      },
-      {
-        role: "user",
-        content: `Perfect! Thank you!`
-      },
+- Discussion on Project 2: Discord#studio`,
+    },
+    {
+      role: "user",
+      content: `Perfect! Thank you!`,
+    },
     {
       role: "user",
       content: bigMemoryString,
@@ -234,14 +257,18 @@ In the previous message I just sent, please identify any GitHub Repos, Issues, M
 - Discussion on Project 1: Missive#fkdf993ek9k93k
 - Discussion on Project 2: Missive#fkdf993ek9k93k
 - Discussion on Project 3 in #studio: Discord#studio
-`
+`,
     },
-  ]
-  
+  ];
+
   // we can send the big string to an LLM and ask it to look for the "needles" of various IDs for conversations, repos, and projects
   // And just ask it to return it in a standard JSON format
   // that we can pass down to the next function
-  const response = await createChatCompletion(messages, ["missive", "repo", "project"]);
+  const response = await createChatCompletion(messages, [
+    "missive",
+    "repo",
+    "project",
+  ]);
 
   // Let's assume & hope the robot returns the format we requested:
   // A newline delimited list of each ID with a little label
@@ -255,13 +282,23 @@ In the previous message I just sent, please identify any GitHub Repos, Issues, M
     const [label, id] = line.split(": ");
     const [type, value] = id.split("#");
     return { label, type, value, id };
-  })
+  });
 
-  logger.info(`Parsed ID extraction from memories: ${JSON.stringify(parsedResponse, null, 2)}`);
+  logger.info(
+    `Parsed ID extraction from memories: ${JSON.stringify(
+      parsedResponse,
+      null,
+      2
+    )}`
+  );
 
   // make sure the parsedResponse has a length, if it doesn't, error out
   if (parsedResponse.length === 0) {
-    logger.error(`No project slugs or IDs found in the memories ${JSON.stringify(response)}`);
+    logger.error(
+      `No project slugs or IDs found in the memories ${JSON.stringify(
+        response
+      )}`
+    );
     return [];
   }
 
@@ -288,7 +325,6 @@ async function listTodoChanges() {
   return data;
 }
 
-
 /**
  * Reads the calendar for the current week.
  * @returns {Promise<Object>} A promise that resolves to an object containing calendar entries.
@@ -301,7 +337,11 @@ async function readCalendar() {
     // const events = await listEventsThisWeek(calendarId);
     // const events = await listEventsBetweenDates(calendarId, dateFns.startOfWeek(new Date()), dateFns.endOfWeek(new Date()));
     // pull 1 week behind and 1 week ahead
-    const events = await listEventsBetweenDates(calendarId, dateFns.subWeeks(new Date(), 1), dateFns.addWeeks(new Date(), 1));
+    const events = await listEventsBetweenDates(
+      calendarId,
+      dateFns.subWeeks(new Date(), 1),
+      dateFns.addWeeks(new Date(), 1)
+    );
 
     return events;
   } catch (error) {
@@ -319,9 +359,16 @@ async function readCalendar() {
  * @returns {Promise<Array>} A promise that resolves to an array of project summaries.
  * @example await generateProjectSummary({ project, projectMemoryMap, todoChanges, calendarEntries });
  */
-async function generateProjectSummary({ project, projectMemoryMap, todoChanges, calendarEntries, memoriesMentioningProject }) {
+async function generateProjectSummary({
+  project,
+  projectMemoryMap,
+  todoChanges,
+  calendarEntries,
+  memoriesMentioningProject,
+}) {
+  const { createChatCompletion } = require("../helpers");
   // Placeholder for project summary generation logic
-  let messages = []
+  let messages = [];
 
   if (project && project.label) {
     messages.push({
@@ -333,28 +380,38 @@ async function generateProjectSummary({ project, projectMemoryMap, todoChanges, 
   if (projectMemoryMap && projectMemoryMap[project.label]) {
     messages.push({
       role: "user",
-      content: `Here are the memories for project ${project.label}: ${projectMemoryMap[project.label].map((memory) => memory.content).join("\n")}`,
+      content: `Here are the memories for project ${
+        project.label
+      }: ${projectMemoryMap[project.label]
+        .map((memory) => memory.content)
+        .join("\n")}`,
     });
   }
 
   if (todoChanges && todoChanges.length > 0) {
     messages.push({
       role: "user",
-      content: `Here are the todo changes for project ${project.label}: ${todoChanges.map((todo) => todo.content).join("\n")}`,
+      content: `Here are the todo changes for project ${
+        project.label
+      }: ${todoChanges.map((todo) => todo.content).join("\n")}`,
     });
   }
 
   if (memoriesMentioningProject && memoriesMentioningProject.length > 0) {
     messages.push({
       role: "user",
-      content: `These memories reference the project: ${memoriesMentioningProject.map((memory) => memory.content).join("\n")}`,
+      content: `These memories reference the project: ${memoriesMentioningProject
+        .map((memory) => memory.content)
+        .join("\n")}`,
     });
   }
 
   if (calendarEntries && Object.keys(calendarEntries).length > 0) {
     messages.push({
       role: "user",
-      content: `Here are the calendar entries for project ${project.label}: ${JSON.stringify(calendarEntries)}`,
+      content: `Here are the calendar entries for project ${
+        project.label
+      }: ${JSON.stringify(calendarEntries)}`,
     });
   }
 
@@ -363,9 +420,13 @@ async function generateProjectSummary({ project, projectMemoryMap, todoChanges, 
     content: `Can you please generate a summary for project ${project.label}? Be as detailed as possible.`,
   });
 
-  const completion = createChatCompletion(messages)
+  const completion = await createChatCompletion(messages);
+  const aiResponse = completion.data.choices[0].message.content;
+  console.log("--------- aiResponse");
+  console.log(aiResponse);
+  console.log("--------- completion");
   console.log(completion);
-  return completion
+  return aiResponse;
 }
 
 /**
@@ -373,33 +434,53 @@ async function generateProjectSummary({ project, projectMemoryMap, todoChanges, 
  * @param {Array} projectSummaries - The project summaries to base the meta-summary on.
  * @returns {Promise<String>} A promise that resolves to a string containing the meta-summary.
  */
-async function generateMetaSummary({ projectSummaries, todoChanges, calendarEntries }) {
+async function generateMetaSummary({
+  weekMemories,
+  projectSummaries,
+  todoChanges,
+  calendarEntries,
+}) {
+  const { createChatCompletion } = require("../helpers");
+  logger.info(
+    `Generating meta-summary for weekMemories: ${weekMemories.length}`
+  );
   // make sure all the things exist
-  if(!projectSummaries || projectSummaries.length === 0) {
-    throw new Error("No project summaries found, can't generate a meta-summary");
-  }
 
-  if(!todoChanges || todoChanges.length === 0) {
-    throw new Error("No todo changes found, can't generate a meta-summary");
-  }
+  // log out the first memory
+  logger.info(`First memory: ${JSON.stringify(weekMemories[0])}`);
 
-  if(!calendarEntries || Object.keys(calendarEntries).length === 0) {
-    throw new Error("No calendar entries found, can't generate a meta-summary");
-  }
+  // if(!projectSummaries || projectSummaries.length === 0) {
+  //   throw new Error("No project summaries found, can't generate a meta-summary");
+  // }
 
-  
-  const metaSummaryCompletion = createChatCompletion([
+  // if(!todoChanges || todoChanges.length === 0) {
+  //   throw new Error("No todo changes found, can't generate a meta-summary");
+  // }
+
+  // if(!calendarEntries || Object.keys(calendarEntries).length === 0) {
+  //   throw new Error("No calendar entries found, can't generate a meta-summary");
+  // }
+
+  const metaSummaryCompletion = await createChatCompletion([
+    // {
+    //   role: "user",
+    //   content: `I want to generate a meta-summary based on the project summaries: ${projectSummaries.join("\n")}`,
+    // // },
+    // {
+    //   role: "user",
+    //   content: `Here are the todo changes: ${todoChanges.map((todo) => todo.content).join("\n")}`,
+    // },
+    // {
+    //   role: "user",
+    //   content: `Here are the calendar entries: ${JSON.stringify(calendarEntries)}`,
+    // },
     {
       role: "user",
-      content: `I want to generate a meta-summary based on the project summaries: ${projectSummaries.join("\n")}`,
-    },
-    {
-      role: "user",
-      content: `Here are the todo changes: ${todoChanges.map((todo) => todo.content).join("\n")}`,
-    },
-    {
-      role: "user",
-      content: `Here are the calendar entries: ${JSON.stringify(calendarEntries)}`,
+      content: `Here are all the memories from this week: ${weekMemories
+        .map((memory) => {
+          return `${memory.created_at}: ${memory.value}`;
+        })
+        .join("\n")}`,
     },
     {
       role: "user",
@@ -407,7 +488,10 @@ async function generateMetaSummary({ projectSummaries, todoChanges, calendarEntr
     },
   ]);
 
-  return metaSummaryCompletion;
+  // return metaSummaryCompletion;
+  // extract the response text from the openai chat completion
+  const responseText = metaSummaryCompletion.data.choices[0].message.content;
+  return responseText;
 }
 
 /**
@@ -416,7 +500,7 @@ async function generateMetaSummary({ projectSummaries, todoChanges, calendarEntr
  * @returns {Promise<String>} A promise that resolves to a string containing the formatted summary.
  */
 async function formatSummary(summary) {
-  const formattedCompletion = createChatCompletion([
+  const formattedCompletion = await createChatCompletion([
     {
       role: "user",
       content: `I want to format the summary: ${summary}`,
@@ -438,22 +522,19 @@ async function formatSummary(summary) {
  */
 async function communicateSummary(message, service) {
   // Placeholder for communication logic
-  if(service === "discord") {
+  if (service === "discord") {
     // Look up the ID of the weekly summary from the config
-
     // then send a message to that channel
-
     // figure out the correct Discord channel to post to
     // post to discord
   } else if (service === "api") {
     // AKA Missive
-    // 
+    //
     // Create a new conversation with a title like "Weekly Summary - Week of [date]"
-
     // post to missive
   } else if (service === "github") {
     // figure out any relevant repos / issues
-    // and send response there 
+    // and send response there
   }
 }
 

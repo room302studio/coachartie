@@ -1482,4 +1482,5 @@ module.exports = {
   getPromptsFromSupabase,
   getConfigFromSupabase,
   capabilityRegex,
+  createChatCompletion
 };
