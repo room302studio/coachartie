@@ -120,7 +120,6 @@ async function makeWeeklyBriefing() {
  */
 async function makeDailyBriefing() {
   try {
-    const 
     return "Daily briefing done!";
   } catch (error) {
     throw new Error(`Error occurred while trying to make daily briefing: ${error}`);
