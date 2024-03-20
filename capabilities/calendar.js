@@ -209,4 +209,7 @@ module.exports = {
         throw new Error(`Invalid method: ${method}`);
     }
   },
+  listEventsBetweenDates,
+  listEventsThisWeek,
+  listEventsPrevWeek,
 };

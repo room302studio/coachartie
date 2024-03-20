@@ -50,7 +50,7 @@ async function makeWeeklyBriefing() {
     logger.info(`${countTokens(weekMemories)} tokens for all memories this week from ${weekStartDate} to ${weekEndDate} and ${weekMemories.length} memories`);
 
     // Look for any projects / project IDs / project slugs
-    const projects = await identifyProjectsInMemories(processedMemories);
+    const projects = await identifyProjectsInMemories(weekMemories);
 
     const projectMemoryMap = {};
 
@@ -95,8 +95,6 @@ async function makeWeeklyBriefing() {
     // for final user-facing message
     const formattedSummary = await formatSummary(metaSummary);
 
-    
-
     // Create new post in new conversation (if missive)
     // and/or
     // Create new thread in private channel (if Discord)
@@ -117,7 +115,6 @@ async function makeWeeklyBriefing() {
  */
 async function makeDailyBriefing() {
   try {
-    const 
     return "Daily briefing done!";
   } catch (error) {
     throw new Error(`Error occurred while trying to make daily briefing: ${error}`);
@@ -176,6 +173,18 @@ async function identifyProjectsInMemories(processedMemories) {
   // Placeholder for project identification logic
   // We are going to get a bunch of memory objects
   // First let's extract all the content
+
+  // make sure processedMemories is an array of objects with a content property
+  if (!Array.isArray(processedMemories) || processedMemories.length === 0) {
+    logger.error(`No memories found to identify projects in`);
+    return [];
+  }
+
+  if (!processedMemories[0].content) {
+    logger.error(`No content found in memories to identify projects in`);
+    return [];
+  }
+
   const memoryContentOnly = processedMemories.map((memory) => memory.content);
 
   // Then we can look for any project slugs or project IDs in the content
