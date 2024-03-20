@@ -56,20 +56,33 @@ async function getMemoriesBetweenDates(startDate, endDate) {
     return [];
   }
 
+  logger.info(`Looking for memories between ${startDate} and ${endDate}`);
+  logger.info(`Looking for memories between ${startDate.toISOString()} and ${endDate.toISOString()}`);
+
   const { supabase } = require("../helpers");
-  const { data, error } = await supabase
+  const response = await supabase
     .from(MEMORIES_TABLE_NAME)
     .select("*")
     .gte("created_at", startDate.toISOString())
     .lte("created_at", endDate.toISOString())
     .order("created_at", { ascending: true });
 
+  // logger.info(`Response from getMemoriesBetweenDates: ${response}`);
+  // console.log(`🚀`)
+  // console.log(response);
+  // log the object keys on response
+  // logger.info(`Response keys: ${Object.keys(response)}`);
+  // logger.info(`Response keys: ${Object.keys(response.data)}`);
+
+
+  const { data, error } = response;
+
   if (error) {
     logger.info("Error fetching memories between dates:", error);
     return [];
   }
 
-  return data;
+  return data; 
 }
 
 /**
