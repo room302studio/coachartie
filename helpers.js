@@ -42,7 +42,7 @@ async function getPromptsFromSupabase() {
   const prompts = Object.fromEntries(
     promptKeys.map((_, i) => [promptKeys[i], promptValues[i]]),
   );
-  logger.info(`Prompts: ${JSON.stringify(prompts, null, 2)}`);
+  // logger.info(`Prompts: ${JSON.stringify(prompts, null, 2)}`);
   return prompts;
 }
 
@@ -62,7 +62,7 @@ async function getConfigFromSupabase() {
   const config = Object.fromEntries(
     configKeys.map((_, i) => [configKeys[i], configValues[i]]),
   );
-  logger.info(`Config: ${JSON.stringify(config, null, 2)}`);
+  // logger.info(`Config: ${JSON.stringify(config, null, 2)}`);
   return config;
 }
 

@@ -3,9 +3,6 @@ const fs = require("fs");
 const path = require("path");
 // Process the capability, passing capArgsString directly
 // const { processCapability } = require("./src/chain");
-const chain = require("./src/chain");
-console.log("CHAIN");
-console.log(chain);
 
 // console.log('--------')
 // console.log("processCapability", processCapability);
@@ -72,6 +69,11 @@ async function processInputAsMessage(input) {
   }
 
   const [, capSlug, capMethod, capArgsString] = capabilityMatch;
+
+  delete require.cache[require.resolve('./src/chain')];
+
+    // Re-require the chain module to get the latest version
+  const chain = require('./src/chain');
 
   // Initialize an empty messages array to simulate the message chain
   let messages = [];

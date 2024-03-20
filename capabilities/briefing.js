@@ -42,59 +42,74 @@ async function makeWeeklyBriefing() {
     const weekStartDate = dateFns.startOfWeek(new Date());
     const weekEndDate = dateFns.endOfWeek(new Date());
     logger.info(`Looking for memories between ${weekStartDate} and ${weekEndDate}`);
-    const weekMemories = getMemoriesBetweenDates(
+    
+    const weekMemories = await getMemoriesBetweenDates(
       weekStartDate,
       weekEndDate
     );
 
-    logger.info(`${countTokens(weekMemories)} tokens for all memories this week from ${weekStartDate} to ${weekEndDate} and ${weekMemories.length} memories`);
+    console.log('✨')
+    // console.log(weekMemories)
+
+    logger.info('Below is the weekMemories returned from supabase')
+    logger.info(`${JSON.stringify(weekMemories, null, 2)}`);
+
+    // we want to remove all the embeddings from each memory
+    // and turn into a giant string for tokenization
+    const cleanMemories = weekMemories.map((memory) => {
+      return memory.value
+    })
+
+    const cleanMemoryString = cleanMemories.join('\n');
+
+    logger.info(`${countTokens(cleanMemoryString)} tokens for all memories this week from ${weekStartDate} to ${weekEndDate} and ${weekMemories.length} memories`);
 
     // Look for any projects / project IDs / project slugs
-    const projects = await identifyProjectsInMemories(processedMemories);
+    // const projects = await identifyProjectsInMemories(weekMemories);
     // We now have an array of projects and identifying information about them
 
-    const projectMemoryMap = {};
+    // const projectMemoryMap = {};
 
     // loop through each project, and get the relevant memories for it 
-    for (const project of projects) {
-      const projectMemories = getRelevantMemories(project.label, 5);
-      logger.info(`Found ${countTokens(projectMemories)} tokens for project ${project.label} across ${projectMemories.length} memories`);
-      projectMemoryMap[project.label] = projectMemories;
-    }
+    // for (const project of projects) {
+    //   const projectMemories = getRelevantMemories(project.label, 5);
+    //   logger.info(`Found ${countTokens(projectMemories)} tokens for project ${project.label} across ${projectMemories.length} memories`);
+    //   projectMemoryMap[project.label] = projectMemories;
+    // }
 
     // Now we've built information about projects, more world context
 
     // Look for any todos that have been completed
     // List all todo changes from this week (added, edited, deleted)
-    const todoChanges = await listTodoChanges();
-    logger.info(`Found ${todoChanges.length} todo changes this week`);
+    // const todoChanges = await listTodoChanges();
+    // logger.info(`Found ${todoChanges.length} todo changes this week`);
 
     // Read the calendar for the previous + upcoming week
-    const calendarEntries = await readCalendar();
-    logger.info(`Found ${calendarEntries.length} calendar entries this week`);
+    // const calendarEntries = await readCalendar();
+    // logger.info(`Found ${calendarEntries.length} calendar entries this week`);
 
-    let projectSummaries = [];
-    for (const projectMemories of projects) {
-      const projectSummary = await generateProjectSummary({ projectMemories, projectMemoryMap, todoChanges, calendarEntries });
+    // let projectSummaries = [];
+    // for (const projectMemories of projects) {
+    //   const projectSummary = await generateProjectSummary({ projectMemories, projectMemoryMap, todoChanges, calendarEntries });
 
-      logger.info(`Generated project summary for ${projectMemories.label}: ${projectSummary}`);
+    //   logger.info(`Generated project summary for ${projectMemories.label}: ${projectSummary}`);
 
-      // add the project summary to the project summaries
-      projectSummaries.push(projectSummary);
-    }
-    logger.info(`Generated ${projectSummaries.length} project summaries`);
+    //   // add the project summary to the project summaries
+    //   projectSummaries.push(projectSummary);
+    // }
+    // logger.info(`Generated ${projectSummaries.length} project summaries`);
 
-    // Generate meta-summary based on project summaries
-    const metaSummary = await generateMetaSummary({
-      projectSummaries,
-      todoChanges,
-      calendarEntries,
-    });
+    // // Generate meta-summary based on project summaries
+    // const metaSummary = await generateMetaSummary({
+    //   projectSummaries,
+    //   todoChanges,
+    //   calendarEntries,
+    // });
 
     // Take fact-based summary and run it through weekly summary prompt / template
     // TODO: Prompt engineering around turning list of facts across org into well-summarized document
     // for final user-facing message
-    const formattedSummary = await formatSummary(metaSummary);
+    // const formattedSummary = await formatSummary(metaSummary);
 
     
 
@@ -105,7 +120,8 @@ async function makeWeeklyBriefing() {
     // await communicateSummary(formattedSummary);
 
     // Save an archived copy of this weekly summary into our database (as special memory?)
-    await archiveSummary(formattedSummary);
+    // await archiveSummary(formattedSummary);
+    const formattedSummary = 'This is a formatted summary';
 
     // return "Weekly summary done!";
     return formattedSummary;
