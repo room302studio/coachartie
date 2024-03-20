@@ -23,3 +23,33 @@ async function createPartner(name, aliases, shortname, startDate) {
   if (error) throw new Error(error.message);
   return `Successfully added partner: ${name}`;
 }
+
+
+// TODO: Add function documentation
+async function updatePartner(partnerId, newName, newAliases, newStartDate) {
+  // TODO: undefined value should has no effect
+  const { data, error } = await supabase
+    .from(PARTNER_TABLE_NAME)
+    .update({ name: newName, aliases: newAliases, start_date: newStartDate })
+    .match({ id: partnerId });
+
+  if (error) throw new Error(error.message);
+  return data[0];
+}
+
+
+module.exports = {
+  handleCapabilityMethod: async (method, args) => {
+    console.log(`⚡️ Calling capability method: supabasepartner.${method}`);
+
+    if (method === "createPartner") {
+      const [name, aliases, shortname, startDate] = destructureArgs(args);
+      return await createPartner(name, aliases, shortname, startDate);
+    } else if (method === "updatePartner") {
+      const [partnerId, newName, newAliases, newStartDate] = destructureArgs(args);
+      return await updatePartner(partnerId, newName, newAliases, newStartDate);
+    } else {
+      throw new Error(`Invalid method: ${method}`);
+    }
+  },
+};
