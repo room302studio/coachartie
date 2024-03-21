@@ -1219,6 +1219,21 @@ function destructureArgs(args) {
 }
 
 /**
+ * Parses a JSON string into a JavaScript object.
+ *
+ * This function takes a JSON string as an argument, replaces single quotes with double quotes to ensure valid JSON format,
+ * and then parses it into a JavaScript object.
+ * If the input string is not a valid JSON, parseJSONArgs() will throw an error.
+ *
+ * @param {string} arg - The JSON string to be parsed.
+ * @returns {Object} - The JavaScript object parsed from the input JSON string.
+ * @throws {SyntaxError} If the input string is not a valid JSON.
+ */
+function parseJSONArg(arg) {
+  return JSON.parse(arg.replace(/'/g, '"'));
+}
+
+/**
  * Generates a random hexagram number and returns its name.
  * @returns {string} The hexagram number and its corresponding name.
  */
@@ -1481,4 +1496,5 @@ module.exports = {
   getConfigFromSupabase,
   capabilityRegex,
   createChatCompletion,
+  parseJSONArg
 };

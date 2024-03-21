@@ -335,7 +335,7 @@ async function listSharedLabels() {
   return data;
 }
 
-async function createSharedLabel(name, organization) {
+async function createSharedLabel({ name, organization, shareWithOrganization }) {
   const url = `${apiFront}/shared_labels`;
   const options = {
     method: "POST",
@@ -344,13 +344,11 @@ async function createSharedLabel(name, organization) {
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      shared_labels: [
-        {
-          name,
-          organization,
-          share_with_organization: true,
-        },
-      ],
+      shared_labels: [{
+        name,
+        organization,
+        share_with_organization: shareWithOrganization,
+      }],
     }),
   };
 
@@ -359,8 +357,18 @@ async function createSharedLabel(name, organization) {
 }
 
 
-async function createPost(conversationSubject, username, usernameIcon, organization, add_shared_labels, notificationTitle, notificationBody) {
-  const responsePost = await fetch(`${apiFront}/posts/`, {
+async function createPost({
+  conversationSubject,
+  username,
+  usernameIcon,
+  organization,
+  addSharedLabels,
+  notificationTitle,
+  notificationBody,
+  text
+}) {
+  const url = `${apiFront}/posts`;
+  const options = {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -369,17 +377,19 @@ async function createPost(conversationSubject, username, usernameIcon, organizat
     body: JSON.stringify({
       posts: {
         conversation_subject: conversationSubject,
+        username,
+        organization,
+        username_icon: usernameIcon,
+        add_shared_labels: addSharedLabels,
+        text,
         notification: {
           title: notificationTitle,
           body: notificationBody,
         },
-        username,
-        username_icon: usernameIcon,
-        organization,
-        add_shared_labels,
       },
     }),
-  });
+  }
+  const response = await fetch(url, options);
   return await response.json();
 }
 
