@@ -288,6 +288,7 @@ ${m.value}`,
   // logger.info(`Attachment: ${JSON.stringify(attachment)}`);
 
   if (attachment) {
+    // TODO: Turn this into processMissiveAttachment method
     logger.info(`Attachment found in body: ${JSON.stringify(attachment)}`);
 
     const resourceId = attachment.id;
@@ -382,7 +383,8 @@ ${m.value}`,
     ...contextMessages.map((m) => {
       const obj = {
         role: "user",
-        content: m.value,
+        content: `#### Contextual message in conversation:
+${m.content}`,        
       };
 
       return obj;
@@ -471,7 +473,6 @@ ${m.value}`,
 }
 
 app.post("/api/missive-reply", async (req, res) => {
-  const { processMessageChain } = await require("./src/chain");
   const passphrase = process.env.WEBHOOK_PASSPHRASE; // Assuming PASSPHRASE is the environment variable name
   // Generate HMAC hash of the request body to verify authenticity
   const hmac = createHmac("sha256", passphrase);
