@@ -18,10 +18,11 @@ const {
 const logger = require("./src/logger.js")("helpers");
 const completionLogger = require("./src/logger.js")("completion");
 const { createClient } = require("@supabase/supabase-js");
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_API_KEY,
-);
+// const supabase = createClient(
+//   process.env.SUPABASE_URL,
+//   process.env.SUPABASE_API_KEY,
+// );
+const { supabase } = require('./src/supabaseclient.js');
 
 const capabilityRegex = /(\w+):(\w+)\(([^]*?)\)/; // captures newlines in the  third argument
 
@@ -42,7 +43,7 @@ async function getPromptsFromSupabase() {
   const prompts = Object.fromEntries(
     promptKeys.map((_, i) => [promptKeys[i], promptValues[i]]),
   );
-  logger.info(`Prompts: ${JSON.stringify(prompts, null, 2)}`);
+  // logger.info(`Prompts: ${JSON.stringify(prompts, null, 2)}`);
   return prompts;
 }
 
@@ -62,7 +63,7 @@ async function getConfigFromSupabase() {
   const config = Object.fromEntries(
     configKeys.map((_, i) => [configKeys[i], configValues[i]]),
   );
-  logger.info(`Config: ${JSON.stringify(config, null, 2)}`);
+  // logger.info(`Config: ${JSON.stringify(config, null, 2)}`);
   return config;
 }
 
@@ -1482,4 +1483,5 @@ module.exports = {
   getPromptsFromSupabase,
   getConfigFromSupabase,
   capabilityRegex,
+  createChatCompletion
 };

@@ -11,7 +11,7 @@ async function handleCapabilityMethod(method, args) {
     return askWolframAlpha(arg1);
   } else {
     throw new Error(
-      `Method ${method} not supported by Wolfram Alpha capability.`,
+      `Method ${method} not supported by Wolfram Alpha capability.`
     );
   }
 }

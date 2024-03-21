@@ -62,7 +62,7 @@ module.exports = (async () => {
     messages,
     { username, channel, guild },
     retryCount = 0,
-    capabilityCallCount = 0,
+    capabilityCallCount = 0
   ) {
     const chainId = getUniqueEmoji();
 
@@ -93,8 +93,8 @@ module.exports = (async () => {
         logger.info(
           `${chainId} - Capability Call ${capabilityCallIndex} started: ${lastMessage.content.slice(
             0,
-            2400,
-          )}...`,
+            2400
+          )}...`
         );
 
         // process the last message in the chain
@@ -102,7 +102,7 @@ module.exports = (async () => {
           const updatedMessages = await processMessage(
             messages,
             lastMessage.content,
-            { username, channel, guild },
+            { username, channel, guild }
           );
           messages = updatedMessages;
           lastMessage = messages[messages.length - 1];
@@ -114,15 +114,15 @@ module.exports = (async () => {
 
           chainReport += `${chainId} - Capability Call ${capabilityCallIndex}: ${lastMessage.content.slice(
             0,
-            80,
+            80
           )}...\n`;
 
           logger.info(
-            `${chainId} - Capability Call ${capabilityCallIndex} completed`,
+            `${chainId} - Capability Call ${capabilityCallIndex} completed`
           );
         } catch (error) {
           logger.info(
-            `Process message chain: error processing message: ${error}`,
+            `Process message chain: error processing message: ${error}`
           );
         }
       } while (
@@ -138,18 +138,18 @@ module.exports = (async () => {
           `Error processing message chain, retrying (${
             retryCount + 1
           }/${MAX_RETRY_COUNT})`,
-          error,
+          error
         );
-        return processMessageChain(
+        return await processMessageChain(
           messages,
           { username, channel, guild },
           retryCount + 1,
-          capabilityCallCount,
+          capabilityCallCount
         );
       } else {
         logger.info(
           `${chainId} - Error processing message chain, maximum retries exceeded`,
-          error,
+          error
         );
         throw error;
       }
@@ -175,7 +175,7 @@ module.exports = (async () => {
         capSlug,
         capMethod,
         capArgs,
-        messages,
+        messages
       );
     } catch (e) {
       capabilityResponse = `${capSlug}:${capMethod} failed with error: ${e}`;
@@ -214,7 +214,7 @@ module.exports = (async () => {
       capSlug,
       capMethod,
       capArgs,
-      messages,
+      messages
     );
 
     // if (capabilityResponse.image) {
@@ -238,7 +238,9 @@ module.exports = (async () => {
       message.image = capabilityResponse.image;
     }
 
-    messages.push(message);
+    // messages.push(message);
+    // actually lets add it to the front of the array so that it's the first thing the user sees
+    messages.unshift(message);
 
     return messages;
   }
@@ -256,7 +258,7 @@ module.exports = (async () => {
   async function processMessage(
     messages,
     lastMessage,
-    { username = "", channel = "", guild = "" },
+    { username = "", channel = "", guild = "" }
   ) {
     logger.info(`Processing Message in chain.js`);
 
@@ -269,6 +271,7 @@ module.exports = (async () => {
         messages = await processCapability(messages, capabilityMatch);
 
         const lastMessage = messages[messages.length - 1];
+        const lastUserMessage = messages.find((m) => m.role === "user").content;
 
         // check if the lastMessage has an image
         if (lastMessage.image) {
@@ -278,12 +281,12 @@ module.exports = (async () => {
 
         // store a memory of the capability call
         await generateAndStoreCompletion(
-          lastMessage,
-          messages[messages.length - 1].content,          
+          lastUserMessage,
+          messages[messages.length - 1].content,
           { username, channel, guild },
           messages,
           true, // mark as capability
-          capabilityMatch[1],
+          capabilityMatch[1]
         );
       } catch (error) {
         logger.info(`Error processing capability: ${error}`);
@@ -309,7 +312,6 @@ module.exports = (async () => {
       .reverse()
       .find((m) => m.role === "user");
 
-
     const prompt = lastUserMessage.content;
 
     storeUserMessage({ username, channel, guild }, prompt);
@@ -323,7 +325,7 @@ module.exports = (async () => {
       {
         temperature,
         frequency_penalty,
-      },
+      }
     );
 
     messages.push({
@@ -335,7 +337,7 @@ module.exports = (async () => {
       prompt,
       aiResponse,
       { username, channel, guild },
-      messages,
+      messages
     );
 
     return messages;

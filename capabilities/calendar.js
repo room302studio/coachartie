@@ -4,7 +4,7 @@ const logger = require("../src/logger.js")("capabilities");
 const dotenv = require("dotenv");
 dotenv.config();
 
-const keyFile = `./${process.env.GOOGLE_KEY_PATH}`
+const keyFile = `./${process.env.GOOGLE_KEY_PATH}`;
 const scopes = [
   "https://www.googleapis.com/auth/drive",
   "https://www.googleapis.com/auth/calendar",
@@ -51,7 +51,7 @@ async function listAllCalendars() {
     }
 
     const calendars = response.data.items.map(
-      ({ summary, id }) => `${summary} (${id})`,
+      ({ summary, id }) => `${summary} (${id})`
     );
     return calendars;
   } catch (error) {
@@ -114,7 +114,7 @@ async function createEvent(calendarId, event) {
           value: "room302.studio",
         },
       },
-    }),
+    })
   );
 
   await batch.execute();
@@ -143,6 +143,47 @@ async function listEventsThisWeek(calendarId) {
   return JSON.stringify(response);
 }
 
+// TODO: listEventsPrevWeek
+/**
+ * Retrieves a list of events occurring within the previous week for the specified calendar.
+ * @param {string} calendarId - The ID of the calendar to retrieve events from.
+ * @returns {Promise<object>} - A promise that resolves to the list of events.
+ */
+async function listEventsPrevWeek(calendarId) {
+  const calendar = await getCalendarInstance();
+  const now = new Date();
+  const prevWeek = new Date();
+  prevWeek.setDate(now.getDate() - 7);
+
+  const response = await calendar.events.list({
+    calendarId,
+    timeMin: prevWeek.toISOString(),
+    timeMax: now.toISOString(),
+    singleEvents: true,
+    orderBy: "startTime",
+  });
+  return JSON.stringify(response);
+}
+
+/**
+  * Retrieves a list of events occurring between the specified dates for the specified calendar.
+  * @param {string} calendarId - The ID of the calendar to retrieve events from.
+  * @param {Date} startDate - The start date of the range.
+  * @param {Date} endDate - The end date of the range.
+  * @returns {Promise<object>} - A promise that resolves to the list of events.
+ */
+async function listEventsBetweenDates(calendarId, startDate, endDate) {
+  const calendar = await getCalendarInstance();
+  const response = await calendar.events.list({
+    calendarId,
+    timeMin: startDate.toISOString(),
+    timeMax: endDate.toISOString(),
+    singleEvents: true,
+    orderBy: "startTime",
+  });
+  return JSON.stringify(response);
+}
+
 module.exports = {
   handleCapabilityMethod: async (method, args) => {
     const [arg1, arg2, arg3] = destructureArgs(args);
@@ -160,8 +201,15 @@ module.exports = {
         return await createEvent(arg1, arg2);
       case "listEventsThisWeek":
         return await listEventsThisWeek(arg1);
+      case "listEventsPrevWeek":
+        return await listEventsPrevWeek(arg1);
+      case "listEventsBetweenDates":
+        return await listEventsBetweenDates(arg1, arg2, arg3);
       default:
         throw new Error(`Invalid method: ${method}`);
     }
   },
+  listEventsBetweenDates,
+  listEventsThisWeek,
+  listEventsPrevWeek,
 };
