@@ -19,7 +19,7 @@ for (const file of files) {
   // if the file is _template.js ignore it
   if (capabilityName === "_template") continue;
 
-  console.log(`Generating manifest for ${capabilityName}`);
+  logger.info(`Generating manifest for ${capabilityName}`);
 
   // Build the documentation for the capability file
   import("documentation").then((documentation) => {
@@ -44,7 +44,7 @@ for (const file of files) {
         // Write the manifest to a file
         fs.writeFileSync(
           "capabilities/_manifest.json",
-          JSON.stringify(manifest, null, 2)
+          JSON.stringify(manifest, null, 2),
         );
       })
       .catch((err) => {
@@ -109,7 +109,7 @@ function parseJSDoc(jsDocData, moduleName) {
 
       if (func.returns?.[0]?.description?.children) {
         funcInfo.description += ` Returns: ${getTextFromChildren(
-          func.returns[0].description.children
+          func.returns[0].description.children,
         )}`;
       }
     }

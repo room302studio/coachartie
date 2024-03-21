@@ -203,7 +203,7 @@ ${jsonToMarkdownList(latestMessageMinusBody)}`,
   logger.info(
     `${conversationMessages.length} messages found in conversation ${conversationId}`,
   );
-  // logger.info(`Conversation messages: ${JSON.stringify(conversationMessages)}`);  
+  // logger.info(`Conversation messages: ${JSON.stringify(conversationMessages)}`);
 
   // add the previous conversationMessages to the formattedMessages array
   formattedMessages.push(
@@ -246,7 +246,7 @@ ${jsonToMarkdownList(m)}`,
                 role: "user",
                 // content: m.value,
                 content: `### Memory of resource ${resourceId}:
-${m.value}`,                
+${m.value}`,
               };
               // logger.info(`Adding message to formattedMessages: ${JSON.stringify(msg)}`);
               return msg;
@@ -384,7 +384,7 @@ ${m.value}`,
       const obj = {
         role: "user",
         content: `#### Contextual message in conversation:
-${m.content}`,        
+${m.content}`,
       };
 
       return obj;
@@ -414,7 +414,6 @@ ${m.content}`,
     }
   }
 
-
   let processedMessage;
 
   try {
@@ -443,8 +442,6 @@ ${m.content}`,
 
   const lastMessage = processedMessage[processedMessage.length - 1];
 
-  console.log("lastMessage", lastMessage);
-
   // Now we need to POST the response back to the Missive API using the conversationId
   const responsePost = await fetch(`${apiFront}/posts/`, {
     method: "POST",
@@ -458,13 +455,12 @@ ${m.content}`,
         notification: {
           title: BOT_NAME,
           // body: lastMessage.content,
-          body: '',
+          body: "",
         },
         // text: lastMessage.content,
         username: BOT_NAME,
         markdown: lastMessage.content,
       },
-      
     }),
   });
 

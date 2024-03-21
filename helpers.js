@@ -22,7 +22,7 @@ const { createClient } = require("@supabase/supabase-js");
 //   process.env.SUPABASE_URL,
 //   process.env.SUPABASE_API_KEY,
 // );
-const { supabase } = require('./src/supabaseclient.js');
+const { supabase } = require("./src/supabaseclient.js");
 
 const capabilityRegex = /(\w+):(\w+)\(([^]*?)\)/; // captures newlines in the  third argument
 
@@ -876,7 +876,7 @@ async function listTodos() {
 
 async function addTodosToMessages(messages) {
   const todos = await listTodos();
-  console.log("returning todos", todos);
+  logger.info(`🔧 Adding todos to messages: ${todos.length}`);
   const todoString = JSON.stringify(todos);
   messages.push({
     role: "system",
@@ -1059,9 +1059,6 @@ async function addRelevantMemories(username, messages) {
     logger.info(
       `🔧 Retrieving ${relevantMemoryCount} relevant memories for ${queryString}`,
     );
-
-    console.log('ANOTHER RELEVANT MEMORIES')
-    console.log(JSON.stringify(relevantMemories, null, 2))
 
     if (relevantMemories.length === 0) {
       relevantMemories.forEach((memory) => {
@@ -1483,5 +1480,5 @@ module.exports = {
   getPromptsFromSupabase,
   getConfigFromSupabase,
   capabilityRegex,
-  createChatCompletion
+  createChatCompletion,
 };

@@ -410,15 +410,15 @@ async function fetchAndSummarizeUrl(url, userPrompt = "") {
       chunkResponses = JSON.parse(
         fs.readFileSync(
           path.join(__dirname, `../cache/${cacheKey}.json`),
-          "utf8"
-        )
+          "utf8",
+        ),
       );
     } else {
       chunkResponses = await processChunks(chunks, data);
       // Cache the chunks
       fs.writeFileSync(
         path.join(__dirname, `../cache/${cacheKey}.json`),
-        JSON.stringify(chunkResponses)
+        JSON.stringify(chunkResponses),
       );
     }
 
