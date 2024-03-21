@@ -18,10 +18,11 @@ const {
 const logger = require("./src/logger.js")("helpers");
 const completionLogger = require("./src/logger.js")("completion");
 const { createClient } = require("@supabase/supabase-js");
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_API_KEY,
-);
+// const supabase = createClient(
+//   process.env.SUPABASE_URL,
+//   process.env.SUPABASE_API_KEY,
+// );
+const { supabase } = require('./src/supabaseclient.js');
 
 const capabilityRegex = /(\w+):(\w+)\(([^]*?)\)/; // captures newlines in the  third argument
 
