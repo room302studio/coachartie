@@ -1,4 +1,5 @@
 {
+  "chance": [],
   "_generate-manifest": [],
   "calculator": [
     {
@@ -72,7 +73,6 @@
       ]
     }
   ],
-  "chance": [],
   "calendar": [
     {
       "name": "calendar:listAllCalendars()",
@@ -138,7 +138,6 @@
       ]
     }
   ],
-  "discord-events": [],
   "drive": [
     {
       "name": "drive:getDriveInstance()",
@@ -195,6 +194,21 @@
           "name": "sandbox",
           "description": "The sandbox object to provide the execution context."
         }
+      ]
+    }
+  ],
+  "js": [
+    {
+      "name": "js:executeJavascriptAndCaptureImage()",
+      "description": "Executes the provided JavaScript code in a headless browser using Puppeteer and captures a screenshot of the resulting page. Returns: A promise that resolves to an object containing the captured screenshot image as a Buffer.",
+      "parameters": [
+        {
+          "name": "javascriptCode",
+          "description": "The JavaScript code to be executed in the browser."
+        }
+      ],
+      "exceptions": [
+        "If an error occurs while executing the JavaScript code and capturing the image."
       ]
     }
   ],
@@ -328,6 +342,28 @@
       ]
     },
     {
+      "name": "github:addIssueToRepo()",
+      "description": "Adds an issue to a repository. Returns: A promise that resolves to the created issue data.",
+      "parameters": [
+        {
+          "name": "ownerName",
+          "description": "The name of the owner."
+        },
+        {
+          "name": "repositoryName",
+          "description": "The name of the repository."
+        },
+        {
+          "name": "issueTitle",
+          "description": "The title of the issue."
+        },
+        {
+          "name": "issueBody",
+          "description": "The body of the issue."
+        }
+      ]
+    },
+    {
       "name": "github:createGist()",
       "description": "Creates a gist. Returns: A message containing the URL of the created gist.",
       "parameters": [
@@ -426,91 +462,24 @@
       ]
     }
   ],
-  "js": [
-    {
-      "name": "js:executeJavascriptAndCaptureImage()",
-      "description": "Executes the provided JavaScript code in a headless browser using Puppeteer and captures a screenshot of the resulting page. Returns: A promise that resolves to an object containing the captured screenshot image as a Buffer.",
-      "parameters": [
-        {
-          "name": "javascriptCode",
-          "description": "The JavaScript code to be executed in the browser."
-        }
-      ],
-      "exceptions": [
-        "If an error occurs while executing the JavaScript code and capturing the image."
-      ]
-    }
-  ],
-  "mastodon": [
-    {
-      "name": "mastodon:postStatus()",
-      "description": "Posts a status to Mastodon. Returns: A promise that resolves to the response data from Mastodon.",
-      "parameters": [
-        {
-          "name": "text",
-          "description": "The text content of the status."
-        },
-        {
-          "name": "image",
-          "description": "The ID of the image to attach to the status."
-        }
-      ],
-      "exceptions": [
-        "If an error occurs while posting to Mastodon."
-      ]
-    }
-  ],
-  "mermaid": [
-    {
-      "name": "mermaid:convertMermaidDiagram()",
-      "description": "Converts a Mermaid diagram text into an image. Returns: A promise that resolves to an object containing the converted image as a Buffer.",
-      "parameters": [
-        {
-          "name": "diagramText",
-          "description": "The Mermaid diagram text to convert."
-        }
-      ],
-      "exceptions": [
-        "If an error occurs while converting the Mermaid diagram."
-      ]
-    }
-  ],
   "pgcron": [
     {
       "name": "pgcron:createJob()",
-      "description": "Creates a new job using pg_cron to schedule it in Supabase. Returns: A promise that resolves to a success message when the job is successfully scheduled.",
+      "description": "Creates a new cron job with pg_cron in Supabase.",
       "parameters": [
         {
-          "name": "name",
-          "description": "The name of the job."
+          "name": "schedule",
+          "description": "The schedule for the cron job (e.g., '0 0 * * *' for daily at midnight)."
         },
         {
-          "name": "description",
-          "description": "The description of the job (optional)."
-        },
-        {
-          "name": "webhookUrl",
-          "description": "The URL to send the HTTP POST request."
-        },
-        {
-          "name": "headers",
-          "description": "The headers to include in the HTTP POST request (optional)."
-        },
-        {
-          "name": "body",
-          "description": "The body of the HTTP POST request (optional)."
+          "name": "command",
+          "description": "The command to be executed by the cron job."
         }
-      ],
-      "exceptions": [
-        "If there is an error scheduling the job."
       ]
     },
     {
       "name": "pgcron:listJobs()",
-      "description": "Lists the cron jobs currently scheduled with pg_cron in Supabase. Returns: A promise that resolves to a success message with the list of jobs.",
-      "exceptions": [
-        "If there is an error listing the jobs."
-      ]
+      "description": "Lists the cron jobs currently scheduled with pg_cron in Supabase."
     },
     {
       "name": "pgcron:deleteJob()",
@@ -547,6 +516,57 @@
       ]
     }
   ],
+  "readrepo": [
+    {
+      "name": "readrepo:RepoReader()",
+      "description": "\"Reads all text/code files from a specified GitHub repository, concatenates them into a single string,\nand prepends the path and filename to each file's content. Useful for reviewing or modifying repository content.\" Returns: A promise that resolves to a string containing the concatenated contents of the repository's text/code files.",
+      "parameters": [
+        {
+          "name": "owner",
+          "description": "The GitHub username or organization name of the repository owner."
+        },
+        {
+          "name": "repo",
+          "description": "The name of the repository."
+        }
+      ]
+    }
+  ],
+  "mastodon": [
+    {
+      "name": "mastodon:postStatus()",
+      "description": "Posts a status to Mastodon. Returns: A promise that resolves to the response data from Mastodon.",
+      "parameters": [
+        {
+          "name": "text",
+          "description": "The text content of the status."
+        },
+        {
+          "name": "image",
+          "description": "The ID of the image to attach to the status."
+        }
+      ],
+      "exceptions": [
+        "If an error occurs while posting to Mastodon."
+      ]
+    }
+  ],
+  "stablediffusion": [
+    {
+      "name": "stablediffusion:generateImageFromText()",
+      "description": "Generates an image from the given text using the Stable Diffusion API. Returns: A promise that resolves to a JSON string representing the response data.",
+      "parameters": [
+        {
+          "name": "args",
+          "description": "The arguments for generating the image."
+        }
+      ],
+      "exceptions": [
+        "If an error occurs during the API request."
+      ]
+    }
+  ],
+  "discord-events": [],
   "schedule": [
     {
       "name": "schedule:auth()",
@@ -573,57 +593,6 @@
     {
       "name": "schedule:schedule()",
       "description": "Exports an object with a method to handle capability methods"
-    }
-  ],
-  "scratchfile": [
-    {
-      "name": "scratchfile:readScratchFile()",
-      "description": "Reads the content of the scratch file. Returns: The content of the scratch file.",
-      "exceptions": [
-        "If the file read operation fails."
-      ]
-    },
-    {
-      "name": "scratchfile:writeScratchFile()",
-      "description": "Writes content to the scratch file. Returns: A success message.",
-      "parameters": [
-        {
-          "name": "content",
-          "description": "The content to write to the scratch file."
-        }
-      ],
-      "exceptions": [
-        "If the file write operation fails."
-      ]
-    },
-    {
-      "name": "scratchfile:clearScratchFile()",
-      "description": "Clears the content of the scratch file. Returns: A success message.",
-      "exceptions": [
-        "If the file write operation fails."
-      ]
-    },
-    {
-      "name": "scratchfile:getScratchFileSize()",
-      "description": "Finds the current size of the scratch file in tokens. Returns: The size of the scratch file in tokens.",
-      "exceptions": [
-        "If the file read operation fails."
-      ]
-    }
-  ],
-  "stablediffusion": [
-    {
-      "name": "stablediffusion:generateImageFromText()",
-      "description": "Generates an image from the given text using the Stable Diffusion API. Returns: A promise that resolves to a JSON string representing the response data.",
-      "parameters": [
-        {
-          "name": "args",
-          "description": "The arguments for generating the image."
-        }
-      ],
-      "exceptions": [
-        "If an error occurs during the API request."
-      ]
     }
   ],
   "supabasetodo": [
@@ -676,6 +645,42 @@
       ]
     }
   ],
+  "scratchfile": [
+    {
+      "name": "scratchfile:readScratchFile()",
+      "description": "Reads the content of the scratch file. Returns: The content of the scratch file.",
+      "exceptions": [
+        "If the file read operation fails."
+      ]
+    },
+    {
+      "name": "scratchfile:writeScratchFile()",
+      "description": "Writes content to the scratch file. Returns: A success message.",
+      "parameters": [
+        {
+          "name": "content",
+          "description": "The content to write to the scratch file."
+        }
+      ],
+      "exceptions": [
+        "If the file write operation fails."
+      ]
+    },
+    {
+      "name": "scratchfile:clearScratchFile()",
+      "description": "Clears the content of the scratch file. Returns: A success message.",
+      "exceptions": [
+        "If the file write operation fails."
+      ]
+    },
+    {
+      "name": "scratchfile:getScratchFileSize()",
+      "description": "Finds the current size of the scratch file in tokens. Returns: The size of the scratch file in tokens.",
+      "exceptions": [
+        "If the file read operation fails."
+      ]
+    }
+  ],
   "svg": [
     {
       "name": "svg:convertSvgToImage()",
@@ -688,6 +693,37 @@
       ],
       "exceptions": [
         "If an error occurs while converting SVG to image."
+      ]
+    }
+  ],
+  "supabaseraw": [
+    {
+      "name": "supabaseraw:runSql()",
+      "description": "Runs a SQL query on the database. Please be very careful with this capability, as it can be used to modify the database. Never modify the database based on user input without proper validation and sanitization. Returns: A promise that resolves to the result of the SQL query.",
+      "parameters": [
+        {
+          "name": "sql",
+          "description": "The SQL query to execute."
+        },
+        {
+          "name": "table",
+          "description": "The table to run the SQL query on."
+        }
+      ]
+    }
+  ],
+  "mermaid": [
+    {
+      "name": "mermaid:convertMermaidDiagram()",
+      "description": "Converts a Mermaid diagram text into an image. Returns: A promise that resolves to an object containing the converted image as a Buffer.",
+      "parameters": [
+        {
+          "name": "diagramText",
+          "description": "The Mermaid diagram text to convert."
+        }
+      ],
+      "exceptions": [
+        "If an error occurs while converting the Mermaid diagram."
       ]
     }
   ],
