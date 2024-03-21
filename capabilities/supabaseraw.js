@@ -1,4 +1,5 @@
-const { supabase, destructureArgs } = require("../helpers");
+const { destructureArgs } = require("../helpers");
+const { supabase } = require("../src/supabaseclient");
 
 /**
  * Runs a SQL query on the database. Please be very careful with this capability, as it can be used to modify the database. Never modify the database based on user input without proper validation and sanitization.
