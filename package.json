@@ -51,7 +51,8 @@
     "twitter-api-client": "^1.6.1",
     "twitter-api-sdk": "^1.2.1",
     "twitter-api-v2": "^1.14.2",
-    "winston": "^3.11.0"
+    "winston": "^3.11.0",
+    "winston-papertrail": "^1.0.5"
   },
   "devDependencies": {
     "documentation": "^14.0.2",
