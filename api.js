@@ -141,7 +141,7 @@ async function processMissiveRequest(body) {
   // the conversationID is the ID of the conversation that the webhook was triggered from and is used to look up other messages in the conversation outside of the webhook
   const conversationId = body.conversation.id;
 
-  logger.info(`Body: ${JSON.stringify(body)}`);
+  // logger.info(`Body: ${JSON.stringify(body)}`);
 
   // the user message might be in body.comment.message
   // or it might be in body.comment.body
@@ -158,15 +158,15 @@ async function processMissiveRequest(body) {
   // Take a look at the latest message in the conversation
   const latestMessageId = body.latest_message?.id;
   const latestMessageAttachments = body?.latest_message?.attachments;
-  logger.info(`Latest message ID: ${latestMessageId}`);
-  logger.info(
-    `Latest message attachments: ${JSON.stringify(latestMessageAttachments)}`,
-  );
+  // logger.info(`Latest message ID: ${latestMessageId}`);
+  // logger.info(
+  //   `Latest message attachments: ${JSON.stringify(latestMessageAttachments)}`,
+  // );
 
   // we also need to check if there is an attachment, and if there is, we need to process it and turn it into text
 
   const fullLatestMessage = await getMessage(latestMessageId);
-  logger.info(`Full latest message: ${JSON.stringify(fullLatestMessage)}`);
+  // logger.info(`Full latest message: ${JSON.stringify(fullLatestMessage)}`);
 
   // we need to get the HTML email body out of the message, sanitize it a bit to save on tokens, and add that as a system message
   const latestMessageHtmlBody = fullLatestMessage?.messages?.body;
@@ -178,12 +178,13 @@ async function processMissiveRequest(body) {
     .replace(/<script([\s\S]*?)<\/script>/gi, "")
     .replace(/<[^>]+>/gi, "");
 
-  logger.info(`Latest message text body: ${latestMessageTextBody}`);
+  // logger.info(`Latest message text body: ${latestMessageTextBody}`);
 
   // now lets add that as a system message
   formattedMessages.push({
-    role: "system",
-    content: `Latest message in conversation: ${latestMessageTextBody}`,
+    role: "user",
+    content: `# Latest message in Missive conversation: 
+${latestMessageTextBody}`,
   });
 
   // we can also add the JSON of the fullLatestMessage MINUS the body
@@ -193,28 +194,24 @@ async function processMissiveRequest(body) {
 
   formattedMessages.push({
     role: "system",
-    content: `Latest message in conversation: ${jsonToMarkdownList(
-      latestMessageMinusBody,
-    )}`,
+    content: `## Latest message in conversation: 
+${jsonToMarkdownList(latestMessageMinusBody)}`,
   });
 
   logger.info(`Looking for messages in conversation ${conversationId}`);
   const conversationMessages = await listMessages(conversationId);
-
   logger.info(
     `${conversationMessages.length} messages found in conversation ${conversationId}`,
   );
-  logger.info(`Conversation messages: ${JSON.stringify(conversationMessages)}`);
-  logger.info(
-    `${conversationMessages.length} messages found in conversation ${conversationId}`,
-  );
+  // logger.info(`Conversation messages: ${JSON.stringify(conversationMessages)}`);  
 
   // add the previous conversationMessages to the formattedMessages array
   formattedMessages.push(
     ...conversationMessages.map((m) => {
       return {
-        role: "system",
-        content: jsonToMarkdownList(m),
+        role: "user",
+        content: `### Previous message in conversation:
+${jsonToMarkdownList(m)}`,
       };
     }),
   );
@@ -246,8 +243,10 @@ async function processMissiveRequest(body) {
           formattedMessages.push(
             ...resourceMemories.map((m) => {
               const msg = {
-                role: "system",
-                content: m.value,
+                role: "user",
+                // content: m.value,
+                content: `### Memory of resource ${resourceId}:
+${m.value}`,                
               };
               // logger.info(`Adding message to formattedMessages: ${JSON.stringify(msg)}`);
               return msg;
@@ -342,7 +341,7 @@ async function processMissiveRequest(body) {
         formattedMessages.push(
           ...resourceMemories.map((m) => {
             return {
-              role: "system",
+              role: "user",
               content: m.value,
             };
           }),
@@ -361,7 +360,7 @@ async function processMissiveRequest(body) {
       formattedMessages.push(
         ...resourceMemories.map((m) => {
           return {
-            role: "system",
+            role: "user",
             content: m.value,
           };
         }),
@@ -382,7 +381,7 @@ async function processMissiveRequest(body) {
   formattedMessages.push(
     ...contextMessages.map((m) => {
       const obj = {
-        role: "system",
+        role: "user",
         content: m.value,
       };
 
