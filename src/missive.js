@@ -365,7 +365,9 @@ async function createPost({
   addSharedLabels,
   notificationTitle,
   notificationBody,
-  text
+  text,
+  markdown,
+  conversation
 }) {
   const url = `${apiFront}/posts`;
   const options = {
@@ -382,6 +384,8 @@ async function createPost({
         username_icon: usernameIcon,
         add_shared_labels: addSharedLabels,
         text,
+        markdown,
+        conversation,
         notification: {
           title: notificationTitle,
           body: notificationBody,
@@ -429,11 +433,5 @@ async function listUsers() {
 }
 
 module.exports = {
-  listConversations,
-  listConversationMessages,
-  getMessage,
-  listSharedLabels,
-  createSharedLabel,
-  createPost,
-  listUsers,
+  listConversations, listConversationMessages, getMessage, listSharedLabels, createSharedLabel, createPost, listUsers,
 };

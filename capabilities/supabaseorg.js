@@ -13,7 +13,22 @@ const ORG_TABLE_NAME = "orgs";
 const EMAIL_TABLE_NAME = "emails";
 const ORG_EMAIL_TABLE_NAME = "org_emails";
 
-// TODO: Add function documentation
+/**
+ * Creates a new organization, label and post
+ *
+ * @param {string} name - The name of the organization.
+ * @param {string} shortname - The short name of the organization. If not provided, the name is used and spaces are replaced with hyphens.
+ * @param {Array} aliases - The aliases of the organization.
+ * @param {string} summary - The summary of the organization.
+ * @param {string} note - The note for the organization.
+ * @param {Date} firstContact - The date of the first contact with the organization. If not provided, the current date is used.
+ * @param {string} primaryEmailAddress - The primary email address of the organization.
+ * @param {Array} emailAddresses - The email addresses of the organization.
+ *
+ * @returns {Promise<string>} A promise that resolves to a string message indicating the result of the operation.
+ *
+ * @throws {Error} If there is an error with the Supabase operations.
+ */
 async function createOrg({
                            name,
                            shortname,
@@ -76,33 +91,72 @@ async function createOrg({
     const { error: orgEmailError } = await supabase.from(ORG_EMAIL_TABLE_NAME).insert(orgEmails)
     if (orgEmailError) throw new Error(orgEmailError.message);
   }
-
-  return `Successfully added partner: ${name}`;
+  return `Successfully added org: ${name}`;
 }
 
 
-// TODO: Add function documentation
-async function updatePartner(partnerId, newName, newAliases, newStartDate) {
-  // TODO: undefined value should has no effect
+/**
+ * Updates an existing organization in the database and sends a notification.
+ *
+ * @param {string} name - The current name of the organization.
+ * @param {string} newName - The new name of the organization.
+ * @param {Array} aliases - The new aliases of the organization.
+ * @param {Date} firstContact - The new date of the first contact with the organization.
+ *
+ * @returns {Promise<string>} A promise that resolves to a string message indicating the result of the operation.
+ *
+ * @throws {Error} If there is an error with the Supabase operations.
+ */
+async function updateOrg({ name, newName, aliases, firstContact }) {
+  if (!newName && !aliases && !firstContact) return "No changes made"
+
+  const { data: [orgBefore], error: errorGetOrg } = await supabase
+    .from(ORG_TABLE_NAME)
+    .select('name, aliases, first_contact, missive_conversation_id')
+    .match({ name })
+  if (errorGetOrg) throw new Error(error.message);
+  if (
+    (!newName || newName === name) &&
+    (!aliases || JSON.stringify(aliases) === JSON.stringify(orgBefore.aliases)) &&
+    (!firstContact || firstContact === orgBefore.first_contact)
+  ) return "No changes made";
+
   const { data, error } = await supabase
-    .from(PARTNER_TABLE_NAME)
-    .update({ name: newName, aliases: newAliases, start_date: newStartDate })
-    .match({ id: partnerId });
-
+    .from(ORG_TABLE_NAME)
+    .update({ newName, aliases, first_contact: firstContact })
+    .match({ name });
   if (error) throw new Error(error.message);
-  return data[0];
-}
 
+  const updateNotificationParts = [];
+  if (newName) {
+    name = newName
+    updateNotificationParts.push(`- Org updated: ${orgBefore.name} changed to ${newName}`);
+  }
+  if (aliases) {
+    updateNotificationParts.push(`- ${name} alias added: ${aliases}`);
+    updateNotificationParts.push(`- ${name} alias removed: ${orgBefore.aliases}`);
+  }
+  if (firstContact) {
+    updateNotificationParts.push(`- First contact with ${name} on ${firstContact}`);
+  }
+  const updateNotificationMarkdown = updateNotificationParts.join('\n');
+  await createPost({
+    notificationTitle: "Update org",
+    notificationBody: "Update org",
+    markdown: updateNotificationMarkdown,
+    conversation: orgBefore.missive_conversation_id,
+  })
+  return updateNotificationMarkdown;
+}
 
 module.exports = {
   handleCapabilityMethod: async (method, args) => {
     console.log(`⚡️ Calling capability method: supabaseorg.${method}`);
-
+    const arg = parseJSONArg(args)
     if (method === "createOrg") {
-      return await createOrg(parseJSONArg(args));
-    } else if (method === "updatePartner") {
-      const [partnerId, newName, newAliases, newStartDate] = destructureArgs(args);
-      return await updatePartner(partnerId, newName, newAliases, newStartDate);
+      return await createOrg(arg);
+    } else if (method === "updateOrg") {
+      return await updateOrg(arg);
     } else {
       throw new Error(`Invalid method: ${method}`);
     }
