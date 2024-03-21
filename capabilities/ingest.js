@@ -24,6 +24,23 @@ async function handleCapabilityMethod(method, args) {
 async function deepDocumentIngest(url) {
   try {
     const response = await axios.get(url);
+
+    // First we need to figure out what kind of document we are looking at so we can process it properly
+    // If it's Markdown we can skip a few steps
+
+    // First, use our puppeteer web browser to turn the page into text
+
+    // Then, if it's a web page we use headers elements to try to split the page into logical sections
+    // If it's markdown we will do the same, but with a Markdown parser
+
+    // First we prepare by taking the headers and as much of the sections as we can, and asking the LLM to send back a list of the sections/concepts in the document
+
+    // Once we've created our sections, we can create memories of them and store them in the database
+
+    // Then we want to generate a meta-summary of the document based on all of those memories, and store that in the database as well
+
+
+
     return response.data;
   } catch (error) {
     throw new Error(`Error occurred while making external request: ${error}`);
