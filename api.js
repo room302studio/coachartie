@@ -405,6 +405,15 @@ async function processMissiveRequest(body) {
     )}`,
   });
 
+  // go through all of the messages and make sure they don't have an embedding object
+  // if they do, we need to remove it
+  for (const message of formattedMessages) {
+    if (message.embedding) {
+      delete message.embedding;
+    }
+  }
+
+
   let processedMessage;
 
   try {
@@ -417,7 +426,7 @@ async function processMissiveRequest(body) {
       },
     ];
 
-    logger.info(`All messages: ${JSON.stringify(allMessages)}`);
+    // logger.info(`All messages: ${JSON.stringify(allMessages)}`);
 
     processedMessage = await processMessageChain(allMessages, {
       username,
