@@ -1,5 +1,14 @@
 const winston = require("winston");
 const util = require("util");
+require("dotenv").config();
+
+require("winston-papertrail").Papertrail;
+
+var winstonPapertrail = new winston.transports.Papertrail({
+  host: "logs.papertrailapp.com",
+  port: 12345,
+});
+
 module.exports = function (serviceName) {
   /**
    * Logger instance for logging messages.
@@ -10,6 +19,13 @@ module.exports = function (serviceName) {
     level: "info",
     defaultMeta: { service: serviceName || "default" },
     transports: [
+      new winston.transports.Papertrail({
+        host: "logs.papertrailapp.com",
+        port: 12345,
+        logFormat: function (level, message) {
+          return "[" + level + "] " + message;
+        },
+      }),
       new winston.transports.Console({
         format: winston.format.combine(
           winston.format.timestamp(),
@@ -19,7 +35,7 @@ module.exports = function (serviceName) {
               : "";
             const { level, message, timestamp, ...meta } = info;
             return `${timestamp} ${serviceName} ${lineNumber} : ${message}`;
-          })
+          }),
         ),
       }),
       new winston.transports.File({
@@ -29,7 +45,7 @@ module.exports = function (serviceName) {
           winston.format.printf((info) => {
             const { level, message, timestamp, ...meta } = info;
             return `${timestamp} ${level}: ${message}`;
-          })
+          }),
         ),
       }),
       new winston.transports.File({
@@ -40,7 +56,7 @@ module.exports = function (serviceName) {
             const { level, message, timestamp, ...meta } = info;
 
             return `${timestamp} ${level}: ${message}`;
-          })
+          }),
         ),
       }),
     ],

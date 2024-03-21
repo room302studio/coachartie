@@ -105,10 +105,10 @@ module.exports = {
   handleCapabilityMethod: async (method, args) => {
     // const desArgs = destructureArgs(args);
     // const [arg1, arg2] = desArgs;
-    console.log("args", args);
     const [arg1, arg2] = destructureArgs(args);
-    console.log(`⚡️ Calling capability method: supabasetodo.${method}`);
-    // console.log(`⚡️ With arguments: ${JSON.stringify(desArgs)}`);
+    logger.info(`⚡️ Calling capability method: supabasetodo.${method}
+    
+    ${JSON.stringify(args)}`);
 
     if (method === "createTodo") {
       // const todoJsonString = arg1

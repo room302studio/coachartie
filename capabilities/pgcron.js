@@ -34,8 +34,6 @@ async function createJob(schedule, command) {
     console.error("Error creating job with pg_cron:", error);
     throw error;
   }
-
-  console.log("Job created:", data);
   return `Job created: ${data}`;
 }
 
@@ -52,7 +50,7 @@ async function listJobs() {
       throw error;
     }
 
-    console.log("Jobs:", data);
+    logger.info("Jobs:", data);
     return JSON.stringify(data, null, 2);
   } catch (err) {
     console.error("Failed to list jobs:", err.message);
@@ -75,7 +73,7 @@ async function deleteJob(name) {
       throw error;
     }
 
-    console.log("Successfully deleted job:", data);
+    logger.info("Successfully deleted job:", data);
     return `Successfully deleted job: ${name}`;
   } catch (err) {
     console.error("Failed to delete job:", err.message);
@@ -104,7 +102,7 @@ async function updateJob(name, schedule, command) {
       throw error;
     }
 
-    console.log("Successfully updated job:", data);
+    logger.info("Successfully updated job:", data);
     return `Successfully updated job: ${name}`;
   } catch (err) {
     console.error("Failed to update job:", err.message);
@@ -115,7 +113,7 @@ async function updateJob(name, schedule, command) {
 module.exports = {
   handleCapabilityMethod: async (method, args) => {
     const [arg1, arg2, arg3] = destructureArgs(args);
-    console.log(`⚡️ Calling capability method: supabasetodo.${method}`);
+    logger.info(`⚡️ Calling capability method: supabasetodo.${method}`);
 
     /* args is a string passed in like
       pgcron:createJob(

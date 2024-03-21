@@ -8,7 +8,7 @@ let error = null;
 
 const fetchImageDescription = async () => {
   isFetching = true;
-  logger.info("requesgting description of image at", imageUrl);
+  logger.info(`Requesting description of image at ${imageUrl}`);
   try {
     const completion = await openai.createChatCompletion({
       model: "gpt-4-vision-preview",

@@ -11,10 +11,10 @@ const path = require("path");
 const capabilityManifestPath = path.join(
   __dirname,
   "capabilities",
-  "_manifest.json"
+  "_manifest.json",
 );
 const capabilityManifest = JSON.parse(
-  fs.readFileSync(capabilityManifestPath, "utf8")
+  fs.readFileSync(capabilityManifestPath, "utf8"),
 );
 
 // Create readline interface for command line input
@@ -48,7 +48,7 @@ function displayCapabilities() {
     });
   });
   console.log(
-    "\nType the capability and method you want to use in the format: capability:methodName(args)"
+    "\nType the capability and method you want to use in the format: capability:methodName(args)",
   );
 }
 
@@ -63,17 +63,17 @@ async function processInputAsMessage(input) {
   lastCommand = input;
   if (!capabilityMatch) {
     console.log(
-      "Invalid format. Please use the format: capabilitySlug:methodName(args)"
+      "Invalid format. Please use the format: capabilitySlug:methodName(args)",
     );
     return;
   }
 
   const [, capSlug, capMethod, capArgsString] = capabilityMatch;
 
-  delete require.cache[require.resolve('./src/chain')];
+  delete require.cache[require.resolve("./src/chain")];
 
-    // Re-require the chain module to get the latest version
-  const chain = require('./src/chain');
+  // Re-require the chain module to get the latest version
+  const chain = require("./src/chain");
 
   // Initialize an empty messages array to simulate the message chain
   let messages = [];

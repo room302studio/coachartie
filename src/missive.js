@@ -168,9 +168,9 @@ async function listConversationMessages(emailMessageId) {
 
 const conversationId = "2939b050-496f-4128-a249-61576f897720";
 
-const messages = listConversationMessages(conversationId).then((data) => {
-  console.log(data);
-});
+// const messages = listConversationMessages(conversationId).then((data) => {
+//   console.log(data);
+// });
 
 /*
 GET /v1/messages/id
