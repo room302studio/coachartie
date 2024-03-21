@@ -46,7 +46,7 @@ module.exports = (async () => {
     //   : [];
     let relevantMemories = await getRelevantMemories(prompt, userMemoryCount);
 
-    if(!relevantMemories) {
+    if (!relevantMemories) {
       relevantMemories = [];
     }
 
@@ -98,12 +98,6 @@ module.exports = (async () => {
       `📜 Preamble messages ${JSON.stringify(completeMessages)}`,
     );
 
-    console.log('RELEVANT MEMORIES!!!!')
-    console.log(JSON.stringify(relevantMemories))
-    // if relevant memories is an empty object, make it an empty array
-    if (relevantMemories === {}) {
-      relevantMemories = [];
-    }
     // de-dupe memories
     memories = [...userMemories, ...generalMemories, ...relevantMemories];
 

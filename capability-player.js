@@ -1,7 +1,11 @@
 const readline = require("readline");
 const fs = require("fs");
 const path = require("path");
-const { processCapability } = require("./src/chain");
+// Process the capability, passing capArgsString directly
+// const { processCapability } = require("./src/chain");
+
+// console.log('--------')
+// console.log("processCapability", processCapability);
 
 // Load and parse the capability manifest
 const capabilityManifestPath = path.join(
@@ -66,10 +70,18 @@ async function processInputAsMessage(input) {
 
   const [, capSlug, capMethod, capArgsString] = capabilityMatch;
 
+  delete require.cache[require.resolve("./src/chain")];
+
+  // Re-require the chain module to get the latest version
+  const chain = require("./src/chain");
+
   // Initialize an empty messages array to simulate the message chain
   let messages = [];
 
-  // Process the capability, passing capArgsString directly
+  const { processCapability } = await chain;
+
+  // console.log("processCapability", processCapability);
+
   messages = await processCapability(messages, [
     null,
     capSlug,
@@ -79,7 +91,7 @@ async function processInputAsMessage(input) {
 
   // Output the response
   const lastMessage = messages[messages.length - 1];
-  console.log("Capability Response:", lastMessage.content);
+  // console.log("Capability Response:", lastMessage);
 }
 // Main function to run the CLI
 async function main() {

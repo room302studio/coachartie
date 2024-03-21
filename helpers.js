@@ -18,16 +18,11 @@ const {
 const logger = require("./src/logger.js")("helpers");
 const completionLogger = require("./src/logger.js")("completion");
 const { createClient } = require("@supabase/supabase-js");
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_API_KEY,
-);
-// import Anthropic from '@anthropic-ai/sdk';
-const Anthropic = require("@anthropic-ai/sdk");
-
-const anthropic = new Anthropic(
-  {apiKey: process.env.ANTHROPIC_API_KEY}
-);
+// const supabase = createClient(
+//   process.env.SUPABASE_URL,
+//   process.env.SUPABASE_API_KEY,
+// );
+const { supabase } = require("./src/supabaseclient.js");
 
 const capabilityRegex = /(\w+):(\w+)\(([^]*?)\)/; // captures newlines in the  third argument
 
@@ -46,9 +41,9 @@ async function getPromptsFromSupabase() {
   const promptValues = promptArray.map((prompt) => prompt.prompt_text);
   // return an object with all the keys and values
   const prompts = Object.fromEntries(
-    promptKeys.map((_, i) => [promptKeys[i], promptValues[i]]),
+    promptKeys.map((_, i) => [promptKeys[i], promptValues[i]])
   );
-  logger.info(`Prompts: ${JSON.stringify(prompts, null, 2)}`);
+  // logger.info(`Prompts: ${JSON.stringify(prompts, null, 2)}`);
   return prompts;
 }
 
@@ -66,9 +61,9 @@ async function getConfigFromSupabase() {
   const configValues = configArray.map((config) => config.config_value);
   // return an object with all the keys and values
   const config = Object.fromEntries(
-    configKeys.map((_, i) => [configKeys[i], configValues[i]]),
+    configKeys.map((_, i) => [configKeys[i], configValues[i]])
   );
-  logger.info(`Config: ${JSON.stringify(config, null, 2)}`);
+  // logger.info(`Config: ${JSON.stringify(config, null, 2)}`);
   return config;
 }
 
@@ -325,7 +320,7 @@ function trimResponseIfNeeded(capabilityResponse) {
   while (isResponseExceedingLimit(capabilityResponse)) {
     capabilityResponse = trimResponseByLineCount(
       capabilityResponse,
-      countTokens(capabilityResponse),
+      countTokens(capabilityResponse)
     );
   }
   return capabilityResponse;
@@ -594,8 +589,8 @@ async function generateAiCompletion(prompt, username, messages, config) {
   logger.info(
     `Sending final messages array for chat completion: ${util.inspect(
       messages,
-      { depth: null, colors: true },
-    )}`,
+      { depth: null, colors: true }
+    )}`
   );
 
   let completion = null;
@@ -613,12 +608,14 @@ async function generateAiCompletion(prompt, username, messages, config) {
     completion = await createChatCompletion(
       messages,
       temperature,
-      presence_penalty,
+      presence_penalty
     );
   } catch (err) {
     logger.info(`Error creating chat completion ${err}`);
   }
-  logger.info(`Raw completion response: ${JSON.stringify(completion, null, 2)}`);
+  logger.info(
+    `Raw completion response: ${JSON.stringify(completion, null, 2)}`
+  );
   const aiResponse = completion.data.choices[0].message.content;
   logger.info("🔧 AI Response: " + aiResponse);
   completionLogger.info("🔧 AI Response: " + aiResponse);
@@ -640,7 +637,7 @@ const completionModel = "claude";
 async function createChatCompletion(
   messages,
   temperature,
-  presence_penalty = 0.01,
+  presence_penalty = 0.01
 ) {
   if (completionModel === "openai") {
     logger.info("Using OpenAI for chat completion");
@@ -669,13 +666,13 @@ async function createChatCompletion(
     return await createGeminiCompletion(
       messages,
       temperature,
-      presence_penalty,
+      presence_penalty
     );
   } else if (completionModel === "claude") {
     const res = await createClaudeCompletion(messages, temperature);
 
-    console.log('---')
-    console.log('res', res)
+    console.log("---");
+    console.log("res", res);
     // return res.content.text
     // right now we return the text but we need to make it look like a normal openai resposne so the downstream stuff works the same
     return {
@@ -683,7 +680,7 @@ async function createChatCompletion(
         choices: [
           {
             message: {
-              role: 'assistant',
+              role: "assistant",
               content: res.content[0].text,
             },
           },
@@ -694,7 +691,6 @@ async function createChatCompletion(
 }
 
 async function createClaudeCompletion(messages, temperature) {
-
   // the first thing we need to do is go through all of our messages, and make sure the role is "user" - no matter what (some of them come in as `system` from the openai style)
   messages = messages.map((message) => {
     message.role = "user";
@@ -714,22 +710,21 @@ async function createClaudeCompletion(messages, temperature) {
       }
     }
     return acc;
-  }, []);  
+  }, []);
 
-  const claudeCompletion =  await anthropic.messages.create({
-    model: 'claude-2.1',
+  const claudeCompletion = await anthropic.messages.create({
+    model: "claude-2.1",
     // max_tokens: MAX_OUTPUT_TOKENS,
     max_tokens: 2048,
     // messages: [
     //   {"role": "user", "content": "Hello, world"}
     // ]
-    messages
+    messages,
   });
 
-  console.log('🐭', JSON.stringify(claudeCompletion))
+  console.log("🐭", JSON.stringify(claudeCompletion));
 
   return claudeCompletion;
-  
 }
 
 async function createGeminiCompletion(messages, temperature, presence_penalty) {
@@ -940,7 +935,7 @@ async function listTodos() {
 
 async function addTodosToMessages(messages) {
   const todos = await listTodos();
-  console.log("returning todos", todos);
+  logger.info(`🔧 Adding todos to messages: ${todos.length}`);
   const todoString = JSON.stringify(todos);
   messages.push({
     role: "system",
@@ -999,7 +994,7 @@ async function addCapabilityPromptIntro(messages) {
   const { CAPABILITY_PROMPT_INTRO } = await getPromptsFromSupabase();
 
   messages.push({
-    role: "system",
+    role: "user",
     content: CAPABILITY_PROMPT_INTRO,
   });
 }
@@ -1029,8 +1024,8 @@ async function addCapabilityManifestMessage(messages) {
   const manifest = loadCapabilityManifest();
   if (manifest) {
     messages.push({
-      role: "system",
-      content: JSON.stringify(manifest),
+      role: "user",
+      content: `Capability manifest: ${JSON.stringify(manifest)}`,
     });
   }
   return messages;
@@ -1045,12 +1040,12 @@ async function addCapabilityManifestMessage(messages) {
 async function addUserMessages(username, messages) {
   const userMessageCount = chance.integer({ min: 10, max: 32 });
   logger.info(
-    `🔧 Retrieving ${userMessageCount} previous messages for ${username}`,
+    `🔧 Retrieving ${userMessageCount} previous messages for ${username}`
   );
   try {
     const userMessages = await getUserMessageHistory(
       username,
-      userMessageCount,
+      userMessageCount
     );
     if (!userMessages) {
       logger.info(`No previous messages found for ${username}`);
@@ -1112,20 +1107,17 @@ async function addRelevantMemories(username, messages) {
 
   const queryString = lastUserMessage.content;
   logger.info(
-    `🔧 Querying for relevant memories for ${username}: ${queryString}`,
+    `🔧 Querying for relevant memories for ${username}: ${queryString}`
   );
 
   try {
     const relevantMemories = await getRelevantMemories(
       queryString,
-      relevantMemoryCount,
+      relevantMemoryCount
     );
     logger.info(
-      `🔧 Retrieving ${relevantMemoryCount} relevant memories for ${queryString}`,
+      `🔧 Retrieving ${relevantMemoryCount} relevant memories for ${queryString}`
     );
-
-    console.log('ANOTHER RELEVANT MEMORIES')
-    console.log(JSON.stringify(relevantMemories, null, 2))
 
     if (relevantMemories.length === 0) {
       relevantMemories.forEach((memory) => {
@@ -1547,4 +1539,5 @@ module.exports = {
   getPromptsFromSupabase,
   getConfigFromSupabase,
   capabilityRegex,
+  createChatCompletion,
 };

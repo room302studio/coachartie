@@ -140,7 +140,7 @@ module.exports = (async () => {
           }/${MAX_RETRY_COUNT})`,
           error,
         );
-        return processMessageChain(
+        return await processMessageChain(
           messages,
           { username, channel, guild },
           retryCount + 1,
@@ -238,7 +238,9 @@ module.exports = (async () => {
       message.image = capabilityResponse.image;
     }
 
-    messages.push(message);
+    // messages.push(message);
+    // actually lets add it to the front of the array so that it's the first thing the user sees
+    messages.unshift(message);
 
     return messages;
   }
@@ -269,6 +271,7 @@ module.exports = (async () => {
         messages = await processCapability(messages, capabilityMatch);
 
         const lastMessage = messages[messages.length - 1];
+        const lastUserMessage = messages.find((m) => m.role === "user").content;
 
         // check if the lastMessage has an image
         if (lastMessage.image) {
@@ -278,8 +281,8 @@ module.exports = (async () => {
 
         // store a memory of the capability call
         await generateAndStoreCompletion(
-          lastMessage,
-          messages[messages.length - 1].content,          
+          lastUserMessage,
+          messages[messages.length - 1].content,
           { username, channel, guild },
           messages,
           true, // mark as capability
@@ -308,7 +311,6 @@ module.exports = (async () => {
       .slice()
       .reverse()
       .find((m) => m.role === "user");
-
 
     const prompt = lastUserMessage.content;
 

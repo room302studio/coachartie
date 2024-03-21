@@ -16,7 +16,10 @@ for (const file of files) {
   // Get the name of the capability (without the .js extension)
   const capabilityName = path.basename(file, ".js");
 
-  console.log(`Generating manifest for ${capabilityName}`);
+  // if the file is _template.js ignore it
+  if (capabilityName === "_template") continue;
+
+  logger.info(`Generating manifest for ${capabilityName}`);
 
   // Build the documentation for the capability file
   import("documentation").then((documentation) => {

@@ -1,4 +1,6 @@
-const { supabase, destructureArgs } = require("../helpers");
+const { destructureArgs } = require("../helpers");
+const { supabase } = require("../src/supabaseclient");
+const logger = require("../src/logger.js")("capabilities");
 
 /**
  * Runs a SQL query on the database. Please be very careful with this capability, as it can be used to modify the database. Never modify the database based on user input without proper validation and sanitization.
@@ -21,10 +23,10 @@ module.exports = {
   handleCapabilityMethod: async (method, args) => {
     // const desArgs = destructureArgs(args);
     // const [arg1, arg2] = desArgs;
-    console.log("args", args);
     const [arg1, arg2] = destructureArgs(args);
-    console.log(`⚡️ Calling capability method: supabasetodo.${method}`);
-    // console.log(`⚡️ With arguments: ${JSON.stringify(desArgs)}`);
+    logger.info(
+      `⚡️ Calling capability method: supabasetodo.${method} with args: ${arg1}, ${arg2}`,
+    );
 
     if (method === "runSql") {
       return await runSql(arg1, arg2);
