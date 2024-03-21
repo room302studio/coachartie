@@ -5,12 +5,12 @@ const dotenv = require("dotenv");
 dotenv.config();
 
 /**
- * This capability allows Coach Artie to read and concatenate the contents of a GitHub repository,
- * including the paths and filenames. It's particularly useful for users who want to understand the structure
- * and content of a GitHub repository or propose changes to it by specifying its URL and the requested changes.
+ * This capability allows you to read the entire contents of a GitHub repository (excluding binary files), concatenating all files into one long text string.
+ * It's particularly useful if you want to understand the structure
+ * and contents of a GitHub repository or if you want to implement changes to an existing repo, by specifying its URL and the requested changes.
  *
  * @capability {name} "GitHub Repository Reader"
- * @description "Reads all text/code files from a specified GitHub repository, concatenates them into a single string,
+ * @description "Reads all code/text files from a specified GitHub repository, concatenates them into a single string,
  *               and prepends the path and filename to each file's content. Useful for reviewing or modifying repository content."
  * @param {string} owner - The GitHub username or organization name of the repository owner.
  * @param {string} repo - The name of the repository.
