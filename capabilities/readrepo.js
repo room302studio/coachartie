@@ -14,7 +14,7 @@ dotenv.config();
  *               and prepends the path and filename to each file's content. Useful for reviewing or modifying repository content."
  * @param {string} owner - The GitHub username or organization name of the repository owner.
  * @param {string} repo - The name of the repository.
- * @returns {Promise<string>} A promise that resolves to a string containing the concatenated contents of the repository's text/code files.
+ * @returns {Promise<string>} A promise that resolves to a string containing the concatenated contents of the repository's code/text files.
  */
 
 class RepoReader {
