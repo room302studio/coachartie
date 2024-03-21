@@ -935,7 +935,7 @@ async function addCapabilityPromptIntro(messages) {
   const { CAPABILITY_PROMPT_INTRO } = await getPromptsFromSupabase();
 
   messages.push({
-    role: "system",
+    role: "user",
     content: CAPABILITY_PROMPT_INTRO,
   });
 }
@@ -965,8 +965,8 @@ async function addCapabilityManifestMessage(messages) {
   const manifest = loadCapabilityManifest();
   if (manifest) {
     messages.push({
-      role: "system",
-      content: JSON.stringify(manifest),
+      role: "user",
+      content: `Capability manifest: ${JSON.stringify(manifest)}`,
     });
   }
   return messages;
