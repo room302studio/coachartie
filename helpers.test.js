@@ -1,39 +1,44 @@
-const { Chance } = require("chance");
-const chance = new Chance();
 const dotenv = require("dotenv");
-const { openai } = require("./src/openai");
-const { capabilityRegex } = require("./src/capabilities.js");
-const {
-  getUserMemory,
-  getUserMessageHistory,
-} = require("./capabilities/remember");
 dotenv.config();
 
 const {
-  ERROR_MSG,
-  TOKEN_LIMIT,
-  RESPONSE_LIMIT,
-  WARNING_BUFFER,
   destructureArgs,
   getHexagram,
   countTokens,
   countMessageTokens,
   removeMentionFromMessage,
-  replaceRobotIdWithName,
-  doesMessageContainCapability,
   isBreakingMessageChain,
-  trimResponseIfNeeded,
-  generateAiCompletionParams,
-  displayTypingIndicator,
-  generateAiCompletion,
+  processChunks,
   assembleMessagePreamble,
-  splitMessageIntoChunks,
-  splitAndSendMessage,
-  createTokenLimitWarning,
-  isExceedingTokenLimit,
+  addCurrentDateTime,
+  addHexagramPrompt,
+  // addSystemPrompt,
+  addCapabilityPromptIntro,
+  addCapabilityManifestMessage,
+  addTodosToMessages,
+  addUserMessages,
+  addUserMemories,
+  addRelevantMemories,
+  addGeneralMemories
 } = require("./helpers.js");
 
+// Mocking the dependent functions
+// jest.mock("./helpers.js", () => ({
+//   ...jest.requireActual("./helpers.js"),
+//   addCurrentDateTime: jest.fn(),
+//   addHexagramPrompt: jest.fn(),
+//   addSystemPrompt: jest.fn(),
+//   addCapabilityPromptIntro: jest.fn(),
+//   addCapabilityManifestMessage: jest.fn(),
+//   addTodosToMessages: jest.fn(),
+//   addUserMessages: jest.fn(),
+//   addUserMemories: jest.fn(),
+//   addRelevantMemories: jest.fn(),
+//   addGeneralMemories: jest.fn()
+// }));
+
 describe("Helpers", () => {
+
   describe("destructureArgs", () => {
     it("should destructure arguments correctly", () => {
       const args = "arg1, arg2, arg3";
@@ -129,5 +134,47 @@ describe("Helpers", () => {
       expect(resultUser).toBe(false);
       expect(resultSystem).toBe(false);
     });
+
+    describe("processChunks", () => {
+      it("should process chunks of data asynchronously", async () => {
+        const chunks = [["data1"], ["data2"], ["data3"]];
+        const processFunction = jest.fn().mockResolvedValue("processed");
+        const results = await processChunks(chunks, processFunction, 2);
+        expect(results).toEqual(["processed", "processed", "processed"]);
+        expect(processFunction).toHaveBeenCalledTimes(chunks.length);
+      });
+    });
+
+    describe("addCurrentDateTime", () => {
+      it("should add the current date and time to the messages array", () => {
+        const messages = [];
+        addCurrentDateTime(messages);
+        expect(messages).toHaveLength(1);
+        expect(messages[0].role).toEqual("system");
+        // Adjusted the regex to match the received string format including AM/PM
+        expect(messages[0].content).toMatch(/Today is \d{1,2}\/\d{1,2}\/\d{4} at \d{1,2}:\d{2}:\d{2} [AP]M/);
+      });
+    });
+
+    describe("addSystemPrompt", () => {
+      it("should add a system prompt to the messages array", async () => {
+        const { addSystemPrompt } = require("./helpers.js");
+        const messages = [];
+        await addSystemPrompt(messages);
+        expect(messages).toHaveLength(1);
+        expect(messages[0].role).toEqual("user");
+      });
+    });
+
+    // make sure assembleMessagePreamble works as expected
+    // describe("assembleMessagePreamble", () => {
+    //   it("should assemble a message preamble", () => {
+    //     const messages = [];
+    //     assembleMessagePreamble(messages);
+    //     expect(messages).toHaveLength(1);
+    //   });
+    // });
+
+
   });
 });

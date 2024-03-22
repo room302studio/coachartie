@@ -9,7 +9,7 @@ const { openai } = require("./src/openai");
 dotenv.config();
 const { encode, decode } = require("@nem035/gpt-3-encoder");
 // TODO: Swap out for getConfigFromSupabase
-const { RESPONSE_LIMIT, TOKEN_LIMIT, MAX_OUTPUT_TOKENS } = require("./config");
+const { TOKEN_LIMIT, MAX_OUTPUT_TOKENS } = require("./config");
 const {
   getUserMemory,
   getUserMessageHistory,
@@ -46,7 +46,7 @@ async function getPromptsFromSupabase() {
   const promptValues = promptArray.map((prompt) => prompt.prompt_text);
   // return an object with all the keys and values
   const prompts = Object.fromEntries(
-    promptKeys.map((_, i) => [promptKeys[i], promptValues[i]]),
+    promptKeys.map((_, i) => [promptKeys[i], promptValues[i]])
   );
   // logger.info(`Prompts: ${JSON.stringify(prompts, null, 2)}`);
   return prompts;
@@ -66,7 +66,7 @@ async function getConfigFromSupabase() {
   const configValues = configArray.map((config) => config.config_value);
   // return an object with all the keys and values
   const config = Object.fromEntries(
-    configKeys.map((_, i) => [configKeys[i], configValues[i]]),
+    configKeys.map((_, i) => [configKeys[i], configValues[i]])
   );
   return config;
 }
@@ -130,7 +130,6 @@ function removeMentionFromMessage(message, mention) {
   // so we need to use a regex
   const mentionRegex = new RegExp(mention, "g");
   return message.replace(mentionRegex, "").trim();
-
 }
 
 /**
@@ -269,24 +268,15 @@ function isBreakingMessageChain(capabilityMatch, lastMessage) {
  * @param {string} capabilityResponse - The response to trim.
  * @returns {string} - The trimmed response.
  */
-function trimResponseIfNeeded(capabilityResponse) {
-  while (isResponseExceedingLimit(capabilityResponse)) {
-    capabilityResponse = trimResponseByLineCount(
-      capabilityResponse,
-      countTokens(capabilityResponse),
-    );
-  }
-  return capabilityResponse;
-}
-
-/**
- * Checks if a response exceeds the limit.
- * @param {string} response - The response to check.
- * @returns {boolean} - True if the response exceeds the limit, false otherwise.
- */
-function isResponseExceedingLimit(response) {
-  return countTokens(response) > RESPONSE_LIMIT;
-}
+// function trimResponseIfNeeded(capabilityResponse) {
+//   while (isResponseExceedingLimit(capabilityResponse)) {
+//     capabilityResponse = trimResponseByLineCount(
+//       capabilityResponse,
+//       countTokens(capabilityResponse),
+//     );
+//   }
+//   return capabilityResponse;
+// }
 
 /**
  * Generates parameters for AI completion.
@@ -548,33 +538,18 @@ async function generateAiCompletion(prompt, username, messages, config) {
     completionLogger.info("🔧 Chat completion created");
     completionLogger.info("🔧 Temperature: " + temperature);
     completionLogger.info("🔧 Presence Penalty: " + presence_penalty);
-    completionLogger.info("🔧 Messages: " + JSON.stringify(messages));
+    // completionLogger.info("🔧 Messages: " + JSON.stringify(messages));
 
     completion = await createChatCompletion(
       messages,
       temperature,
-      presence_penalty,
+      presence_penalty
     );
   } catch (err) {
     logger.info(`Error creating chat completion ${err}`);
   }
-  // logger.info(
-  //   `Raw completion response: ${JSON.stringify(completion, null, 2)}`,
-  // );
-
-  let aiResponse;
-  const choice = completion?.data?.choices?.[0]?.message?.content;
-  if (choice) {
-    aiResponse = choice;
-  } else {
-    const errorDetail = {
-      error: true,
-      message: "Invalid or incomplete AI completion response.",
-      completionResponse: JSON.stringify(completion, null, 2)
-    };
-    logger.error(`Error extracting AI response: ${JSON.stringify(errorDetail)}`);
-    throw new Error(`Error extracting AI response: ${JSON.stringify(errorDetail)}`);
-  }
+  // logger.info(`${JSON.stringify(completion, null, 2)}`);
+  const aiResponse = completion.choices[0].message.content;
   logger.info("🔧 AI Response: " + aiResponse);
   completionLogger.info("🔧 AI Response: " + aiResponse);
   messages.push(aiResponse);
@@ -591,7 +566,7 @@ async function generateAiCompletion(prompt, username, messages, config) {
 async function createChatCompletion(
   messages,
   temperature,
-  presence_penalty = 0.01,
+  presence_penalty = 0.01
 ) {
   const { CHAT_MODEL, MAX_OUTPUT_TOKENS } = await getConfigFromSupabase();
   const completionModel = CHAT_MODEL || "openai";
@@ -609,17 +584,16 @@ async function createChatCompletion(
     Message Count: ${messages.length}
     `);
 
-    console.log('messages')
-    console.log(messages)
-
+    console.log("messages");
+    console.log(messages);
 
     try {
-      return await openai.createChatCompletion({
+      return await openai.chat.completions.create({
         model: "gpt-4-turbo-preview",
         temperature,
         presence_penalty,
         // max_tokens,
-        messages
+        messages,
       });
     } catch (error) {
       logger.error("Error creating chat completion:", error);
@@ -630,7 +604,7 @@ async function createChatCompletion(
     return await createGeminiCompletion(
       messages,
       temperature,
-      presence_penalty,
+      presence_penalty
     );
   } else if (completionModel === "claude") {
     const res = await createClaudeCompletion(messages, temperature, max_tokens);
@@ -855,7 +829,7 @@ async function assembleMessagePreamble(username) {
   logger.info(`🔧 Assembling message preamble for <${username}> message`);
   const messages = [];
   addCurrentDateTime(messages);
-  await addHexagramPrompt(messages);  
+  await addHexagramPrompt(messages);
   await addTodosToMessages(messages);
   await addUserMessages(username, messages);
   await addUserMemories(username, messages);
@@ -865,7 +839,7 @@ async function assembleMessagePreamble(username) {
   await addCapabilityManifestMessage(messages);
   // add some general memories from all interactions
   await addGeneralMemories(messages);
-  
+
   await addSystemPrompt(messages);
   return messages;
 }
@@ -981,7 +955,7 @@ async function addCapabilityManifestMessage(messages) {
         role: "user",
         // content: `Capability manifest: ${JSON.stringify(manifest)}`,
         content: `## CAPABILITY MANIFEST\n\n${formatCapabilityManifest(
-          manifest,
+          manifest
         )}`,
       });
     }
@@ -1040,19 +1014,26 @@ function convertMessagesToXML(messages) {
  * @returns {string} - The capability manifest in XML format.
  */
 function convertCapabilityManifestToXML(manifest) {
-  const capabilitiesXml = Object.values(manifest).flatMap(category => 
-    category.map(capability => {
-      const nameXml = `    <name>${capability.name}</name>\n`;
-      const descriptionXml = capability.description ? `    <description>${capability.description}</description>\n` : '';
-      const parametersXml = capability.parameters ? `    <parameters>\n${
-        capability.parameters.map(parameter => 
-          `      <parameter>\n        <name>${parameter.name}</name>\n        <description>${parameter.description}</description>\n      </parameter>\n`
-        ).join('')
-      }    </parameters>\n` : '';
+  const capabilitiesXml = Object.values(manifest)
+    .flatMap((category) =>
+      category.map((capability) => {
+        const nameXml = `    <name>${capability.name}</name>\n`;
+        const descriptionXml = capability.description
+          ? `    <description>${capability.description}</description>\n`
+          : "";
+        const parametersXml = capability.parameters
+          ? `    <parameters>\n${capability.parameters
+              .map(
+                (parameter) =>
+                  `      <parameter>\n        <name>${parameter.name}</name>\n        <description>${parameter.description}</description>\n      </parameter>\n`
+              )
+              .join("")}    </parameters>\n`
+          : "";
 
-      return `  <capability>\n${nameXml}${descriptionXml}${parametersXml}  </capability>\n`;
-    })
-  ).join('');
+        return `  <capability>\n${nameXml}${descriptionXml}${parametersXml}  </capability>\n`;
+      })
+    )
+    .join("");
 
   return `<capabilities>\n${capabilitiesXml}</capabilities>`;
 }
@@ -1065,12 +1046,12 @@ function convertCapabilityManifestToXML(manifest) {
 async function addUserMessages(username, messages) {
   const userMessageCount = chance.integer({ min: 10, max: 32 });
   logger.info(
-    `🔧 Retrieving ${userMessageCount} previous messages for ${username}`,
+    `🔧 Retrieving ${userMessageCount} previous messages for ${username}`
   );
   try {
     const userMessages = await getUserMessageHistory(
       username,
-      userMessageCount,
+      userMessageCount
     );
     if (!userMessages) {
       logger.info(`No previous messages found for ${username}`);
@@ -1132,16 +1113,16 @@ async function addRelevantMemories(username, messages) {
 
   const queryString = lastUserMessage.content;
   logger.info(
-    `🔧 Querying for relevant memories for ${username}: ${queryString}`,
+    `🔧 Querying for relevant memories for ${username}: ${queryString}`
   );
 
   try {
     const relevantMemories = await getRelevantMemories(
       queryString,
-      relevantMemoryCount,
+      relevantMemoryCount
     );
     logger.info(
-      `🔧 Retrieving ${relevantMemoryCount} relevant memories for ${queryString}`,
+      `🔧 Retrieving ${relevantMemoryCount} relevant memories for ${queryString}`
     );
 
     if (relevantMemories.length === 0) {
@@ -1540,6 +1521,82 @@ function getUniqueEmoji() {
   return emoji;
 }
 
+function cleanUrlForPuppeteer(dirtyUrl) {
+  // if the url starts and ends with ' then remove them
+  if (dirtyUrl.startsWith("'") && dirtyUrl.endsWith("'")) {
+    dirtyUrl = dirtyUrl.slice(1, -1);
+  }
+
+  // if it starts with ' remove it
+  if (dirtyUrl.startsWith("'")) {
+    dirtyUrl = dirtyUrl.slice(1);
+  }
+
+  // if it ends with ' remove it
+  if (dirtyUrl.endsWith("'")) {
+    dirtyUrl = dirtyUrl.slice(0, -1);
+  }
+
+  // if the url starts and ends with " then remove them
+  if (dirtyUrl.startsWith('"') && dirtyUrl.endsWith('"')) {
+    dirtyUrl = dirtyUrl.slice(1, -1);
+  }
+
+  // if it starts with " remove it
+  if (dirtyUrl.startsWith('"')) {
+    dirtyUrl = dirtyUrl.slice(1);
+  }
+
+  // if it ends with " remove it
+  if (dirtyUrl.endsWith('"')) {
+    dirtyUrl = dirtyUrl.slice(0, -1);
+  }
+
+  // return the clean url
+  return dirtyUrl;
+}
+
+async function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Processes chunks of data asynchronously with a provided processing function.
+ *
+ * @param {Array} chunks - The data chunks to process.
+ * @param {Function} processFunction - The function to process each chunk. Must return a Promise.
+ * @param {number} [limit=2] - The number of chunks to process concurrently.
+ * @param {Object} [options={}] - Additional options for the processing function.
+ * @returns {Promise<Array>} - A promise that resolves to an array of processed chunk results.
+ */
+async function processChunks(chunks, processFunction, limit = 2, options = {}) {
+  const results = [];
+  const chunkLength = chunks.length;
+
+  // Remove any empty or blank chunks
+  chunks = chunks.filter((chunk) => chunk.length > 0);
+
+  for (let i = 0; i < chunkLength; i += limit) {
+    const chunkPromises = chunks
+      .slice(i, i + limit)
+      .map(async (chunk, index) => {
+        // Sleep to avoid rate limits or to stagger requests
+        await sleep(500);
+
+        console.log(`Processing chunk ${i + index + 1} of ${chunkLength}...`);
+
+        // Call the provided processFunction for each chunk
+        return processFunction(chunk, options);
+      });
+
+    // Wait for all promises in the current batch to resolve
+    const chunkResults = await Promise.all(chunkPromises);
+    results.push(...chunkResults);
+  }
+
+  return results;
+}
+
 module.exports = {
   destructureArgs,
   getHexagram,
@@ -1548,8 +1605,10 @@ module.exports = {
   removeMentionFromMessage,
   doesMessageContainCapability,
   isBreakingMessageChain,
-  trimResponseIfNeeded,
+  // trimResponseIfNeeded,
   generateAiCompletionParams,
+  addSystemPrompt,
+  addCurrentDateTime,
   displayTypingIndicator,
   generateAiCompletion,
   assembleMessagePreamble,
@@ -1565,4 +1624,7 @@ module.exports = {
   createChatCompletion,
   convertCapabilityManifestToXML,
   convertMessagesToXML,
+  cleanUrlForPuppeteer,
+  processChunks,
+  sleep,
 };

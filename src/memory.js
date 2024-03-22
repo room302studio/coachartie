@@ -100,9 +100,9 @@ module.exports = (async () => {
     //   }
     // });
 
-    preambleLogger.info(
-      `📜 Preamble messages ${JSON.stringify(completeMessages)}`,
-    );
+    // preambleLogger.info(
+    //   `📜 Preamble messages ${JSON.stringify(completeMessages)}`,
+    // );
 
     // de-dupe memories
     memories = [...userMemories, ...generalMemories, ...relevantMemories];
@@ -149,7 +149,7 @@ module.exports = (async () => {
     //   }
     // });
 
-    const rememberCompletion = await openai.createChatCompletion({
+    const rememberCompletion = await openai.chat.completions.create({
       model: REMEMBER_MODEL,
       // temperature: 1.1,
       // top_p: 0.9,
@@ -181,7 +181,7 @@ module.exports = (async () => {
       ],
     });
 
-    const rememberText = rememberCompletion.data.choices[0].message.content;
+    const rememberText = rememberCompletion.choices[0].message.content;
 
     // if the remember text is ✨ AKA empty, we don't wanna store it
     if (rememberText === "✨") return rememberText;
