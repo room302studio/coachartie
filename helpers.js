@@ -605,7 +605,7 @@ async function createChatCompletion(
   temperature,
   presence_penalty = 0.01
 ) {
-  const { CHAT_MODEL, MAX_OUTPUT_TOKENS } = await getConfigFromSupabase();
+  const { CHAT_MODEL, MAX_OUTPUT_TOKENS, CLAUDE_COMPLETION_MODEL, OPENAI_COMPLETION_MODEL } = await getConfigFromSupabase();
   const completionModel = CHAT_MODEL || "openai";
 
   const max_tokens = MAX_OUTPUT_TOKENS || 1500;
@@ -623,7 +623,8 @@ async function createChatCompletion(
 
     try {
       return await openai.chat.completions.create({
-        model: "gpt-4-turbo-preview",
+        // model: "gpt-4-turbo-preview",
+        model: OPENAI_COMPLETION_MODEL,
         temperature,
         presence_penalty,
         // max_tokens,
@@ -648,7 +649,6 @@ async function createChatCompletion(
     // logger.info("---");
 
     return {
-      data: {
         choices: [
           {
             message: {
@@ -657,19 +657,21 @@ async function createChatCompletion(
             },
           },
         ],
-      },
     };
   }
 }
 
 async function createClaudeCompletion(messages, temperature, max_tokens) {
+  const { CLAUDE_COMPLETION_MODEL } = await getConfigFromSupabase();
   // convert the messages into an xml format for claude, sent as a single well-formatted user message
   const xmlMessages = convertMessagesToXML(messages);
   // completionLogger.info(`xmlMessages: ${xmlMessages}`);
 
   const claudeCompletion = await anthropic.messages.create({
     // model: "claude-2.1",
-    model: "claude-3-sonnet-20240229",
+    // model: "claude-3-sonnet-20240229",
+    // model: "claude-3-haiku-20240307",
+    model: CLAUDE_COMPLETION_MODEL,
     // max_tokens: MAX_OUTPUT_TOKENS,
     max_tokens: 1024,
     messages: [{ role: "user", content: xmlMessages }],
