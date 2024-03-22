@@ -596,6 +596,8 @@ async function createChatCompletion(
   const { CHAT_MODEL, MAX_OUTPUT_TOKENS } = await getConfigFromSupabase();
   const completionModel = CHAT_MODEL || "openai";
 
+  const max_tokens = MAX_OUTPUT_TOKENS || 1500;
+
   if (completionModel === "openai") {
     logger.info("Using OpenAI for chat completion");
 
@@ -606,13 +608,17 @@ async function createChatCompletion(
     Message Count: ${messages.length}
     `);
 
+    console.log('messages')
+    console.log(messages)
+
+
     try {
       return await openai.createChatCompletion({
         model: "gpt-4-turbo-preview",
         temperature,
         presence_penalty,
-        max_tokens: MAX_OUTPUT_TOKENS,
-        messages: messages,
+        // max_tokens,
+        messages
       });
     } catch (error) {
       logger.error("Error creating chat completion:", error);
@@ -626,7 +632,7 @@ async function createChatCompletion(
       presence_penalty,
     );
   } else if (completionModel === "claude") {
-    const res = await createClaudeCompletion(messages, temperature);
+    const res = await createClaudeCompletion(messages, temperature, max_tokens);
 
     // logger.info("---");
     // logger.info(`res: ${JSON.stringify(res, null, 2)}`);
@@ -647,7 +653,7 @@ async function createChatCompletion(
   }
 }
 
-async function createClaudeCompletion(messages, temperature) {
+async function createClaudeCompletion(messages, temperature, max_tokens) {
   // convert the messages into an xml format for claude, sent as a single well-formatted user message
   const xmlMessages = convertMessagesToXML(messages);
   // completionLogger.info(`xmlMessages: ${xmlMessages}`);
@@ -656,7 +662,7 @@ async function createClaudeCompletion(messages, temperature) {
     // model: "claude-2.1",
     model: "claude-3-sonnet-20240229",
     // max_tokens: MAX_OUTPUT_TOKENS,
-    max_tokens: 2048,
+    max_tokens,
     messages: [{ role: "user", content: xmlMessages }],
   });
 
@@ -1001,6 +1007,14 @@ function formatCapabilityManifest(manifest) {
         formattedManifest += "**Parameters:**\n\n";
         for (const parameter of capability.parameters) {
           formattedManifest += `- **${parameter.name}**: ${parameter.description}\n`;
+        }
+        formattedManifest += "\n";
+      }
+
+      if (capability.examples) {
+        formattedManifest += "**Examples:**\n\n";
+        for (const example of capability.examples) {
+          formattedManifest += `${example}\n\n`;
         }
         formattedManifest += "\n";
       }
