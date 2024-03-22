@@ -69,3 +69,43 @@ async function createProject({
   if (errAddProject) throw new Error(errAddProject.message);
   return `Successfully added project: ${projectName}`;
 }
+
+async function updateProject({
+                               projectName,
+                               newProjectName,
+                               newOrgId,
+                               newAliases,
+                               newStatus,
+                               newStartDate,
+                               newEndDate,
+                             }) {
+  if (!newProjectName && !newOrgId && !newAliases && !newStatus && !newStartDate && !newEndDate) return "No changes made"
+
+  const { data: [projectBefore], error } = await supabase
+    .from(PROJECT_TABLE_NAME)
+    .select('org_id, aliases, status, start_date, end_date')
+    .match({ name: projectName })
+  if (error) throw new Error(error.message);
+  if (
+    (!newProjectName || newProjectName === projectName) &&
+    (!newOrgId || newOrgId === projectBefore.org_id) &&
+    (!newAliases || JSON.stringify(newAliases) === JSON.stringify(projectBefore.aliases)) &&
+    (!newStatus || newStatus === projectBefore.status) &&
+    (!newStartDate || newStartDate === projectBefore.start_date) &&
+    (!newEndDate || newEndDate === projectBefore.end_date)
+  ) return "No changes made";
+
+  const { error: errUpdateProject } = await supabase
+    .from(PROJECT_TABLE_NAME)
+    .update({
+      name: newProjectName,
+      org_id: newOrgId,
+      aliases: newAliases,
+      status: newStatus,
+      start_date: newStartDate,
+      end_date: newEndDate,
+    })
+    .match({ name: projectName });
+  if (errUpdateProject) throw new Error(errUpdateProject.message);
+  return `Successfully updated project: ${projectName}`;
+}
