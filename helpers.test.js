@@ -3,10 +3,10 @@ const chance = new Chance();
 const dotenv = require("dotenv");
 const { openai } = require("./src/openai");
 const { capabilityRegex } = require("./src/capabilities.js");
-const {
-  getUserMemory,
-  getUserMessageHistory,
-} = require("./capabilities/remember");
+// const {
+//   getUserMemory,
+//   getUserMessageHistory,
+// } = require("./capabilities/memory");
 dotenv.config();
 
 const {
