@@ -1,16 +1,10 @@
 const axios = require("axios");
-const { Configuration, OpenAIApi } = require("openai");
 const dotenv = require("dotenv");
 const { destructureArgs } = require("../helpers");
 const logger = require("../src/logger.js")("wikipedia");
-
+const {openai} = require("../src/openai.js")
 dotenv.config();
 
-const configuration = new Configuration({
-  organization: process.env.OPENAI_API_ORGANIZATION,
-  apiKey: process.env.OPENAI_API_KEY,
-});
-const openai = new OpenAIApi(configuration);
 
 async function handleCapabilityMethod(method, args) {
   const [arg1] = destructureArgs(args);
@@ -63,7 +57,7 @@ async function askWikipedia(args) {
       return "No Wikipedia articles found for the given query.";
     }
 
-    const searchEvaluation = await openai.createChatCompletion({
+    const searchEvaluation = await openai.chat.completions.create({
       model: "gpt-3.5-turbo-16k",
       max_tokens: 444,
       temperature: 1,

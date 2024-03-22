@@ -16,7 +16,11 @@ try {
  * @param {string} diagramText - The Mermaid diagram text to convert.
  * @returns {Promise<{ image: Buffer }>} - A promise that resolves to an object containing the converted image as a Buffer.
  * @throws {Error} - If an error occurs while converting the Mermaid diagram.
- * @example convertMermaidDiagram("graph LR; A-->B;"); // Returns { image: <Buffer> }
+ * @example convertMermaidDiagram(graph LR; A-->B;); // Returns { image: <Buffer> }
+ * @example convertMermaidToDiagram(```mermaid
+ * graph LR;
+ *  A-->B;
+ * ```); // Returns { image: <Buffer> }
  */
 const convertMermaidDiagram = async (diagramText) => {
   try {
@@ -44,9 +48,17 @@ const convertMermaidDiagram = async (diagramText) => {
     if (diagramText.startsWith("```mermaid")) {
       diagramText = diagramText.replace("```mermaid", "");
     }
+    // or if just starts with ```
+    if (diagramText.startsWith("```")) {
+      diagramText = diagramText.replace("```", "");
+    }
     if (diagramText.endsWith("```")) {
       diagramText = diagramText.replace("```", "");
     }
+
+    
+
+
 
     // Load the Mermaid library
     await page.addScriptTag({
@@ -69,14 +81,14 @@ const convertMermaidDiagram = async (diagramText) => {
     const svgHandle = await page.$("svg");
     const svgBoundingBox = await svgHandle.boundingBox();
     const screenshot = await page.screenshot({
-      // clip: {
-      //   x: svgBoundingBox.x,
-      //   y: svgBoundingBox.y,
-      //   width: svgBoundingBox.width,
-      //   height: svgBoundingBox.height
-      // },
+      clip: {
+        x: svgBoundingBox.x,
+        y: svgBoundingBox.y,
+        width: svgBoundingBox.width,
+        height: svgBoundingBox.height
+      },
       // quality: 100, // Increase the quality to 100
-      fullPage: true, // Capture the full page
+      // fullPage: true, // Capture the full page
       deviceScaleFactor: 4, // Increase the DPI to 2x
     });
 

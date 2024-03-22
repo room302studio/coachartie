@@ -8,7 +8,13 @@ const {
 const chance = require("chance").Chance();
 const vision = require("./vision.js");
 const logger = require("../src/logger.js")("memory");
-const preambleLogger = require("../src/logger.js")("preamble");
+// const preambleLogger = require("../src/logger.js")("preamble");
+
+const preambleLogger = {
+  info: (message) => {},
+};
+
+
 const { getPromptsFromSupabase, getConfigFromSupabase } = require("../helpers");
 
 module.exports = (async () => {
@@ -24,11 +30,11 @@ module.exports = (async () => {
    * @param {string} username - The username of the user to generate a completion for
    * @param {Array} conversationHistory - The entire conversation history up to the point of the user's last message
    * @param {boolean} isCapability - Whether the completion is for a capability or not
-   * @param {strin } capabilityName - The name of the capability (if applicable)
+   * @param {string} capabilityName - The name of the capability (if applicable)
    *
    * @returns {string} - The completion text
    */
-  async function generateAndStoreCompletion(
+  async function logInteraction(
     prompt,
     response,
     { username = "", channel = "", guild = "" },
@@ -87,7 +93,6 @@ module.exports = (async () => {
         content: isCapability ? PROMPT_CAPABILITY_REMEMBER : PROMPT_REMEMBER,
       },
     ];
-
     // make sure none of the completeMessages have an image
     // completeMessages.forEach((message) => {
     //   if (message.image) {
@@ -95,9 +100,9 @@ module.exports = (async () => {
     //   }
     // });
 
-    preambleLogger.info(
-      `📜 Preamble messages ${JSON.stringify(completeMessages)}`,
-    );
+    // preambleLogger.info(
+    //   `📜 Preamble messages ${JSON.stringify(completeMessages)}`,
+    // );
 
     // de-dupe memories
     memories = [...userMemories, ...generalMemories, ...relevantMemories];
@@ -144,7 +149,7 @@ module.exports = (async () => {
     //   }
     // });
 
-    const rememberCompletion = await openai.createChatCompletion({
+    const rememberCompletion = await openai.chat.completions.create({
       model: REMEMBER_MODEL,
       // temperature: 1.1,
       // top_p: 0.9,
@@ -176,7 +181,7 @@ module.exports = (async () => {
       ],
     });
 
-    const rememberText = rememberCompletion.data.choices[0].message.content;
+    const rememberText = rememberCompletion.choices[0].message.content;
 
     // if the remember text is ✨ AKA empty, we don't wanna store it
     if (rememberText === "✨") return rememberText;
@@ -188,6 +193,6 @@ module.exports = (async () => {
   }
 
   return {
-    generateAndStoreCompletion,
+    logInteraction,
   };
 })();

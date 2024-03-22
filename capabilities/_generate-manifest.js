@@ -1,6 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-
+const logger = require("../src/logger.js")("generate-manifest");
 const capabilitiesDir = path.join(__dirname);
 
 // Get all the files in the capabilities directory
@@ -8,88 +8,35 @@ const files = fs.readdirSync(capabilitiesDir);
 
 let manifest = {};
 
-// Loop through each file
-for (const file of files) {
-  // Ignore non-JavaScript files
-  if (path.extname(file) !== ".js") continue;
+// Convert the loop to an async function to use await
+async function generateManifest() {
+  const documentation = await import("documentation"); // Move import outside the loop if possible
 
-  // Get the name of the capability (without the .js extension)
-  const capabilityName = path.basename(file, ".js");
+  for (const file of files) {
+    if (path.extname(file) !== ".js" || file === "_template.js" || file === "_generate-manifest.js") {
+      continue; // Skip non-JS, _template, and self
+    }
 
-  // if the file is _template.js ignore it
-  if (capabilityName === "_template") continue;
+    const capabilityName = path.basename(file, ".js");
+    logger.info(`Generating manifest for ${capabilityName}`);
 
-  logger.info(`Generating manifest for ${capabilityName}`);
+    try {
+      const docs = await documentation.build([path.join(capabilitiesDir, file)], { shallow: true });
+      const output = await documentation.formats.json(docs);
+      manifest[capabilityName] = parseJSDoc(JSON.parse(output), capabilityName);
+    } catch (err) {
+      console.error(err);
+    }
+  }
 
-  // Build the documentation for the capability file
-  import("documentation").then((documentation) => {
-    documentation
-      .build([path.join(capabilitiesDir, file)], { shallow: true })
-      .then((docs) => {
-        // Format the documentation as JSON
-        return documentation.formats.json(docs);
-      })
-      .then((output) => {
-        // Parse the JSON output
-        const jsonOutput = JSON.parse(output);
-
-        // console.log('✨ Parsed JSON', jsonOutput);
-
-        const textManifest = parseJSDoc(jsonOutput, capabilityName);
-
-        // Add the capability and its documentation to the manifest
-        // manifest[capabilityName] = jsonOutput;
-        manifest[capabilityName] = textManifest;
-
-        // Write the manifest to a file
-        fs.writeFileSync(
-          "capabilities/_manifest.json",
-          JSON.stringify(manifest, null, 2),
-        );
-      })
-      .catch((err) => {
-        console.error(err);
-      });
-  });
+  fs.writeFileSync("capabilities/_manifest.json", JSON.stringify(manifest, null, 2));
 }
 
-// function parseJSDoc(jsDocData, moduleName) {
-//   let output = [];
-
-//   jsDocData.forEach(func => {
-//     let funcInfo = `Function: ${moduleName}:${func.name}()\n`;
-
-//     if (func.description?.children) {
-//       funcInfo += ` - ${getTextFromChildren(func.description.children)}.\n`;
-//     }
-
-//     if (func.params?.length > 0) {
-//       funcInfo += `  Parameters:\n`;
-//       funcInfo += func.params
-//         .filter(param => param.description?.children)
-//         .map(param => `  - ${param.name} (${getTextFromChildren(param.description.children)})`)
-//         .join('\n');
-//       funcInfo += '\n';
-//     }
-
-//     if (func.returns?.[0]?.description?.children) {
-//       funcInfo += `  Returns: ${getTextFromChildren(func.returns[0].description.children)}.\n`;
-//     }
-
-//     if (func.throws?.length > 0) {
-//       funcInfo += `  Exceptions:\n`;
-//       funcInfo += func.throws
-//         .filter(ex => ex.description?.children)
-//         .map(ex => `    - ${getTextFromChildren(ex.description.children)}`)
-//         .join('\n');
-//       funcInfo += '\n';
-//     }
-
-//     output.push(funcInfo);
-//   });
-
-//   return output.join('\n');
-// }
+// Call the async function
+generateManifest().then(() => {    
+  console.log('Manifest generation complete.')
+  process.exit(0);
+}).catch(console.error);
 
 function parseJSDoc(jsDocData, moduleName) {
   let output = [];
@@ -129,6 +76,18 @@ function parseJSDoc(jsDocData, moduleName) {
       funcInfo.exceptions = func.throws
         .filter((ex) => ex.description?.children)
         .map((ex) => getTextFromChildren(ex.description.children));
+    }
+
+    // if there are any examples, properly format them and add them to the output
+    if (func.examples?.length > 0) {
+      funcInfo.examples = func.examples
+        .map((ex) => {
+          return ex.description
+            .split("\n")
+            .map((line) => `    ${line}`)
+            .join("\n");
+        })
+        .join("\n");
     }
 
     output.push(funcInfo);

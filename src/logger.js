@@ -6,13 +6,26 @@ require("dotenv").config();
 module.exports = function (serviceName) {
   let loggers = [];
 
+  // Define a maximum message size
+  const MAX_MESSAGE_SIZE = 1024 * 5; // 5KB, adjust as needed
+
+  // Function to truncate message if it exceeds the maximum size
+  const truncateMessage = (message) => {
+    if (Buffer.byteLength(message, 'utf8') > MAX_MESSAGE_SIZE) {
+      return message.substring(0, MAX_MESSAGE_SIZE) + '... [Message truncated]';
+    }
+    return message;
+  };
+
   loggers.push(new winston.transports.Console({
     format: winston.format.combine(
       winston.format.timestamp(),
       winston.format.printf((info) => {
         const lineNumber = info.stack ? info.stack.split("\n")[2].trim() : "";
         const { level, message, timestamp } = info;
-        return `${timestamp} ${serviceName} ${lineNumber} : ${message}`;
+        // Truncate message if necessary
+        const truncatedMessage = truncateMessage(message);
+        return `${timestamp} ${serviceName} ${lineNumber} : ${truncatedMessage}`;
       }),
     ),
   }));
@@ -26,7 +39,9 @@ module.exports = function (serviceName) {
         winston.format.timestamp(),
         winston.format.printf((info) => {
           const { level, message, timestamp } = info;
-          return `${timestamp} ${level}: ${message}`;
+          // Truncate message if necessary
+          const truncatedMessage = truncateMessage(message);
+          return `${timestamp} ${level}: ${truncatedMessage}`;
         }),
       ),
     }));
@@ -37,7 +52,9 @@ module.exports = function (serviceName) {
         winston.format.timestamp(),
         winston.format.printf((info) => {
           const { level, message, timestamp } = info;
-          return `${timestamp} ${level}: ${message}`;
+          // Truncate message if necessary
+          const truncatedMessage = truncateMessage(message);
+          return `${timestamp} ${level}: ${truncatedMessage}`;
         }),
       ),
     }));
@@ -52,6 +69,11 @@ module.exports = function (serviceName) {
       localhost: os.hostname(),
       eol: '\n',
     });
+
+    papertrail.on('error', (err) => {
+      console.error('Error in Papertrail logging:', err);
+    });
+    
     loggers.push(papertrail);
   }
 
@@ -72,9 +94,9 @@ module.exports = function (serviceName) {
   }
 
   return {
-    log: (message) => winstonLogger.log('info', message),
-    info: (message) => winstonLogger.info(message),
-    warn: (message) => winstonLogger.warn(message),
-    error: (message) => winstonLogger.error("🚨 " + message),
+    log: (message) => winstonLogger.log('info', truncateMessage(message)),
+    info: (message) => winstonLogger.info(truncateMessage(message)),
+    warn: (message) => winstonLogger.warn(truncateMessage(message)),
+    error: (message) => winstonLogger.error("🚨 " + truncateMessage(message)),
   };
 };
