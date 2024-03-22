@@ -335,7 +335,7 @@ async function listSharedLabels() {
   return data;
 }
 
-async function createSharedLabel({ name, organization, shareWithOrganization }) {
+async function createSharedLabel({ name, organization, parent, shareWithOrganization }) {
   const url = `${apiFront}/shared_labels`;
   const options = {
     method: "POST",
@@ -347,6 +347,7 @@ async function createSharedLabel({ name, organization, shareWithOrganization }) 
       shared_labels: [{
         name,
         organization,
+        parent,
         share_with_organization: shareWithOrganization,
       }],
     }),

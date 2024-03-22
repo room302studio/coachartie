@@ -1,4 +1,4 @@
-const { destructureArgs, parseJSONArg } = require("../helpers");
+const { parseJSONArg } = require("../helpers");
 const { createSharedLabel, createPost } = require("../src/missive");
 const { createClient } = require("@supabase/supabase-js");
 require("dotenv").config();
@@ -39,6 +39,8 @@ async function createOrg({
                            primaryEmailAddress,
                            emailAddresses,
                          }) {
+  if (!name) throw new Error("Missing required fields");
+
   const newLabel = await createSharedLabel({
     name,
     shareWithOrganization: true,
@@ -54,7 +56,7 @@ async function createOrg({
     organization: process.env.MISSIVE_ORGANIZATION,
     notificationTitle: "New org",
     notificationBody: name,
-    text: "New org",
+    text: name,
   })
 
   let newlyAddedEmails = []
@@ -100,30 +102,30 @@ async function createOrg({
  *
  * @param {string} name - The current name of the organization.
  * @param {string} newName - The new name of the organization.
- * @param {Array} aliases - The new aliases of the organization.
- * @param {Date} firstContact - The new date of the first contact with the organization.
+ * @param {Array} newAliases - The new aliases of the organization.
+ * @param {Date} newFirstContact - The new date of the first contact with the organization.
  *
  * @returns {Promise<string>} A promise that resolves to a string message indicating the result of the operation.
  *
  * @throws {Error} If there is an error with the Supabase operations.
  */
-async function updateOrg({ name, newName, aliases, firstContact }) {
-  if (!newName && !aliases && !firstContact) return "No changes made"
+async function updateOrg({ name, newName, newAliases, newFirstContact }) {
+  if (!newName && !newAliases && !newFirstContact) return "No changes made"
 
   const { data: [orgBefore], error: errorGetOrg } = await supabase
     .from(ORG_TABLE_NAME)
-    .select('name, aliases, first_contact, missive_conversation_id')
+    .select('aliases, first_contact, missive_conversation_id')
     .match({ name })
-  if (errorGetOrg) throw new Error(error.message);
+  if (errorGetOrg) throw new Error(errorGetOrg.message);
   if (
     (!newName || newName === name) &&
-    (!aliases || JSON.stringify(aliases) === JSON.stringify(orgBefore.aliases)) &&
-    (!firstContact || firstContact === orgBefore.first_contact)
+    (!newAliases || JSON.stringify(newAliases) === JSON.stringify(orgBefore.aliases)) &&
+    (!newFirstContact || newFirstContact === orgBefore.first_contact)
   ) return "No changes made";
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from(ORG_TABLE_NAME)
-    .update({ newName, aliases, first_contact: firstContact })
+    .update({ newName, aliases: newAliases, first_contact: newFirstContact })
     .match({ name });
   if (error) throw new Error(error.message);
 
@@ -132,12 +134,12 @@ async function updateOrg({ name, newName, aliases, firstContact }) {
     name = newName
     updateNotificationParts.push(`- Org updated: ${orgBefore.name} changed to ${newName}`);
   }
-  if (aliases) {
-    updateNotificationParts.push(`- ${name} alias added: ${aliases}`);
+  if (newAliases) {
+    updateNotificationParts.push(`- ${name} alias added: ${newAliases}`);
     updateNotificationParts.push(`- ${name} alias removed: ${orgBefore.aliases}`);
   }
-  if (firstContact) {
-    updateNotificationParts.push(`- First contact with ${name} on ${firstContact}`);
+  if (newFirstContact) {
+    updateNotificationParts.push(`- First contact with ${name} on ${newFirstContact}`);
   }
   const updateNotificationMarkdown = updateNotificationParts.join('\n');
   await createPost({
@@ -161,4 +163,5 @@ module.exports = {
       throw new Error(`Invalid method: ${method}`);
     }
   },
+  ORG_TABLE_NAME
 };
