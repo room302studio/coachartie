@@ -109,3 +109,42 @@ async function updateProject({
   if (errUpdateProject) throw new Error(errUpdateProject.message);
   return `Successfully updated project: ${projectName}`;
 }
+
+async function updateProjectStatus({ name, shortname, alias, endDate, newStatus }) {
+  if (!name && !shortname && !alias) throw new Error("Missing required fields");
+
+  let newValue = { status: newStatus }
+  if (endDate) newValue.end_date = endDate
+  let query = supabase
+    .from(PROJECT_TABLE_NAME)
+    .update(newValue)
+  if (name) query = query.eq('name', name);
+  if (shortname) query = query.eq('shortname', shortname);
+  if (alias) query = query.contains('aliases', [alias]);
+
+  const { error } = await query;
+
+  if (error) throw new Error(error.message);
+  return `Successfully ${newStatus} project: ${name || shortname || alias}`
+}
+
+module.exports = {
+  handleCapabilityMethod: async (method, args) => {
+    console.log(`⚡️ Calling capability method: supabaseproject.${method}`);
+    const arg = parseJSONArg(args)
+    if (method === "createProject") {
+      return await createProject(arg);
+    } else if (method === "updateProject") {
+      return await updateProject(arg);
+    } else if (method === "completeProject") {
+      arg.newStatus = "completed";
+      return await updateProjectStatus(arg);
+    } else if (method === "archiveProject") {
+      arg.newStatus = "archived";
+      delete arg.endDate
+      return await updateProjectStatus(arg);
+    } else {
+      throw new Error(`Invalid method: ${method}`);
+    }
+  },
+};
