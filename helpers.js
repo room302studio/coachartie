@@ -597,6 +597,7 @@ async function createChatCompletion(
   const completionModel = CHAT_MODEL || "openai";
 
   const max_tokens = MAX_OUTPUT_TOKENS || 1500;
+  console.log("MAX_OUTPUT_TOKENS", MAX_OUTPUT_TOKENS);
 
   if (completionModel === "openai") {
     logger.info("Using OpenAI for chat completion");
@@ -662,7 +663,7 @@ async function createClaudeCompletion(messages, temperature, max_tokens) {
     // model: "claude-2.1",
     model: "claude-3-sonnet-20240229",
     // max_tokens: MAX_OUTPUT_TOKENS,
-    max_tokens,
+    // max_tokens,
     messages: [{ role: "user", content: xmlMessages }],
   });
 
