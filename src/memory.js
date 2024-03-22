@@ -8,7 +8,13 @@ const {
 const chance = require("chance").Chance();
 const vision = require("./vision.js");
 const logger = require("../src/logger.js")("memory");
-const preambleLogger = require("../src/logger.js")("preamble");
+// const preambleLogger = require("../src/logger.js")("preamble");
+
+const preambleLogger = {
+  info: (message) => {},
+};
+
+
 const { getPromptsFromSupabase, getConfigFromSupabase } = require("../helpers");
 
 module.exports = (async () => {
@@ -28,7 +34,7 @@ module.exports = (async () => {
    *
    * @returns {string} - The completion text
    */
-  async function generateAndStoreCompletion(
+  async function logInteraction(
     prompt,
     response,
     { username = "", channel = "", guild = "" },
@@ -187,6 +193,6 @@ module.exports = (async () => {
   }
 
   return {
-    generateAndStoreCompletion,
+    logInteraction,
   };
 })();

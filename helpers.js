@@ -3,6 +3,7 @@ const chance = new Chance();
 const dotenv = require("dotenv");
 const util = require("util");
 const fs = require("fs");
+const convert = require("xml-js");
 const { openai } = require("./src/openai");
 // const { capabilityRegex } = require("./src/capabilities.js");
 dotenv.config();
@@ -16,13 +17,17 @@ const {
   getRelevantMemories,
 } = require("./src/remember.js");
 const logger = require("./src/logger.js")("helpers");
-const completionLogger = require("./src/logger.js")("completion");
-const { createClient } = require("@supabase/supabase-js");
-// const supabase = createClient(
-//   process.env.SUPABASE_URL,
-//   process.env.SUPABASE_API_KEY,
-// );
+
+// const completionLogger = require("./src/logger.js")("completion");
+// make an empty completionLogger
+const completionLogger = {
+  info: () => {},
+  error: () => {},
+};
+
 const { supabase } = require("./src/supabaseclient.js");
+const Anthropic = require("@anthropic-ai/sdk");
+const anthropic = new Anthropic();
 
 const capabilityRegex = /(\w+):(\w+)\(([^]*?)\)/; // captures newlines in the  third argument
 
@@ -41,7 +46,7 @@ async function getPromptsFromSupabase() {
   const promptValues = promptArray.map((prompt) => prompt.prompt_text);
   // return an object with all the keys and values
   const prompts = Object.fromEntries(
-    promptKeys.map((_, i) => [promptKeys[i], promptValues[i]])
+    promptKeys.map((_, i) => [promptKeys[i], promptValues[i]]),
   );
   // logger.info(`Prompts: ${JSON.stringify(prompts, null, 2)}`);
   return prompts;
@@ -61,67 +66,9 @@ async function getConfigFromSupabase() {
   const configValues = configArray.map((config) => config.config_value);
   // return an object with all the keys and values
   const config = Object.fromEntries(
-    configKeys.map((_, i) => [configKeys[i], configValues[i]])
+    configKeys.map((_, i) => [configKeys[i], configValues[i]]),
   );
-  // logger.info(`Config: ${JSON.stringify(config, null, 2)}`);
   return config;
-}
-
-/**
- * Retrieves the value from the configArray that matches the given key.
- * @param {Array} configArray - The array of config objects.
- * @param {string} key - The key to search for in the configArray.
- * @returns {*} - The value associated with the matching key.
- */
-function getConfigByKey(configArray, key) {
-  if (!configArray) {
-    return;
-  }
-  if (!configArray.length) {
-    return;
-  }
-  return configArray.find((config) => config.key === key)?.value;
-}
-
-/**
- * Replaces the robot id with the robot name in a given string.
- * @param {string} string - The string to replace the robot id in.
- * @param {object} client - The client object.
- * @returns {string} - The string with the robot id replaced by the robot name.
- */
-function replaceRobotIdWithName(string, client) {
-  const coachArtieId = getCoachArtieId(client);
-  const coachArtieName = getCoachArtieName(client);
-  return replaceStringWithId(string, coachArtieId, coachArtieName);
-}
-
-/**
- * Gets the id of Coach Artie.
- * @param {object} client - The client object.
- * @returns {string} - The id of Coach Artie.
- */
-function getCoachArtieId(client) {
-  return client.user.id;
-}
-
-/**
- * Gets the name of Coach Artie.
- * @param {object} client - The client object.
- * @returns {string} - The name of Coach Artie.
- */
-function getCoachArtieName(client) {
-  return client.user.username;
-}
-
-/**
- * Replaces an id with a name in a given string.
- * @param {string} string - The string to replace the id in.
- * @param {string} id - The id to replace.
- * @param {string} name - The name to replace the id with.
- * @returns {string} - The string with the id replaced by the name.
- */
-function replaceStringWithId(string, id, name) {
-  return string.replace(`<@!${id}>`, name);
 }
 
 /**
@@ -177,7 +124,13 @@ function countTokensInMessage(message) {
  * @returns {string} - The message with the mention removed.
  */
 function removeMentionFromMessage(message, mention) {
-  return message.replace(mention, "").trim();
+  // we want to remove the entire
+  // <@number> section from
+  // <@1086489885269037128> what's up
+  // so we need to use a regex
+  const mentionRegex = new RegExp(mention, "g");
+  return message.replace(mentionRegex, "").trim();
+
 }
 
 /**
@@ -320,7 +273,7 @@ function trimResponseIfNeeded(capabilityResponse) {
   while (isResponseExceedingLimit(capabilityResponse)) {
     capabilityResponse = trimResponseByLineCount(
       capabilityResponse,
-      countTokens(capabilityResponse)
+      countTokens(capabilityResponse),
     );
   }
   return capabilityResponse;
@@ -579,19 +532,11 @@ async function generateAiCompletion(prompt, username, messages, config) {
   messages = await addPreambleToMessages(username, prompt, messages);
 
   // logger.info(
-  //   `Sending final messages array for chat completion: ${JSON.stringify(
+  //   `Sending final messages array for chat completion: ${util.inspect(
   //     messages,
-  //     null,
-  //     2,
+  //     { depth: null, colors: true },
   //   )}`,
   // );
-
-  logger.info(
-    `Sending final messages array for chat completion: ${util.inspect(
-      messages,
-      { depth: null, colors: true }
-    )}`
-  );
 
   let completion = null;
 
@@ -608,24 +553,33 @@ async function generateAiCompletion(prompt, username, messages, config) {
     completion = await createChatCompletion(
       messages,
       temperature,
-      presence_penalty
+      presence_penalty,
     );
   } catch (err) {
     logger.info(`Error creating chat completion ${err}`);
   }
-  logger.info(
-    `Raw completion response: ${JSON.stringify(completion, null, 2)}`
-  );
-  const aiResponse = completion.data.choices[0].message.content;
+  // logger.info(
+  //   `Raw completion response: ${JSON.stringify(completion, null, 2)}`,
+  // );
+
+  let aiResponse;
+  const choice = completion?.data?.choices?.[0]?.message?.content;
+  if (choice) {
+    aiResponse = choice;
+  } else {
+    const errorDetail = {
+      error: true,
+      message: "Invalid or incomplete AI completion response.",
+      completionResponse: JSON.stringify(completion, null, 2)
+    };
+    logger.error(`Error extracting AI response: ${JSON.stringify(errorDetail)}`);
+    throw new Error(`Error extracting AI response: ${JSON.stringify(errorDetail)}`);
+  }
   logger.info("🔧 AI Response: " + aiResponse);
   completionLogger.info("🔧 AI Response: " + aiResponse);
   messages.push(aiResponse);
   return { messages, aiResponse };
 }
-
-// const completionModel = "gemini";
-// const completionModel = "openai";
-const completionModel = "claude";
 
 /**
  * Creates a chat completion using the specified messages, temperature, and presence penalty.
@@ -637,8 +591,11 @@ const completionModel = "claude";
 async function createChatCompletion(
   messages,
   temperature,
-  presence_penalty = 0.01
+  presence_penalty = 0.01,
 ) {
+  const { CHAT_MODEL, MAX_OUTPUT_TOKENS } = await getConfigFromSupabase();
+  const completionModel = CHAT_MODEL || "openai";
+
   if (completionModel === "openai") {
     logger.info("Using OpenAI for chat completion");
 
@@ -666,15 +623,15 @@ async function createChatCompletion(
     return await createGeminiCompletion(
       messages,
       temperature,
-      presence_penalty
+      presence_penalty,
     );
   } else if (completionModel === "claude") {
     const res = await createClaudeCompletion(messages, temperature);
 
-    console.log("---");
-    console.log("res", res);
-    // return res.content.text
-    // right now we return the text but we need to make it look like a normal openai resposne so the downstream stuff works the same
+    // logger.info("---");
+    // logger.info(`res: ${JSON.stringify(res, null, 2)}`);
+    // logger.info("---");
+
     return {
       data: {
         choices: [
@@ -691,38 +648,17 @@ async function createChatCompletion(
 }
 
 async function createClaudeCompletion(messages, temperature) {
-  // the first thing we need to do is go through all of our messages, and make sure the role is "user" - no matter what (some of them come in as `system` from the openai style)
-  messages = messages.map((message) => {
-    message.role = "user";
-    return message;
-  });
-
-  // if there are multiple user messages next to each other, we just concat them into a single message- the messages MUST alternate user/assistant/user
-  messages = messages.reduce((acc, message) => {
-    if (acc.length === 0) {
-      acc.push(message);
-    } else {
-      const lastMessage = acc[acc.length - 1];
-      if (lastMessage.role === message.role) {
-        lastMessage.content += " " + message.content;
-      } else {
-        acc.push(message);
-      }
-    }
-    return acc;
-  }, []);
+  // convert the messages into an xml format for claude, sent as a single well-formatted user message
+  const xmlMessages = convertMessagesToXML(messages);
+  // completionLogger.info(`xmlMessages: ${xmlMessages}`);
 
   const claudeCompletion = await anthropic.messages.create({
-    model: "claude-2.1",
+    // model: "claude-2.1",
+    model: "claude-3-sonnet-20240229",
     // max_tokens: MAX_OUTPUT_TOKENS,
     max_tokens: 2048,
-    // messages: [
-    //   {"role": "user", "content": "Hello, world"}
-    // ]
-    messages,
+    messages: [{ role: "user", content: xmlMessages }],
   });
-
-  console.log("🐭", JSON.stringify(claudeCompletion));
 
   return claudeCompletion;
 }
@@ -849,7 +785,7 @@ async function createGeminiCompletion(messages, temperature, presence_penalty) {
 }
 
 and we need to return something that looks exactly like then openai response */
-  logger.info("json", json);
+  // logger.info("json", json);
   // const { candidates } = json[0];
   // we actually need to combine all the candidates into one response
   // so lets loop through the json, which is an array of objects with candidates
@@ -868,9 +804,9 @@ and we need to return something that looks exactly like then openai response */
     acc.push(...obj.content.parts);
     return acc;
   }, []);
-  logger.info("content", content);
+  // logger.info("content", content);
   const { parts } = content;
-  logger.info("parts", parts);
+  // logger.info("parts", parts);
   // const aiResponse = parts.map(part => part.text).join("\n");
   // const aiResponse = parts[0].text
   // combine the text of all the parts into one string
@@ -912,17 +848,18 @@ async function assembleMessagePreamble(username) {
   logger.info(`🔧 Assembling message preamble for <${username}> message`);
   const messages = [];
   addCurrentDateTime(messages);
-  await addHexagramPrompt(messages);
-  await addSystemPrompt(messages);
-  await addCapabilityPromptIntro(messages);
-  await addCapabilityManifestMessage(messages);
+  await addHexagramPrompt(messages);  
   await addTodosToMessages(messages);
   await addUserMessages(username, messages);
   await addUserMemories(username, messages);
   // add memories relevant to the user's message
   await addRelevantMemories(username, messages);
+  await addCapabilityPromptIntro(messages);
+  await addCapabilityManifestMessage(messages);
   // add some general memories from all interactions
   await addGeneralMemories(messages);
+  
+  await addSystemPrompt(messages);
   return messages;
 }
 
@@ -1021,16 +958,89 @@ function loadCapabilityManifest() {
  * @returns {Array} - The updated array of messages.
  */
 async function addCapabilityManifestMessage(messages) {
+  const { CHAT_MODEL } = await getConfigFromSupabase();
   const manifest = loadCapabilityManifest();
-  if (manifest) {
+
+  if (CHAT_MODEL === "claude") {
+    // convert the manifest to XML
+    const xmlManifest = convertCapabilityManifestToXML(manifest);
     messages.push({
       role: "user",
-      content: `Capability manifest: ${JSON.stringify(manifest)}`,
+      content: `## CAPABILITY MANIFEST\n\n${xmlManifest}`,
     });
+  } else {
+    if (manifest) {
+      messages.push({
+        role: "user",
+        // content: `Capability manifest: ${JSON.stringify(manifest)}`,
+        content: `## CAPABILITY MANIFEST\n\n${formatCapabilityManifest(
+          manifest,
+        )}`,
+      });
+    }
   }
   return messages;
 }
 
+/**
+ * Formats the capability manifest into a structured and readable format.
+ * @param {Object} manifest - The capability manifest object.
+ * @returns {string} - The capability manifest in a structured and readable format.
+ */
+function formatCapabilityManifest(manifest) {
+  let formattedManifest = "";
+
+  for (const category in manifest) {
+    formattedManifest += `## ${category.toUpperCase()} CAPABILITIES\n\n`;
+
+    for (const capability of manifest[category]) {
+      formattedManifest += `### ${capability.name}\n`;
+      formattedManifest += `${capability.description}\n\n`;
+
+      if (capability.parameters) {
+        formattedManifest += "**Parameters:**\n\n";
+        for (const parameter of capability.parameters) {
+          formattedManifest += `- **${parameter.name}**: ${parameter.description}\n`;
+        }
+        formattedManifest += "\n";
+      }
+    }
+
+    formattedManifest += "---\n\n"; // Separator between categories
+  }
+
+  return formattedManifest;
+}
+
+function convertMessagesToXML(messages) {
+  const options = { compact: true, ignoreComment: true, spaces: 4 };
+  const messagesObj = { messages: { message: messages } };
+  const xml = convert.js2xml(messagesObj, options);
+  return xml;
+}
+
+/**
+ * Converts the capability manifest to XML format.
+ * @param {Object} manifest - The capability manifest object.
+ * @returns {string} - The capability manifest in XML format.
+ */
+function convertCapabilityManifestToXML(manifest) {
+  const capabilitiesXml = Object.values(manifest).flatMap(category => 
+    category.map(capability => {
+      const nameXml = `    <name>${capability.name}</name>\n`;
+      const descriptionXml = capability.description ? `    <description>${capability.description}</description>\n` : '';
+      const parametersXml = capability.parameters ? `    <parameters>\n${
+        capability.parameters.map(parameter => 
+          `      <parameter>\n        <name>${parameter.name}</name>\n        <description>${parameter.description}</description>\n      </parameter>\n`
+        ).join('')
+      }    </parameters>\n` : '';
+
+      return `  <capability>\n${nameXml}${descriptionXml}${parametersXml}  </capability>\n`;
+    })
+  ).join('');
+
+  return `<capabilities>\n${capabilitiesXml}</capabilities>`;
+}
 /**
  * Retrieves previous messages for a user and adds them to the messages array.
  * @param {string} username - The username of the user.
@@ -1040,12 +1050,12 @@ async function addCapabilityManifestMessage(messages) {
 async function addUserMessages(username, messages) {
   const userMessageCount = chance.integer({ min: 10, max: 32 });
   logger.info(
-    `🔧 Retrieving ${userMessageCount} previous messages for ${username}`
+    `🔧 Retrieving ${userMessageCount} previous messages for ${username}`,
   );
   try {
     const userMessages = await getUserMessageHistory(
       username,
-      userMessageCount
+      userMessageCount,
     );
     if (!userMessages) {
       logger.info(`No previous messages found for ${username}`);
@@ -1107,16 +1117,16 @@ async function addRelevantMemories(username, messages) {
 
   const queryString = lastUserMessage.content;
   logger.info(
-    `🔧 Querying for relevant memories for ${username}: ${queryString}`
+    `🔧 Querying for relevant memories for ${username}: ${queryString}`,
   );
 
   try {
     const relevantMemories = await getRelevantMemories(
       queryString,
-      relevantMemoryCount
+      relevantMemoryCount,
     );
     logger.info(
-      `🔧 Retrieving ${relevantMemoryCount} relevant memories for ${queryString}`
+      `🔧 Retrieving ${relevantMemoryCount} relevant memories for ${queryString}`,
     );
 
     if (relevantMemories.length === 0) {
@@ -1516,13 +1526,11 @@ function getUniqueEmoji() {
 }
 
 module.exports = {
-  supabase,
   destructureArgs,
   getHexagram,
   countTokens,
   countMessageTokens,
   removeMentionFromMessage,
-  replaceRobotIdWithName,
   doesMessageContainCapability,
   isBreakingMessageChain,
   trimResponseIfNeeded,
@@ -1540,4 +1548,6 @@ module.exports = {
   getConfigFromSupabase,
   capabilityRegex,
   createChatCompletion,
+  convertCapabilityManifestToXML,
+  convertMessagesToXML,
 };

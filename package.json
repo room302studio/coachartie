@@ -55,7 +55,8 @@
     "winston": "^3.11.0",
     "winston-papertrail": "^1.0.5",
     "winston-syslog": "^2.7.0",
-    "winston-transport": "^4.7.0"
+    "winston-transport": "^4.7.0",
+    "xml-js": "^1.6.11"
   },
   "devDependencies": {
     "documentation": "^14.0.2",

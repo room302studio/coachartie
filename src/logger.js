@@ -52,6 +52,11 @@ module.exports = function (serviceName) {
       localhost: os.hostname(),
       eol: '\n',
     });
+
+    papertrail.on('error', (err) => {
+      console.error('Error in Papertrail logging:', err);
+    });
+    
     loggers.push(papertrail);
   }
 

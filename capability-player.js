@@ -2,10 +2,10 @@ const readline = require("readline");
 const fs = require("fs");
 const path = require("path");
 // Process the capability, passing capArgsString directly
-// const { processCapability } = require("./src/chain");
+// const { processAndLogCapabilityResponse } = require("./src/chain");
 
 // console.log('--------')
-// console.log("processCapability", processCapability);
+// console.log("processAndLogCapabilityResponse", processAndLogCapabilityResponse);
 
 // Load and parse the capability manifest
 const capabilityManifestPath = path.join(
@@ -78,11 +78,11 @@ async function processInputAsMessage(input) {
   // Initialize an empty messages array to simulate the message chain
   let messages = [];
 
-  const { processCapability } = await chain;
+  const { processAndLogCapabilityResponse } = await chain;
 
-  // console.log("processCapability", processCapability);
+  // console.log("processAndLogCapabilityResponse", processAndLogCapabilityResponse);
 
-  messages = await processCapability(messages, [
+  messages = await processAndLogCapabilityResponse(messages, [
     null,
     capSlug,
     capMethod,
