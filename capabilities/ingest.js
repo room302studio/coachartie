@@ -6,7 +6,6 @@ const { webPageToText, webpageToHTML } = require("./web.js"); // Adjust the path
 const { destructureArgs } = require("../helpers");
 const logger = require("../src/logger.js")("ingest-capability");
 
-
 async function handleCapabilityMethod(method, args) {
   const [arg1] = destructureArgs(args);
 
@@ -17,13 +16,12 @@ async function handleCapabilityMethod(method, args) {
   }
 }
 
-
 /**
  * @async
  * @function deepDocumentIngest
  * @param {string} urlOrText - The arguments object that contains the URL or the text of the document to be ingested
  * @returns {string} - The meta-summary of the document
- * 
+ *
  */
 async function deepDocumentIngest(urlOrText) {
   if (!urlOrText) {
@@ -32,28 +30,26 @@ async function deepDocumentIngest(urlOrText) {
 
   // check if the input is a URL
   const isUrl = urlOrText.startsWith("http");
-  
-  
-  try {
-    
 
+  try {
     // First we need to figure out what kind of document we are looking at so we can process it properly
     // If it's Markdown we can skip a few steps
 
     // First, use our puppeteer web browser to turn the page into text
-    // const {text: documentString} = await webPageToText(urlOrText);  
+    // const {text: documentString} = await webPageToText(urlOrText);
     const { html } = await webpageToHTML(urlOrText);
 
-    let document
+    let document;
     if (isUrl) {
       // documentText = documentString;
-      document = parseHtmlToSections(html);
+      document = await parseHtmlToSections(html);
     } else {
       // documentText = urlOrText;
       // if it's a string, parse it as markdown
       document = parseMarkdownToSections(urlOrText);
     }
 
+    console.log("document:");
     console.log(document);
 
     // Then, if it's a web page we use headers elements to try to split the page into logical sections
@@ -64,8 +60,6 @@ async function deepDocumentIngest(urlOrText) {
     // Once we've created our sections, we can create memories of them and store them in the database
 
     // Then we want to generate a meta-summary of the document based on all of those memories, and store that in the database as well
-
-
 
     return "Document ingested successfully.";
   } catch (error) {
@@ -78,12 +72,19 @@ async function parseHtmlToSections(htmlText) {
   const sections = [];
   let currentSection = { header: null, content: [] };
 
-  $('h1, h2, h3, h4, h5, h6, p').each((index, element) => {
+  $("h1, h2, h3, h4, h5, h6, p").each((index, element) => {
     const $element = $(element);
-    const tagName = $element.prop('tagName').toLowerCase();
+    const tagName = $element.prop("tagName").toLowerCase();
     const text = $element.text();
 
-    if (tagName === 'h1' || tagName === 'h2' || tagName === 'h3' || tagName === 'h4' || tagName === 'h5' || tagName === 'h6') {
+    if (
+      tagName === "h1" ||
+      tagName === "h2" ||
+      tagName === "h3" ||
+      tagName === "h4" ||
+      tagName === "h5" ||
+      tagName === "h6"
+    ) {
       // When we hit a heading, we start a new section
       if (currentSection.header || currentSection.content.length) {
         // Save the previous section if it has content
@@ -110,8 +111,8 @@ function parseMarkdownToSections(markdownText) {
   const sections = [];
   let currentSection = { header: null, content: [] };
 
-  tokens.forEach(token => {
-    if (token.type === 'heading') {
+  tokens.forEach((token) => {
+    if (token.type === "heading") {
       // When we hit a heading, we start a new section
       if (currentSection.header || currentSection.content.length) {
         // Save the previous section if it has content
