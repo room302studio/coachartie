@@ -187,6 +187,8 @@ module.exports = (async () => {
       return capabilityResponse;
     }
 
+    logger.info(`Capability Response: ${JSON.stringify(capabilityResponse)}`);
+
     return trimResponseIfNeeded(capabilityResponse);
   }
 

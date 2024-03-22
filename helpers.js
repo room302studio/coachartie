@@ -603,7 +603,7 @@ async function generateAiCompletion(prompt, username, messages, config) {
     completionLogger.info("🔧 Chat completion created");
     completionLogger.info("🔧 Temperature: " + temperature);
     completionLogger.info("🔧 Presence Penalty: " + presence_penalty);
-    completionLogger.info("🔧 Messages: " + JSON.stringify(messages));
+    // completionLogger.info("🔧 Messages: " + JSON.stringify(messages));
 
     completion = await createChatCompletion(
       messages,
@@ -614,7 +614,7 @@ async function generateAiCompletion(prompt, username, messages, config) {
     logger.info(`Error creating chat completion ${err}`);
   }
   // logger.info(`${JSON.stringify(completion, null, 2)}`);
-  const aiResponse = completion.data.choices[0].message.content;
+  const aiResponse = completion.choices[0].message.content;
   logger.info("🔧 AI Response: " + aiResponse);
   completionLogger.info("🔧 AI Response: " + aiResponse);
   messages.push(aiResponse);
@@ -647,7 +647,7 @@ async function createChatCompletion(
     `);
 
     try {
-      return await openai.createChatCompletion({
+      return await openai.chat.completions.create({
         model: "gpt-4-turbo-preview",
         temperature,
         presence_penalty,
@@ -1456,6 +1456,82 @@ function getUniqueEmoji() {
   return emoji;
 }
 
+function cleanUrlForPuppeteer(dirtyUrl) {
+  // if the url starts and ends with ' then remove them
+  if (dirtyUrl.startsWith("'") && dirtyUrl.endsWith("'")) {
+    dirtyUrl = dirtyUrl.slice(1, -1);
+  }
+
+  // if it starts with ' remove it
+  if (dirtyUrl.startsWith("'")) {
+    dirtyUrl = dirtyUrl.slice(1);
+  }
+
+  // if it ends with ' remove it
+  if (dirtyUrl.endsWith("'")) {
+    dirtyUrl = dirtyUrl.slice(0, -1);
+  }
+
+  // if the url starts and ends with " then remove them
+  if (dirtyUrl.startsWith('"') && dirtyUrl.endsWith('"')) {
+    dirtyUrl = dirtyUrl.slice(1, -1);
+  }
+
+  // if it starts with " remove it
+  if (dirtyUrl.startsWith('"')) {
+    dirtyUrl = dirtyUrl.slice(1);
+  }
+
+  // if it ends with " remove it
+  if (dirtyUrl.endsWith('"')) {
+    dirtyUrl = dirtyUrl.slice(0, -1);
+  }
+
+  // return the clean url
+  return dirtyUrl;
+}
+
+async function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Processes chunks of data asynchronously with a provided processing function.
+ * 
+ * @param {Array} chunks - The data chunks to process.
+ * @param {Function} processFunction - The function to process each chunk. Must return a Promise.
+ * @param {number} [limit=2] - The number of chunks to process concurrently.
+ * @param {Object} [options={}] - Additional options for the processing function.
+ * @returns {Promise<Array>} - A promise that resolves to an array of processed chunk results.
+ */
+async function processChunks(chunks, processFunction, limit = 2, options = {}) {
+  const results = [];
+  const chunkLength = chunks.length;
+
+  // Remove any empty or blank chunks
+  chunks = chunks.filter(chunk => chunk.length > 0);
+
+  for (let i = 0; i < chunkLength; i += limit) {
+    const chunkPromises = chunks
+      .slice(i, i + limit)
+      .map(async (chunk, index) => {
+        // Sleep to avoid rate limits or to stagger requests
+        await sleep(500);
+
+        console.log(`Processing chunk ${i + index + 1} of ${chunkLength}...`);
+
+        // Call the provided processFunction for each chunk
+        return processFunction(chunk, options);
+      });
+
+    // Wait for all promises in the current batch to resolve
+    const chunkResults = await Promise.all(chunkPromises);
+    results.push(...chunkResults);
+  }
+
+  return results;
+}
+
 module.exports = {
   supabase,
   destructureArgs,
@@ -1481,4 +1557,7 @@ module.exports = {
   getConfigFromSupabase,
   capabilityRegex,
   createChatCompletion,
+  cleanUrlForPuppeteer,
+  processChunks,
+  sleep
 };

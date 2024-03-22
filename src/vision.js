@@ -10,7 +10,7 @@ const fetchImageDescription = async () => {
   isFetching = true;
   logger.info(`Requesting description of image at ${imageUrl}`);
   try {
-    const completion = await openai.createChatCompletion({
+    const completion = await openai.chat.completions.create({
       model: "gpt-4-vision-preview",
       max_tokens: 1024,
       messages: [
@@ -32,7 +32,7 @@ const fetchImageDescription = async () => {
       ],
     });
 
-    imageDescription = completion.data.choices[0].message.content;
+    imageDescription = completion.choices[0].message.content;
     logger.info(imageDescription);
   } catch (err) {
     error = err;

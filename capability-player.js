@@ -78,7 +78,7 @@ async function processInputAsMessage(input) {
   // Initialize an empty messages array to simulate the message chain
   let messages = [];
 
-  const { processCapability } = await chain;
+  const processCapability = (await chain).processCapability;
 
   // console.log("processCapability", processCapability);
 
