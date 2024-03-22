@@ -4,5 +4,5 @@ const MEMORIES_TABLE_NAME = "memories";
 
 module.exports = {
   MEMORIES_TABLE_NAME,
-  MESSAGES_TABLE_NAME,
+  MESSAGES_TABLE_NAME
 };

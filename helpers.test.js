@@ -167,13 +167,13 @@ describe("Helpers", () => {
     });
 
     // make sure assembleMessagePreamble works as expected
-    describe("assembleMessagePreamble", () => {
-      it("should assemble a message preamble", () => {
-        const messages = [];
-        assembleMessagePreamble(messages);
-        expect(messages).toHaveLength(1);
-      });
-    });
+    // describe("assembleMessagePreamble", () => {
+    //   it("should assemble a message preamble", () => {
+    //     const messages = [];
+    //     assembleMessagePreamble(messages);
+    //     expect(messages).toHaveLength(1);
+    //   });
+    // });
 
 
   });

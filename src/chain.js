@@ -1,15 +1,3 @@
-const {
-  countMessageTokens,
-  doesMessageContainCapability,
-  generateAiCompletionParams,
-  generateAiCompletion,
-  trimResponseIfNeeded,
-  isExceedingTokenLimit,
-  getUniqueEmoji,
-  getConfigFromSupabase,
-  supabase,
-  createTokenLimitWarning,
-} = require("../helpers");
 // const {
 //   generateAndStoreRememberCompletion,
 //   generateAndStoreCapabilityCompletion,
@@ -29,8 +17,26 @@ const logger = require("../src/logger.js")("chain");
 //   MAX_RETRY_COUNT,
 // } = require("../config");
 
-module.exports = (async () => {
-  const { TOKEN_LIMIT, WARNING_BUFFER, MAX_CAPABILITY_CALLS, MAX_RETRY_COUNT } =
+
+
+module.exports = (async () => {  
+    const RESPONSE_LIMIT = 2048;
+
+    const {
+      countMessageTokens,
+      doesMessageContainCapability,
+      generateAiCompletionParams,
+      generateAiCompletion,
+      // trimResponseIfNeeded,
+      // isExceedingTokenLimit,
+      countTokens,
+      getUniqueEmoji,
+      getConfigFromSupabase,
+      supabase,
+      createTokenLimitWarning,
+    } = require("../helpers");
+
+    const { TOKEN_LIMIT, WARNING_BUFFER, MAX_CAPABILITY_CALLS, MAX_RETRY_COUNT } =
     await getConfigFromSupabase();
   /**
    * Processes a message chain.
@@ -345,6 +351,41 @@ module.exports = (async () => {
     return messages;
   }
 
+  /**
+ * Trims a response if it exceeds the limit.
+ * @param {string} capabilityResponse - The response to trim.
+ * @returns {string} - The trimmed response.
+ */
+function trimResponseIfNeeded(capabilityResponse) {
+  while (isResponseExceedingLimit(capabilityResponse)) {
+    capabilityResponse = trimResponseByLineCount(
+      capabilityResponse,
+      countTokens(capabilityResponse),
+    );
+  }
+  return capabilityResponse;
+}
+
+/**
+ * Checks if a response exceeds the limit.
+ * @param {string} response - The response to check.
+ * @returns {boolean} - True if the response exceeds the limit, false otherwise.
+ */
+function isResponseExceedingLimit(response) {
+  return countTokens(response) > TOKEN_LIMIT;
+}
+
+/**
+ * Checks if the total number of tokens in the given messages exceeds the token limit.
+ * @param {Array<string>} messages - The array of messages to count tokens from.
+ * @returns {boolean} - True if the total number of tokens exceeds the token limit, false otherwise.
+ */
+function isExceedingTokenLimit(messages) {
+  return countMessageTokens(messages) > TOKEN_LIMIT;
+}
+
+
+
   // module.exports = {
   //   processMessageChain,
   //   processMessage,
@@ -354,5 +395,7 @@ module.exports = (async () => {
     processMessageChain,
     processMessage,
     processCapability,
+    callCapabilityMethod,
+    getCapabilityResponse,
   };
 })();

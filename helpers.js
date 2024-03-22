@@ -8,7 +8,7 @@ const { openai } = require("./src/openai");
 dotenv.config();
 const { encode, decode } = require("@nem035/gpt-3-encoder");
 // TODO: Swap out for getConfigFromSupabase
-const { RESPONSE_LIMIT, TOKEN_LIMIT, MAX_OUTPUT_TOKENS } = require("./config");
+const { TOKEN_LIMIT, MAX_OUTPUT_TOKENS } = require("./config");
 const {
   getUserMemory,
   getUserMessageHistory,
@@ -316,24 +316,16 @@ function isBreakingMessageChain(capabilityMatch, lastMessage) {
  * @param {string} capabilityResponse - The response to trim.
  * @returns {string} - The trimmed response.
  */
-function trimResponseIfNeeded(capabilityResponse) {
-  while (isResponseExceedingLimit(capabilityResponse)) {
-    capabilityResponse = trimResponseByLineCount(
-      capabilityResponse,
-      countTokens(capabilityResponse),
-    );
-  }
-  return capabilityResponse;
-}
+// function trimResponseIfNeeded(capabilityResponse) {
+//   while (isResponseExceedingLimit(capabilityResponse)) {
+//     capabilityResponse = trimResponseByLineCount(
+//       capabilityResponse,
+//       countTokens(capabilityResponse),
+//     );
+//   }
+//   return capabilityResponse;
+// }
 
-/**
- * Checks if a response exceeds the limit.
- * @param {string} response - The response to check.
- * @returns {boolean} - True if the response exceeds the limit, false otherwise.
- */
-function isResponseExceedingLimit(response) {
-  return countTokens(response) > RESPONSE_LIMIT;
-}
 
 /**
  * Generates parameters for AI completion.
@@ -1542,7 +1534,7 @@ module.exports = {
   replaceRobotIdWithName,
   doesMessageContainCapability,
   isBreakingMessageChain,
-  trimResponseIfNeeded,
+  // trimResponseIfNeeded,
   generateAiCompletionParams,
   addSystemPrompt,
   addCurrentDateTime,
