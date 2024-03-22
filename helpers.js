@@ -555,18 +555,21 @@ async function generateAiCompletion(prompt, username, messages, config) {
   // logger.info(`${JSON.stringify(completion, null, 2)}`);
 
   // use responseHasContent to make sure the response is formatted correctly and throw a detailed error if it's not
-  if (!responseHasContent(completion)) {
-    logger.error(
-      `Error: Response does not have content. Response: ${JSON.stringify(
-        completion,
-        null,
-        2
-      )}`
-    );
-      }
-      
+  // if (!responseHasContent(completion)) {
+  //   logger.error(
+  //     `Error: Response does not have content. Response: ${JSON.stringify(
+  //       completion,
+  //       null,
+  //       2
+  //     )}`
+  //   );
+  //     }
+  
 
   const aiResponse = completion.choices[0].message.content;
+  
+
+
   logger.info("🔧 AI Response: " + aiResponse);
   completionLogger.info("🔧 AI Response: " + aiResponse);
   messages.push(aiResponse);
@@ -574,24 +577,24 @@ async function generateAiCompletion(prompt, username, messages, config) {
 }
 
 // often we need to make sure our response is formatted correctly to extract data out of
-function responseHasContent(response) {
-  // make sure the response has a choices array
-  if (!response.choices) {
-    return false;
-  }
+// function responseHasContent(response) {
+//   // make sure the response has a choices array
+//   if (!response.choices) {
+//     return false;
+//   }
 
-  // make sure the choices array has at least one choice
-  if (!response.choices[0]) {
-    return false;
-  }
+//   // make sure the choices array has at least one choice
+//   if (!response.choices[0]) {
+//     return false;
+//   }
 
-  // make sure the first choice has a .content property
-  if (!response.choices[0].message.content) {
-    return false;
-  }
+//   // make sure the first choice has a .content property
+//   if (!response.choices[0].message.content) {
+//     return false;
+//   }
 
-  return true;
-}
+//   return true;
+// }
 
 /**
  * Creates a chat completion using the specified messages, temperature, and presence penalty.
@@ -649,14 +652,16 @@ async function createChatCompletion(
     // logger.info("---");
 
     return {
-        choices: [
-          {
-            message: {
-              role: "assistant",
-              content: res.content[0].text,
-            },
-          },
-        ],
+      // THE OLD TERRIBLE WAY OPENAI USED TO RETURN CHAT COMPLETIONS
+        // choices: [
+        //   {
+        //     message: {
+        //       role: "assistant",
+        //       content: res.content[0].text,
+        //     },
+        //   },
+        // ], 
+        // TODO: NOW, THE NEW TERRIBLE WAY THAT OPENAI RETURNS CHAT COMPLETIONS
     };
   }
 }
