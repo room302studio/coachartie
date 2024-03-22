@@ -2,7 +2,8 @@
   "briefing": [
     {
       "name": "briefing:makeWeeklyBriefing()",
-      "description": "Makes a weekly briefing. Returns: A promise that resolves to a string indicating the status of the weekly briefing."
+      "description": "Makes a weekly briefing. Returns: A promise that resolves to a string indicating the status of the weekly briefing.",
+      "examples": "    await makeWeeklyBriefing();"
     },
     {
       "name": "briefing:makeDailyBriefing()",
@@ -48,7 +49,8 @@
           "name": "worldInfoObject",
           "description": "An object containing information about the various projects."
         }
-      ]
+      ],
+      "examples": "    await generateProjectSummary({ project, projectMemoryMap, todoChanges, calendarEntries });"
     },
     {
       "name": "briefing:generateMetaSummary()",
@@ -617,7 +619,8 @@
       ],
       "exceptions": [
         "If an error occurs while converting the Mermaid diagram."
-      ]
+      ],
+      "examples": "    convertMermaidDiagram(graph LR; A-->B;); // Returns { image: <Buffer> }\n    convertMermaidToDiagram(```mermaid\n    graph LR;\n     A-->B;\n    ```); // Returns { image: <Buffer> }"
     }
   ],
   "pgcron": [
@@ -633,7 +636,8 @@
           "name": "command",
           "description": "The command to be executed by the cron job."
         }
-      ]
+      ],
+      "examples": "    createJob('0 0 * * *', 'DELETE FROM table WHERE created_at < NOW() - INTERVAL '1 month';') -- Deletes old records from a table every day at midnight.\n      -- Makes a webhook request to the specified URL every day at midnight.\n    createJob('0 0 * * *', 'select\n    net.http_post(\n    url:='https://project-ref.supabase.co/functions/v1/function-name',\n    headers:='{\"Content-Type\": \"application/json\", \"Authorization\": \"Bearer YOUR_ANON_KEY\"}'::jsonb,\n    body:=concat('{\"time\": \"', now(), '\"}')::jsonb\n    ) as request_id;')"
     },
     {
       "name": "pgcron:listJobs()",

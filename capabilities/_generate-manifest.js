@@ -33,7 +33,10 @@ async function generateManifest() {
 }
 
 // Call the async function
-generateManifest().then(() => console.log('Manifest generation complete.')).catch(console.error);
+generateManifest().then(() => {    
+  console.log('Manifest generation complete.')
+  process.exit(0);
+}).catch(console.error);
 
 function parseJSDoc(jsDocData, moduleName) {
   let output = [];
@@ -73,6 +76,18 @@ function parseJSDoc(jsDocData, moduleName) {
       funcInfo.exceptions = func.throws
         .filter((ex) => ex.description?.children)
         .map((ex) => getTextFromChildren(ex.description.children));
+    }
+
+    // if there are any examples, properly format them and add them to the output
+    if (func.examples?.length > 0) {
+      funcInfo.examples = func.examples
+        .map((ex) => {
+          return ex.description
+            .split("\n")
+            .map((line) => `    ${line}`)
+            .join("\n");
+        })
+        .join("\n");
     }
 
     output.push(funcInfo);
