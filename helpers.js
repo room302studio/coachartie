@@ -564,11 +564,8 @@ async function generateAiCompletion(prompt, username, messages, config) {
   //     )}`
   //   );
   //     }
-  
 
   const aiResponse = completion.choices[0].message.content;
-  
-
 
   logger.info("🔧 AI Response: " + aiResponse);
   completionLogger.info("🔧 AI Response: " + aiResponse);
@@ -608,7 +605,12 @@ async function createChatCompletion(
   temperature,
   presence_penalty = 0.01
 ) {
-  const { CHAT_MODEL, MAX_OUTPUT_TOKENS, CLAUDE_COMPLETION_MODEL, OPENAI_COMPLETION_MODEL } = await getConfigFromSupabase();
+  const {
+    CHAT_MODEL,
+    MAX_OUTPUT_TOKENS,
+    CLAUDE_COMPLETION_MODEL,
+    OPENAI_COMPLETION_MODEL,
+  } = await getConfigFromSupabase();
   const completionModel = CHAT_MODEL || "openai";
 
   const max_tokens = MAX_OUTPUT_TOKENS || 1500;
@@ -653,15 +655,15 @@ async function createChatCompletion(
 
     return {
       // THE OLD TERRIBLE WAY OPENAI USED TO RETURN CHAT COMPLETIONS
-        // choices: [
-        //   {
-        //     message: {
-        //       role: "assistant",
-        //       content: res.content[0].text,
-        //     },
-        //   },
-        // ], 
-        // TODO: NOW, THE NEW TERRIBLE WAY THAT OPENAI RETURNS CHAT COMPLETIONS
+      choices: [
+        {
+          message: {
+            role: "assistant",
+            content: res.content[0].text,
+          },
+        },
+      ],
+      // TODO: NOW, THE NEW TERRIBLE WAY THAT OPENAI RETURNS CHAT COMPLETIONS
     };
   }
 }

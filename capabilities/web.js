@@ -132,9 +132,6 @@ async function webpageToHTML(url) {
   // Extract text from the page body tag
   const html = await page.$eval("body", (body) => body.innerHTML);
 
-  console.log(html);
-  console.log("html");
-
   await browser.close();
 
   return { html };
