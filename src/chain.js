@@ -18,7 +18,6 @@ const memoryFunctionsPromise = require("./memory");
 const { capabilityRegex, callCapabilityMethod } = require("./capabilities");
 const { storeUserMessage } = require("./remember");
 const logger = require("../src/logger.js")("chain");
-const memoryFunctionsPromise = require("./memory");
 
 module.exports = (async () => {
   const RESPONSE_LIMIT = 2048;

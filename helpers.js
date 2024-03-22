@@ -548,12 +548,49 @@ async function generateAiCompletion(prompt, username, messages, config) {
   } catch (err) {
     logger.info(`Error creating chat completion ${err}`);
   }
+
+  // console.log('completion')
+  // console.log(completion)
+
   // logger.info(`${JSON.stringify(completion, null, 2)}`);
+
+  // use responseHasContent to make sure the response is formatted correctly and throw a detailed error if it's not
+  if (!responseHasContent(completion)) {
+    logger.error(
+      `Error: Response does not have content. Response: ${JSON.stringify(
+        completion,
+        null,
+        2
+      )}`
+    );
+      }
+      
+
   const aiResponse = completion.choices[0].message.content;
   logger.info("🔧 AI Response: " + aiResponse);
   completionLogger.info("🔧 AI Response: " + aiResponse);
   messages.push(aiResponse);
   return { messages, aiResponse };
+}
+
+// often we need to make sure our response is formatted correctly to extract data out of
+function responseHasContent(response) {
+  // make sure the response has a choices array
+  if (!response.choices) {
+    return false;
+  }
+
+  // make sure the choices array has at least one choice
+  if (!response.choices[0]) {
+    return false;
+  }
+
+  // make sure the first choice has a .content property
+  if (!response.choices[0].message.content) {
+    return false;
+  }
+
+  return true;
 }
 
 /**
@@ -572,7 +609,7 @@ async function createChatCompletion(
   const completionModel = CHAT_MODEL || "openai";
 
   const max_tokens = MAX_OUTPUT_TOKENS || 1500;
-  console.log("MAX_OUTPUT_TOKENS", MAX_OUTPUT_TOKENS);
+  // console.log("MAX_OUTPUT_TOKENS", MAX_OUTPUT_TOKENS);
 
   if (completionModel === "openai") {
     logger.info("Using OpenAI for chat completion");
@@ -583,9 +620,6 @@ async function createChatCompletion(
     Max Tokens: ${MAX_OUTPUT_TOKENS}
     Message Count: ${messages.length}
     `);
-
-    console.log("messages");
-    console.log(messages);
 
     try {
       return await openai.chat.completions.create({
@@ -637,7 +671,7 @@ async function createClaudeCompletion(messages, temperature, max_tokens) {
     // model: "claude-2.1",
     model: "claude-3-sonnet-20240229",
     // max_tokens: MAX_OUTPUT_TOKENS,
-    // max_tokens,
+    max_tokens: 1024,
     messages: [{ role: "user", content: xmlMessages }],
   });
 
@@ -1583,7 +1617,7 @@ async function processChunks(chunks, processFunction, limit = 2, options = {}) {
         // Sleep to avoid rate limits or to stagger requests
         await sleep(500);
 
-        console.log(`Processing chunk ${i + index + 1} of ${chunkLength}...`);
+        // console.log(`Processing chunk ${i + index + 1} of ${chunkLength}...`);
 
         // Call the provided processFunction for each chunk
         return processFunction(chunk, options);
