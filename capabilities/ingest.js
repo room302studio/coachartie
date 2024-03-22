@@ -1,8 +1,11 @@
 const puppeteer = require("puppeteer");
+const cheerio = require("cheerio");
 const dotenv = require("dotenv");
 dotenv.config();
-
+const { webPageToText, webpageToHTML } = require("./web.js"); // Adjust the path as necessary
 const { destructureArgs } = require("../helpers");
+const logger = require("../src/logger.js")("ingest-capability");
+
 
 async function handleCapabilityMethod(method, args) {
   const [arg1] = destructureArgs(args);
@@ -14,7 +17,7 @@ async function handleCapabilityMethod(method, args) {
   }
 }
 
-// This jsdoc documentation is parsed and passed to the robot capabilities through the manifest
+
 /**
  * @async
  * @function deepDocumentIngest
@@ -29,8 +32,6 @@ async function deepDocumentIngest(urlOrText) {
 
   // check if the input is a URL
   const isUrl = urlOrText.startsWith("http");
-
-  // if it's a URL, we need to fetch the page
   
   
   try {
@@ -40,6 +41,20 @@ async function deepDocumentIngest(urlOrText) {
     // If it's Markdown we can skip a few steps
 
     // First, use our puppeteer web browser to turn the page into text
+    // const {text: documentString} = await webPageToText(urlOrText);  
+    const { html } = await webpageToHTML(urlOrText);
+
+    let document
+    if (isUrl) {
+      // documentText = documentString;
+      document = parseHtmlToSections(html);
+    } else {
+      // documentText = urlOrText;
+      // if it's a string, parse it as markdown
+      document = parseMarkdownToSections(urlOrText);
+    }
+
+    console.log(document);
 
     // Then, if it's a web page we use headers elements to try to split the page into logical sections
     // If it's markdown we will do the same, but with a Markdown parser
@@ -52,10 +67,70 @@ async function deepDocumentIngest(urlOrText) {
 
 
 
-    return response.data;
+    return "Document ingested successfully.";
   } catch (error) {
     throw new Error(`Error occurred while making external request: ${error}`);
   }
+}
+
+async function parseHtmlToSections(htmlText) {
+  const $ = cheerio.load(htmlText);
+  const sections = [];
+  let currentSection = { header: null, content: [] };
+
+  $('h1, h2, h3, h4, h5, h6, p').each((index, element) => {
+    const $element = $(element);
+    const tagName = $element.prop('tagName').toLowerCase();
+    const text = $element.text();
+
+    if (tagName === 'h1' || tagName === 'h2' || tagName === 'h3' || tagName === 'h4' || tagName === 'h5' || tagName === 'h6') {
+      // When we hit a heading, we start a new section
+      if (currentSection.header || currentSection.content.length) {
+        // Save the previous section if it has content
+        sections.push(currentSection);
+      }
+      // Start a new section with the current header
+      currentSection = { header: text, content: [] };
+    } else {
+      // Add non-heading elements to the current section's content
+      currentSection.content.push(text);
+    }
+  });
+
+  // Add the last section if it has content
+  if (currentSection.header || currentSection.content.length) {
+    sections.push(currentSection);
+  }
+
+  return sections;
+}
+
+function parseMarkdownToSections(markdownText) {
+  const tokens = marked.lexer(markdownText);
+  const sections = [];
+  let currentSection = { header: null, content: [] };
+
+  tokens.forEach(token => {
+    if (token.type === 'heading') {
+      // When we hit a heading, we start a new section
+      if (currentSection.header || currentSection.content.length) {
+        // Save the previous section if it has content
+        sections.push(currentSection);
+      }
+      // Start a new section with the current header
+      currentSection = { header: token.text, content: [] };
+    } else {
+      // Add non-heading tokens to the current section's content
+      currentSection.content.push(token);
+    }
+  });
+
+  // Add the last section if it has content
+  if (currentSection.header || currentSection.content.length) {
+    sections.push(currentSection);
+  }
+
+  return sections;
 }
 
 module.exports = {

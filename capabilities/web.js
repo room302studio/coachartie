@@ -113,6 +113,29 @@ async function webPageToText(url) {
   return {title, text: trimmedText};
 }
 
+async function webpageToHTML(url) {
+  const browser = await puppeteer.launch();
+  const page = await browser.newPage();
+  await page.setUserAgent(randomUserAgent());
+  await page.goto(url);
+
+  logger.info("🕸️  Navigating to " + url);
+
+  // wait for body to load
+  await page.waitForSelector("body");
+
+  // wait a second or two for javascript to run
+  await sleep(2000);
+
+  // Extract text from the page body tag
+  const html
+    = await page.$eval("body", body => body.innerHTML);
+
+  await browser.close();
+
+  return { html };
+}
+
 async function fetchAndParseURL(url) {
   const {title, text} = await webPageToText(url);
 
@@ -483,4 +506,6 @@ module.exports = {
   fetchLargestImage,
   fetchAllLinks,
   handleCapabilityMethod,
+  webPageToText,
+  webpageToHTML
 };
