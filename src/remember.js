@@ -179,11 +179,11 @@ async function storeUserMemory(
       resource_id: resourceId,
     });
 
-  logger.info(
-    `Stored memory for ${username}: ${value} in ${memoryType} memory ${JSON.stringify(
-      data,
-    )}`,
-  );
+  // logger.info(
+  //   `Stored memory for ${username}: ${value} in ${memoryType} memory ${JSON.stringify(
+  //     data,
+  //   )}`,
+  // );
 
   if (error) {
     logger.info(`Error storing user memory: ${error.message}`);

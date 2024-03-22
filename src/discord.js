@@ -3,6 +3,7 @@ const {
   removeMentionFromMessage,
   splitAndSendMessage,
   displayTypingIndicator,
+  getConfigFromSupabase,
 } = require("../helpers.js");
 
 const vision = require("./vision.js");
@@ -30,6 +31,12 @@ class DiscordBot {
     this.bot.on("ready", onClientReady);
     // this.bot.on("messageCreate", this.onMessageCreate);
     this.bot.on("messageCreate", this.onMessageCreate.bind(this)); // Bind the context of `this`
+
+    // log the supabase config once
+    getConfigFromSupabase().then((config) => {
+      logger.info(`Supabase config: ${JSON.stringify(config)}`);
+    });
+
 
     client = this.bot;
   }
@@ -105,7 +112,12 @@ class DiscordBot {
    * @param {object} message - The message object containing the content.
    */
   async processPrompt(message) {
-    const prompt = removeMentionFromMessage(message.content, "@coachartie");
+    // const prompt = removeMentionFromMessage(message.content, "@coachartie");
+    // const prompt = replaceStringWithId(message.content, "<@!879978978>", "@coachartie");
+    // the message might look like `<@1086489885269037128> what's up`
+    // and it should ust be
+    // what's up
+    const prompt = removeMentionFromMessage(message.content, client.user.id);
     logger.info(`✉️ Message received: ${prompt}`);
     return prompt;
   }

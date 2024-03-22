@@ -11,6 +11,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.18.0",
     "@discordjs/voice": "^0.16.0",
     "@google-cloud/speech": "^5.5.0",
     "@nem035/gpt-3-encoder": "^1.1.7",
@@ -55,7 +56,8 @@
     "winston": "^3.11.0",
     "winston-papertrail": "^1.0.5",
     "winston-syslog": "^2.7.0",
-    "winston-transport": "^4.7.0"
+    "winston-transport": "^4.7.0",
+    "xml-js": "^1.6.11"
   },
   "devDependencies": {
     "documentation": "^14.0.2",

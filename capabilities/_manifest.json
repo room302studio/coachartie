@@ -1,62 +1,170 @@
 {
-  "_generate-manifest": [],
-  "chance": [],
-  "discord-events": [],
-  "drive": [
+  "briefing": [
     {
-      "name": "drive:getDriveInstance()",
-      "description": "Get an instance of Google Drive. Returns: A promise that resolves to an instance of Google Drive."
+      "name": "briefing:makeWeeklyBriefing()",
+      "description": "Makes a weekly briefing. Returns: A promise that resolves to a string indicating the status of the weekly briefing.",
+      "examples": "    await makeWeeklyBriefing();"
     },
     {
-      "name": "drive:listFiles()",
-      "description": "List all files in the Google Drive. Returns: A promise that resolves to an array of file names and IDs."
+      "name": "briefing:makeDailyBriefing()",
+      "description": "Makes a daily briefing across all projects Returns: A promise that resolves to a string indicating the status of the daily briefing."
     },
     {
-      "name": "drive:readDoc()",
-      "description": "Read a Google Doc from Drive and return it as a string Returns: A promise that resolves when the file has been read.",
+      "name": "briefing:makeProjectBriefing()",
+      "description": "Makes a briefing on one particular project.",
       "parameters": [
         {
-          "name": "fileId",
-          "description": "The ID of the file to read."
+          "name": "project",
+          "description": "The project name to make a briefing on."
         }
       ]
     },
     {
-      "name": "drive:readFile()",
-      "description": "Read a file from Google Drive. Returns: A promise that resolves when the file has been read.",
+      "name": "briefing:retrieveFeedback()",
+      "description": "Retrieves feedback on previous weekly summaries. Returns: A promise that resolves to an array of feedback items."
+    },
+    {
+      "name": "briefing:identifyProjectsInMemories()",
+      "description": "Identifies projects, project IDs, or project slugs mentioned in the memories. Returns: A promise that resolves to an array of project identifiers.",
       "parameters": [
         {
-          "name": "fileId",
-          "description": "The ID of the file to read."
+          "name": "processedMemories",
+          "description": "The processed memories to identify projects in."
         }
       ]
     },
     {
-      "name": "drive:createNewDocument()",
+      "name": "briefing:listTodoChanges()",
+      "description": "Lists all todo changes from this week (added, edited, deleted). Returns: A promise that resolves to an array of todo changes."
+    },
+    {
+      "name": "briefing:readCalendar()",
+      "description": "Reads the calendar for the current week. Returns: A promise that resolves to an object containing calendar entries."
+    },
+    {
+      "name": "briefing:generateProjectSummary()",
+      "description": "Generates summary by project. Returns: A promise that resolves to an array of project summaries.",
       "parameters": [
         {
-          "name": "title",
-          "description": "The title of the new document."
+          "name": "worldInfoObject",
+          "description": "An object containing information about the various projects."
+        }
+      ],
+      "examples": "    await generateProjectSummary({ project, projectMemoryMap, todoChanges, calendarEntries });"
+    },
+    {
+      "name": "briefing:generateMetaSummary()",
+      "description": "Generates a meta-summary based on project summaries. Returns: A promise that resolves to a string containing the meta-summary.",
+      "parameters": [
+        {
+          "name": "projectSummaries",
+          "description": "The project summaries to base the meta-summary on."
+        }
+      ]
+    },
+    {
+      "name": "briefing:formatSummary()",
+      "description": "Formats the fact-based summary through a weekly summary prompt/template. Returns: A promise that resolves to a string containing the formatted summary.",
+      "parameters": [
+        {
+          "name": "summary",
+          "description": "The summary to format."
+        }
+      ]
+    },
+    {
+      "name": "briefing:communicateSummary()",
+      "description": "Creates new posts or threads in communication platforms. Returns: ",
+      "parameters": [
+        {
+          "name": "message",
+          "description": "The message to post."
         },
         {
-          "name": "text",
-          "description": "The text to use as the content of the new document."
+          "name": "service",
+          "description": "The service to post the message to - could be either  discord  or  missive  so far"
+        }
+      ]
+    },
+    {
+      "name": "briefing:archiveSummary()",
+      "description": "Saves an archived copy of the weekly summary. Returns: ",
+      "parameters": [
+        {
+          "name": "summary",
+          "description": "The summary to archive."
         }
       ]
     }
   ],
-  "evaluate": [
+  "calculator": [
     {
-      "name": "evaluate:runCodeInSandbox()",
-      "description": "Runs the provided code in a sandboxed environment. Returns: The result of the code execution.",
+      "name": "calculator:add()",
+      "description": "Adds up an array of numbers. Returns: The sum of the numbers.",
       "parameters": [
         {
-          "name": "code",
-          "description": "The code to be executed."
-        },
+          "name": "numbers",
+          "description": "The array of numbers to be added."
+        }
+      ]
+    },
+    {
+      "name": "calculator:subtract()",
+      "description": "Subtracts the numbers in the array. Returns: The result of subtracting the numbers.",
+      "parameters": [
         {
-          "name": "sandbox",
-          "description": "The sandbox object to provide the execution context."
+          "name": "numbers",
+          "description": "The array of numbers to subtract."
+        }
+      ]
+    },
+    {
+      "name": "calculator:multiply()",
+      "description": "Multiplies an array of numbers. Returns: The product of the numbers.",
+      "parameters": [
+        {
+          "name": "numbers",
+          "description": "The array of numbers to multiply."
+        }
+      ]
+    },
+    {
+      "name": "calculator:divide()",
+      "description": "Divides an array of numbers. Returns: The result of dividing the numbers.",
+      "parameters": [
+        {
+          "name": "numbers",
+          "description": "The array of numbers to be divided."
+        }
+      ]
+    },
+    {
+      "name": "calculator:pow()",
+      "description": "Calculates the power of numbers. Returns: The result of the power calculation.",
+      "parameters": [
+        {
+          "name": "numbers",
+          "description": "The numbers to calculate the power of."
+        }
+      ]
+    },
+    {
+      "name": "calculator:sqrt()",
+      "description": "Calculates the square root of each number in the given array. Returns: The array of square roots.",
+      "parameters": [
+        {
+          "name": "numbers",
+          "description": "The array of numbers to calculate the square root for."
+        }
+      ]
+    },
+    {
+      "name": "calculator:log()",
+      "description": "Calculates the logarithm of an array of numbers. Returns: The result of the logarithm calculation.",
+      "parameters": [
+        {
+          "name": "numbers",
+          "description": "The array of numbers to calculate the logarithm for."
         }
       ]
     }
@@ -154,170 +262,63 @@
       ]
     }
   ],
-  "calculator": [
+  "chance": [],
+  "discord-events": [],
+  "drive": [
     {
-      "name": "calculator:add()",
-      "description": "Adds up an array of numbers. Returns: The sum of the numbers.",
+      "name": "drive:getDriveInstance()",
+      "description": "Get an instance of Google Drive. Returns: A promise that resolves to an instance of Google Drive."
+    },
+    {
+      "name": "drive:listFiles()",
+      "description": "List all files in the Google Drive. Returns: A promise that resolves to an array of file names and IDs."
+    },
+    {
+      "name": "drive:readDoc()",
+      "description": "Read a Google Doc from Drive and return it as a string Returns: A promise that resolves when the file has been read.",
       "parameters": [
         {
-          "name": "numbers",
-          "description": "The array of numbers to be added."
+          "name": "fileId",
+          "description": "The ID of the file to read."
         }
       ]
     },
     {
-      "name": "calculator:subtract()",
-      "description": "Subtracts the numbers in the array. Returns: The result of subtracting the numbers.",
+      "name": "drive:readFile()",
+      "description": "Read a file from Google Drive. Returns: A promise that resolves when the file has been read.",
       "parameters": [
         {
-          "name": "numbers",
-          "description": "The array of numbers to subtract."
+          "name": "fileId",
+          "description": "The ID of the file to read."
         }
       ]
     },
     {
-      "name": "calculator:multiply()",
-      "description": "Multiplies an array of numbers. Returns: The product of the numbers.",
+      "name": "drive:createNewDocument()",
       "parameters": [
         {
-          "name": "numbers",
-          "description": "The array of numbers to multiply."
-        }
-      ]
-    },
-    {
-      "name": "calculator:divide()",
-      "description": "Divides an array of numbers. Returns: The result of dividing the numbers.",
-      "parameters": [
+          "name": "title",
+          "description": "The title of the new document."
+        },
         {
-          "name": "numbers",
-          "description": "The array of numbers to be divided."
-        }
-      ]
-    },
-    {
-      "name": "calculator:pow()",
-      "description": "Calculates the power of numbers. Returns: The result of the power calculation.",
-      "parameters": [
-        {
-          "name": "numbers",
-          "description": "The numbers to calculate the power of."
-        }
-      ]
-    },
-    {
-      "name": "calculator:sqrt()",
-      "description": "Calculates the square root of each number in the given array. Returns: The array of square roots.",
-      "parameters": [
-        {
-          "name": "numbers",
-          "description": "The array of numbers to calculate the square root for."
-        }
-      ]
-    },
-    {
-      "name": "calculator:log()",
-      "description": "Calculates the logarithm of an array of numbers. Returns: The result of the logarithm calculation.",
-      "parameters": [
-        {
-          "name": "numbers",
-          "description": "The array of numbers to calculate the logarithm for."
+          "name": "text",
+          "description": "The text to use as the content of the new document."
         }
       ]
     }
   ],
-  "briefing": [
+  "evaluate": [
     {
-      "name": "briefing:makeWeeklyBriefing()",
-      "description": "Makes a weekly briefing. Returns: A promise that resolves to a string indicating the status of the weekly briefing."
-    },
-    {
-      "name": "briefing:makeDailyBriefing()",
-      "description": "Makes a daily briefing across all projects Returns: A promise that resolves to a string indicating the status of the daily briefing."
-    },
-    {
-      "name": "briefing:makeProjectBriefing()",
-      "description": "Makes a briefing on one particular project.",
+      "name": "evaluate:runCodeInSandbox()",
+      "description": "Runs the provided code in a sandboxed environment. Returns: The result of the code execution.",
       "parameters": [
         {
-          "name": "project",
-          "description": "The project name to make a briefing on."
-        }
-      ]
-    },
-    {
-      "name": "briefing:retrieveFeedback()",
-      "description": "Retrieves feedback on previous weekly summaries. Returns: A promise that resolves to an array of feedback items."
-    },
-    {
-      "name": "briefing:identifyProjectsInMemories()",
-      "description": "Identifies projects, project IDs, or project slugs mentioned in the memories. Returns: A promise that resolves to an array of project identifiers.",
-      "parameters": [
-        {
-          "name": "processedMemories",
-          "description": "The processed memories to identify projects in."
-        }
-      ]
-    },
-    {
-      "name": "briefing:listTodoChanges()",
-      "description": "Lists all todo changes from this week (added, edited, deleted). Returns: A promise that resolves to an array of todo changes."
-    },
-    {
-      "name": "briefing:readCalendar()",
-      "description": "Reads the calendar for the current week. Returns: A promise that resolves to an object containing calendar entries."
-    },
-    {
-      "name": "briefing:generateProjectSummary()",
-      "description": "Generates summary by project. Returns: A promise that resolves to an array of project summaries.",
-      "parameters": [
-        {
-          "name": "worldInfoObject",
-          "description": "An object containing information about the various projects."
-        }
-      ]
-    },
-    {
-      "name": "briefing:generateMetaSummary()",
-      "description": "Generates a meta-summary based on project summaries. Returns: A promise that resolves to a string containing the meta-summary.",
-      "parameters": [
-        {
-          "name": "projectSummaries",
-          "description": "The project summaries to base the meta-summary on."
-        }
-      ]
-    },
-    {
-      "name": "briefing:formatSummary()",
-      "description": "Formats the fact-based summary through a weekly summary prompt/template. Returns: A promise that resolves to a string containing the formatted summary.",
-      "parameters": [
-        {
-          "name": "summary",
-          "description": "The summary to format."
-        }
-      ]
-    },
-    {
-      "name": "briefing:communicateSummary()",
-      "description": "Creates new posts or threads in communication platforms. Returns: ",
-      "parameters": [
-        {
-          "name": "message",
-          "description": "The message to post."
+          "name": "code",
+          "description": "The code to be executed."
         },
         {
-          "name": "service",
-          "description": "The service to post the message to - could be either  discord  or  missive  so far"
-        }
-      ]
-    },
-    {
-      "name": "briefing:archiveSummary()",
-      "description": "Saves an archived copy of the weekly summary. Returns: ",
-      "parameters": [
-        {
-          "name": "summary",
-          "description": "The summary to archive."
+          "name": "sandbox",
+          "description": "The sandbox object to provide the execution context."
         }
       ]
     }
@@ -618,7 +619,8 @@
       ],
       "exceptions": [
         "If an error occurs while converting the Mermaid diagram."
-      ]
+      ],
+      "examples": "    convertMermaidDiagram(graph LR; A-->B;); // Returns { image: <Buffer> }\n    convertMermaidToDiagram(```mermaid\n    graph LR;\n     A-->B;\n    ```); // Returns { image: <Buffer> }"
     }
   ],
   "pgcron": [
@@ -634,7 +636,8 @@
           "name": "command",
           "description": "The command to be executed by the cron job."
         }
-      ]
+      ],
+      "examples": "    createJob('0 0 * * *', 'DELETE FROM table WHERE created_at < NOW() - INTERVAL '1 month';') -- Deletes old records from a table every day at midnight.\n      -- Makes a webhook request to the specified URL every day at midnight.\n    createJob('0 0 * * *', 'select\n    net.http_post(\n    url:='https://project-ref.supabase.co/functions/v1/function-name',\n    headers:='{\"Content-Type\": \"application/json\", \"Authorization\": \"Bearer YOUR_ANON_KEY\"}'::jsonb,\n    body:=concat('{\"time\": \"', now(), '\"}')::jsonb\n    ) as request_id;')"
     },
     {
       "name": "pgcron:listJobs()",
