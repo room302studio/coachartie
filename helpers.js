@@ -1544,6 +1544,8 @@ module.exports = {
   isBreakingMessageChain,
   trimResponseIfNeeded,
   generateAiCompletionParams,
+  addSystemPrompt,
+  addCurrentDateTime,
   displayTypingIndicator,
   generateAiCompletion,
   assembleMessagePreamble,
