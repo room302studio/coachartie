@@ -181,6 +181,9 @@ module.exports = (async () => {
       ],
     });
 
+
+    console.log('remember completion', rememberCompletion);
+
     const rememberText = rememberCompletion.choices[0].message.content;
 
     // if the remember text is ✨ AKA empty, we don't wanna store it

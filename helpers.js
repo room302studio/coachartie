@@ -565,7 +565,7 @@ async function generateAiCompletion(prompt, username, messages, config) {
   //   );
   //     }
 
-  const aiResponse = completion.choices[0].message.content;
+  const aiResponse = completion//.choices[0].message.content;
 
   logger.info("🔧 AI Response: " + aiResponse);
   completionLogger.info("🔧 AI Response: " + aiResponse);
@@ -602,8 +602,11 @@ async function generateAiCompletion(prompt, username, messages, config) {
  */
 async function createChatCompletion(
   messages,
-  temperature,
-  presence_penalty = 0.01
+  config = {
+    temperature: 0,
+    presence_penalty: 0.01,
+    max_tokens: 2400
+  }
 ) {
   const {
     CHAT_MODEL,
@@ -613,62 +616,55 @@ async function createChatCompletion(
   } = await getConfigFromSupabase();
   const completionModel = CHAT_MODEL || "openai";
 
-  const max_tokens = MAX_OUTPUT_TOKENS || 1500;
-  // console.log("MAX_OUTPUT_TOKENS", MAX_OUTPUT_TOKENS);
+  logger.info(`Config: ${JSON.stringify(config, null, 2)}`);
+  // if the tokens requested is greater than the limit, set it to the limit
+  // if (config.max_tokens > MAX_OUTPUT_TOKENS) {
+  //   config.max_tokens = MAX_OUTPUT_TOKENS;
+  // }
 
   if (completionModel === "openai") {
     logger.info("Using OpenAI for chat completion");
 
     logger.info(` Model: gpt-4-turbo-preview
-    Temperature: ${temperature}
-    Presence Penalty: ${presence_penalty}
+    Temperature: ${config.temperature}
+    Presence Penalty: ${config.presence_penalty}
     Max Tokens: ${MAX_OUTPUT_TOKENS}
     Message Count: ${messages.length}
     `);
 
     try {
-      return await openai.chat.completions.create({
+      res = await openai.chat.completions.create({
         // model: "gpt-4-turbo-preview",
         model: OPENAI_COMPLETION_MODEL,
-        temperature,
-        presence_penalty,
+        temperature: config.temperature,
+        presence_penalty: config.presence_penalty,
         // max_tokens,
         messages,
       });
+      return res.choices[0].message.content;
     } catch (error) {
       logger.error("Error creating chat completion:", error);
       return `Error creating chat completion: ${error}`;
     }
-  } else if (completionModel === "gemini") {
-    // return a gemini completion
-    return await createGeminiCompletion(
-      messages,
-      temperature,
-      presence_penalty
-    );
   } else if (completionModel === "claude") {
-    const res = await createClaudeCompletion(messages, temperature, max_tokens);
+    // const res = await createClaudeCompletion(messages, config.temperature, config.max_tokens);
+    // use config object instead
+    const res = await createClaudeCompletion(messages, {
+      temperature: config.temperature,
+      max_tokens: +config.max_tokens,
+    });
+
+    console.log(res)
 
     // logger.info("---");
     // logger.info(`res: ${JSON.stringify(res, null, 2)}`);
     // logger.info("---");
 
-    return {
-      // THE OLD TERRIBLE WAY OPENAI USED TO RETURN CHAT COMPLETIONS
-      choices: [
-        {
-          message: {
-            role: "assistant",
-            content: res.content[0].text,
-          },
-        },
-      ],
-      // TODO: NOW, THE NEW TERRIBLE WAY THAT OPENAI RETURNS CHAT COMPLETIONS
-    };
+    return res.content[0].text
   }
 }
 
-async function createClaudeCompletion(messages, temperature, max_tokens) {
+async function createClaudeCompletion(messages, config) {
   const { CLAUDE_COMPLETION_MODEL } = await getConfigFromSupabase();
   // convert the messages into an xml format for claude, sent as a single well-formatted user message
   const xmlMessages = convertMessagesToXML(messages);
@@ -680,172 +676,11 @@ async function createClaudeCompletion(messages, temperature, max_tokens) {
     // model: "claude-3-haiku-20240307",
     model: CLAUDE_COMPLETION_MODEL,
     // max_tokens: MAX_OUTPUT_TOKENS,
-    max_tokens: 1024,
+    max_tokens: config.max_tokens,
     messages: [{ role: "user", content: xmlMessages }],
   });
 
   return claudeCompletion;
-}
-
-async function createGeminiCompletion(messages, temperature, presence_penalty) {
-  const REGION = "us-east4";
-  const PROJECT_ID = "coach-artie";
-  // Define the API endpoint for the Gemini model
-  const apiEndpoint = `https://us-central1-aiplatform.googleapis.com/v1/projects/${PROJECT_ID}/locations/${REGION}/publishers/google/models/gemini-pro:streamGenerateContent`;
-
-  // we need to re-map all the roles, any role that is not "user" or "model" needs to be mapped to "user"
-  messages = messages.map((message) => {
-    if (message.role === "system") {
-      message.role = "user";
-    }
-    return message;
-  });
-
-  // we also can't have messages from the same role in a row, so we need to collapse them into one message
-  messages = messages.reduce((acc, message) => {
-    if (acc.length === 0) {
-      acc.push(message);
-    } else {
-      const lastMessage = acc[acc.length - 1];
-      if (lastMessage.role === message.role) {
-        lastMessage.content += " " + message.content;
-      } else {
-        acc.push(message);
-      }
-    }
-    return acc;
-  }, []);
-
-  // Construct the request body
-  const requestBody = {
-    contents: messages.map((message) => ({
-      role: message.role,
-      parts: [{ text: message.content }],
-    })),
-    // Include additional parameters as needed
-    generation_config: {
-      // temperature: temperature,
-      maxOutputTokens: MAX_OUTPUT_TOKENS * 2,
-    },
-  };
-
-  // Load the private key from the keyfile
-  // const privateKey = fs.readFileSync('./coachartiegithub.2023-05-02.private-key.pem', 'utf8');
-
-  // // Create a JWT client using the private key
-  // const jwtClient = new google.auth.JWT(
-  //   '131536589906-compute@developer.gserviceaccount.com',
-  //   null,
-  //   privateKey,
-  //   ['https://www.googleapis.com/auth/cloud-platform'],
-  //   null // Add this parameter to fix the issue
-  // );
-
-  // // Authorize the client
-  // try {
-  //   await jwtClient.authorize();
-  // } catch (err) {
-  //   logger.info('Error authorizing JWT client:', err);
-  // }
-
-  // to get a bearer token you can run this commmand in the CLI
-  // `gcloud auth print-access-token`
-  const BEARER_TOKEN = "";
-
-  // Make the POST request to the Gemini API with the authorized client
-  const response = await fetch(apiEndpoint, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${BEARER_TOKEN}`,
-    },
-    body: JSON.stringify(requestBody),
-  });
-  // Parse and return the JSON response
-  const json = await response.json();
-  /* response looks like this
-
-  {
-  "candidates": [
-    {
-      "content": {
-        "parts": [
-          {
-            "text": string
-          }
-        ]
-      },
-      "finishReason": enum (FinishReason),
-      "safetyRatings": [
-        {
-          "category": enum (HarmCategory),
-          "probability": enum (HarmProbability),
-          "blocked": boolean
-        }
-      ],
-      "citationMetadata": {
-        "citations": [
-          {
-            "startIndex": integer,
-            "endIndex": integer,
-            "uri": string,
-            "title": string,
-            "license": string,
-            "publicationDate": {
-              "year": integer,
-              "month": integer,
-              "day": integer
-            }
-          }
-        ]
-      }
-    }
-  ],
-  "usageMetadata": {
-    "promptTokenCount": integer,
-    "candidatesTokenCount": integer,
-    "totalTokenCount": integer
-  }
-}
-
-and we need to return something that looks exactly like then openai response */
-  // logger.info("json", json);
-  // const { candidates } = json[0];
-  // we actually need to combine all the candidates into one response
-  // so lets loop through the json, which is an array of objects with candidates
-  // and combine all the candidates into one array of candidates
-  const candidates = json.reduce((acc, obj) => {
-    acc.push(...obj.candidates);
-    return acc;
-  }, []);
-
-  // logger.info('candidates', candidates)
-  // const { content } = candidates[0];
-  // we actually need to combine all the content into one response
-  // so lets loop through the candidates, which is an array of objects with content
-  // and combine all the content into one array of content
-  const content = candidates.reduce((acc, obj) => {
-    acc.push(...obj.content.parts);
-    return acc;
-  }, []);
-  // logger.info("content", content);
-  const { parts } = content;
-  // logger.info("parts", parts);
-  // const aiResponse = parts.map(part => part.text).join("\n");
-  // const aiResponse = parts[0].text
-  // combine the text of all the parts into one string
-  const aiResponse = parts.map((part) => part.text).join("\n");
-  return {
-    data: {
-      choices: [
-        {
-          message: {
-            content: aiResponse,
-          },
-        },
-      ],
-    },
-  };
 }
 
 /**

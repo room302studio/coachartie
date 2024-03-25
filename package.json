@@ -37,6 +37,7 @@
     "express-basic-auth": "^1.2.1",
     "form-data": "^4.0.0",
     "googleapis": "^120.0.0",
+    "html-to-text": "^9.0.5",
     "jsdoc-api": "^8.0.0",
     "jsdoc-parse": "^6.2.0",
     "jsdom": "^22.1.0",
