@@ -367,6 +367,8 @@ app.post("/api/missive-reply", async (req, res) => {
 });
 
 app.post("/api/webhook-prompt", async (req, res) => {
+  const { getPromptsFromSupabase } = require("../helpers");
+
   // this is will be an authorized call from pgcron to send a request to the robot as if a user sent, but specifiying a prompt from the prompts table to use 
 
   const passphrase = process.env.WEBHOOK_PASSPHRASE; // Assuming PASSPHRASE is the environment variable name
