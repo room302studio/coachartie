@@ -21,5 +21,7 @@ jobs:
         node-version: ${{ matrix.node-version }}
     - name: Install dependencies
       run: npm ci
+    - name: Create fake .env
+      run: echo "OPENAI_API_KEY=fake_key_for_testing" > .env
     - name: Run Jest tests
       run: npm run test
