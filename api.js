@@ -411,7 +411,7 @@ app.post("/api/webhook-prompt", async (req, res) => {
       {
         role: "user",
         // content: message,
-        content: `${prompt.prompt} \n ${message}`
+        content: `${prompt.prompt_text} \n ${message}`
       },
     ],
     username,
