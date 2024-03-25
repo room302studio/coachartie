@@ -42,6 +42,10 @@ const capabilityRegex = /(\w+):(\w+)\(([^]*?)\)/; // captures newlines in the  t
 async function getPromptsFromSupabase() {
   const { data, error } = await supabase.from("prompts").select("*");
   const promptArray = data;
+  // if promptArray is not an array, exit out early
+  if (!Array.isArray(promptArray)) {
+    return {};
+  }
   const promptKeys = promptArray.map((prompt) => prompt.prompt_name);
   const promptValues = promptArray.map((prompt) => prompt.prompt_text);
   // return an object with all the keys and values
