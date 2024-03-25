@@ -1,6 +1,7 @@
 const dotenv = require("dotenv");
 const { createClient } = require("@supabase/supabase-js");
 dotenv.config();
+const logger = require("../src/logger.js")("pgcron-capability");
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_API_KEY,
@@ -48,6 +49,7 @@ async function createJob(schedule, command) {
  * @param {object} headers - The headers of the POST request.
  * @param {string} name - The name of the job to create.
  * @returns {Promise<string>} A promise that resolves to a success message if the webhook is created successfully, or an error message if there is an error.
+ * @example pgcron:createWebhook(0 0 * * *, "http://webhook-dev.room302.studio/api/webhook", "{}", "{}", "Test Webhook Call")
  */
 async function createWebhook(schedule, url, body, headers, name) {
   // if there are no headers we can make them
@@ -60,6 +62,12 @@ async function createWebhook(schedule, url, body, headers, name) {
   // if there is no body we need to return an error about it
   if (!body) {
     return `Error: No body provided for the webhook`;
+  }
+
+  // load webhook-authentication key from environment
+  const webhookAuthentication = process.env.OUTGOING_WEBHOOK_AUTHENTICATION;
+  if!webhookAuthentication) {
+    headers["Authorization"] = `Bearer ${webhookAuthentication}`;
   }
 
   const { data, error } = await supabase.rpc("schedule", {
@@ -126,7 +134,7 @@ async function listJobs() {
  */
 async function deleteJob(name) {
   try {
-    const { data, error } = await supabase.rpc("cron.delete", { name });
+    const { data, error } = await supabase.rpc("cron.delete", { jobname: name });
 
     if (error) {
       console.error("Error deleting job with pg_cron:", error.message);
