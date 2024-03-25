@@ -393,6 +393,8 @@ app.post("/api/webhook-prompt", async (req, res) => {
   // get the prompt from the prompt table
   const allPrompts = await getPromptsFromSupabase();
 
+  logger.info(`All prompts: ${JSON.stringify(allPrompts)}`);
+
   // look for the prompt slug in allPrompts
   let prompt = allPrompts.find((p) => p.slug === promptSlug);
 
