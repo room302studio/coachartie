@@ -14,7 +14,6 @@ const preambleLogger = {
   info: (message) => {},
 };
 
-
 const { getPromptsFromSupabase, getConfigFromSupabase } = require("../helpers");
 
 module.exports = (async () => {
@@ -181,8 +180,7 @@ module.exports = (async () => {
       ],
     });
 
-
-    console.log('remember completion', rememberCompletion);
+    console.log("remember completion", rememberCompletion);
 
     const rememberText = rememberCompletion.choices[0].message.content;
 

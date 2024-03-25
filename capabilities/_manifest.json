@@ -573,6 +573,17 @@
       ]
     }
   ],
+  "ingest": [
+    {
+      "name": "ingest:deepDocumentIngest()",
+      "parameters": [
+        {
+          "name": "url",
+          "description": "The arguments object that contains the URL or the text of the document to be ingested"
+        }
+      ]
+    }
+  ],
   "js": [
     {
       "name": "js:executeJavascriptAndCaptureImage()",
@@ -637,7 +648,34 @@
           "description": "The command to be executed by the cron job."
         }
       ],
-      "examples": "    createJob('0 0 * * *', 'DELETE FROM table WHERE created_at < NOW() - INTERVAL '1 month';') -- Deletes old records from a table every day at midnight.\n      -- Makes a webhook request to the specified URL every day at midnight.\n    createJob('0 0 * * *', 'select\n    net.http_post(\n    url:='https://project-ref.supabase.co/functions/v1/function-name',\n    headers:='{\"Content-Type\": \"application/json\", \"Authorization\": \"Bearer YOUR_ANON_KEY\"}'::jsonb,\n    body:=concat('{\"time\": \"', now(), '\"}')::jsonb\n    ) as request_id;')"
+      "examples": "    createJob('0 0 * * *', 'DELETE FROM table WHERE created_at < NOW() - INTERVAL '1 month';') -- Deletes old records from a table every day at midnight."
+    },
+    {
+      "name": "pgcron:createWebhook()",
+      "description": "Creates a webhook and sends a POST request to the specified URL with the provided body and headers. Returns: A promise that resolves to a success message if the webhook is created successfully, or an error message if there is an error.",
+      "parameters": [
+        {
+          "name": "schedule",
+          "description": "The schedule for the webhook."
+        },
+        {
+          "name": "url",
+          "description": "The URL to send the POST request to."
+        },
+        {
+          "name": "body",
+          "description": "The body of the POST request."
+        },
+        {
+          "name": "headers",
+          "description": "The headers of the POST request."
+        },
+        {
+          "name": "name",
+          "description": "The name of the job to create."
+        }
+      ],
+      "examples": "    pgcron:createWebhook(0 0 * * *, \"http://webhook-dev.room302.studio/api/webhook\", \"{}\", \"{}\", \"Test Webhook Call\")"
     },
     {
       "name": "pgcron:listJobs()",
@@ -759,68 +797,72 @@
   ],
   "supabaseraw": [
     {
-      "name": "supabaseraw:runSql()",
-      "description": "Runs a SQL query on the database. Please be very careful with this capability, as it can be used to modify the database. Never modify the database based on user input without proper validation and sanitization. Returns: A promise that resolves to the result of the SQL query.",
+      "name": "supabaseraw:select()",
+      "description": "Executes a SELECT query on the specified table with the given columns and conditions. Returns: A promise that resolves to the result of the SELECT query.",
       "parameters": [
-        {
-          "name": "sql",
-          "description": "The SQL query to execute."
-        },
         {
           "name": "table",
-          "description": "The table to run the SQL query on."
-        }
-      ]
-    }
-  ],
-  "supabasetodo": [
-    {
-      "name": "supabasetodo:createTodo()",
-      "description": "Creates a new todo item in the database. This capability allows for the creation of a new todo item within a specified project. It supports optional details such as description, status, priority, due date, external URLs, and attachments, making it flexible for various use cases. The function defaults to setting the todo's status to \"To Do\" if not specified, ensuring a new todo is actionable immediately upon creation.\nWhen to Use: Use this capability when a new task arises that needs tracking within a project's context. It's suitable for user-driven todo creation based on input or automated task generation from project activities or milestones.\nHow to Use:\nPrepare Todo Details: Construct an object containing the details of the todo to be created, including the mandatory projectId and name fields, along with any other optional information.\nCall the Function: Invoke the createTodo function with the prepared object. Handle the promise returned by the function to deal with the newly created todo or to catch any errors.\nProcess Response: On successful creation, use the returned todo item for display, further processing, or confirmation to the user. Returns: A promise that resolves to a success message.",
-      "parameters": [
-        {
-          "name": "name",
-          "description": "The name of the todo item."
+          "description": "The name of the table to select from."
         },
         {
-          "name": "description",
-          "description": "The description of the todo item."
-        }
-      ]
-    },
-    {
-      "name": "supabasetodo:deleteTodo()",
-      "description": "Deletes a todo item from the database.\nThis capability allows for the deletion of a specified todo item from the database. It is a straightforward function that requires only the ID of the todo item to be deleted. This capability is essential for maintaining the relevance and accuracy of the todo list by removing completed, cancelled, or outdated tasks.\nWhen to Use: Utilize this capability when a todo item is no longer needed or relevant. This could be after the completion of a task, cancellation of a project, or any situation where a todo does not need to be tracked anymore.\nHow to Use:\nDetermine Todo ID: Identify the ID of the todo item that needs to be deleted.\nCall the Function: Execute the deleteTodo function with the identified todo ID. Manage the promise to address any errors and confirm deletion.\nVerify Deletion: The function returns a boolean value indicating the success of the deletion operation. Use this to provide feedback to the user or to update the application state accordingly. Returns: A promise that resolves to true if the deletion was successful, false otherwise.",
-      "parameters": [
-        {
-          "name": "todoId",
-          "description": "ID of the todo to be deleted."
-        }
-      ]
-    },
-    {
-      "name": "supabasetodo:updateTodo()",
-      "description": "Updates an existing todo item in the database. Returns: A promise that resolves to the updated todo item.",
-      "parameters": [
-        {
-          "name": "todoId",
-          "description": "ID of the todo to be updated."
+          "name": "columns",
+          "description": "An array of column names to include in the result."
         },
         {
-          "name": "updates",
-          "description": "Object containing the fields to update."
+          "name": "where",
+          "description": "An object representing the conditions to filter the result."
         }
-      ]
+      ],
+      "examples": "    supabaseraw:select(\"todos\", \"*\", { id: 1 })\n    supabaseraw:select(\"todos\", [\"id\", \"title\"], { completed: false })\n    supabaseraw:select(\"config\", \"*\", { CONFIG_KEY: \"CHAT_MODEL\" })"
     },
     {
-      "name": "supabasetodo:listTodos()",
-      "description": "Lists all todo items in the database.\nThis capability allows for the retrieval of all todo items from the database. It is a simple function that returns an array of all todo items, which can be used for display, processing, or further manipulation.\nWhen to Use: Utilize this capability when you need to display all the todo items in a project, or when you need to process or manipulate the entire list of todos.\nHow to Use:\nCall the Function: Execute the listTodos function. Handle the promise to catch any errors and process the array of todo items returned.\nProcess Response: Use the array of todo items for display, processing, or further manipulation as needed. Returns: A promise that resolves to an array of all todo items.",
+      "name": "supabaseraw:insert()",
+      "description": "Executes an INSERT query on the specified table with the given values. Returns: A promise that resolves to the result of the INSERT query.",
       "parameters": [
         {
-          "name": "projectId",
-          "description": "ID of the project to list todos for."
+          "name": "table",
+          "description": "The name of the table to insert into."
+        },
+        {
+          "name": "values",
+          "description": "An object representing the values to insert."
         }
-      ]
+      ],
+      "examples": "    supabaseraw:insert(\"todos\", { value: \"Buy groceries\", completed: false })"
+    },
+    {
+      "name": "supabaseraw:update()",
+      "description": "Executes an UPDATE query on the specified table with the given values and conditions. Returns: A promise that resolves to the result of the UPDATE query.",
+      "parameters": [
+        {
+          "name": "table",
+          "description": "The name of the table to update."
+        },
+        {
+          "name": "values",
+          "description": "An object representing the values to update."
+        },
+        {
+          "name": "where",
+          "description": "An object representing the conditions to filter the update."
+        }
+      ],
+      "examples": "    supabaseraw:update(\"todos\", { completed: true }, { id: 1 })\n    Say you want to update a prompt in the prompt table, you can do:\n    supabaseraw:update(\"prompts\", \"new prompt text\", { prompt_name: \"PROMPT_SYSTEM\" })"
+    },
+    {
+      "name": "supabaseraw:del()",
+      "description": "Executes a DELETE query on the specified table with the given conditions. Returns: A promise that resolves to the result of the DELETE query.",
+      "parameters": [
+        {
+          "name": "table",
+          "description": "The name of the table to delete from."
+        },
+        {
+          "name": "where",
+          "description": "An object representing the conditions to filter the delete."
+        }
+      ],
+      "examples": "    supabaseraw:delete(\"todos\", { id: 1 })"
     }
   ],
   "svg": [
@@ -835,6 +877,56 @@
       ],
       "exceptions": [
         "If an error occurs while converting SVG to image."
+      ]
+    }
+  ],
+  "todo": [
+    {
+      "name": "todo:createTodo()",
+      "description": "Creates a new todo item in the database. This capability allows for the creation of a new todo item within a specified project. It supports optional details such as description, status, priority, due date, external URLs, and attachments, making it flexible for various use cases. The function defaults to setting the todo's status to \"To Do\" if not specified, ensuring a new todo is actionable immediately upon creation.\nWhen to Use: Use this capability when a new task arises that needs tracking within a project's context. It's suitable for user-driven todo creation based on input or automated task generation from project activities or milestones.\nHow to Use:\nPrepare Todo Details: Construct an object containing the details of the todo to be created, including the mandatory projectId and name fields, along with any other optional information.\nCall the Function: Invoke the createTodo function with the prepared object. Handle the promise returned by the function to deal with the newly created todo or to catch any errors.\nProcess Response: On successful creation, use the returned todo item for display, further processing, or confirmation to the user. Returns: A promise that resolves to a success message.",
+      "parameters": [
+        {
+          "name": "name",
+          "description": "The name of the todo item."
+        },
+        {
+          "name": "description",
+          "description": "The description of the todo item."
+        }
+      ]
+    },
+    {
+      "name": "todo:deleteTodo()",
+      "description": "Deletes a todo item from the database.\nThis capability allows for the deletion of a specified todo item from the database. It is a straightforward function that requires only the ID of the todo item to be deleted. This capability is essential for maintaining the relevance and accuracy of the todo list by removing completed, cancelled, or outdated tasks.\nWhen to Use: Utilize this capability when a todo item is no longer needed or relevant. This could be after the completion of a task, cancellation of a project, or any situation where a todo does not need to be tracked anymore.\nHow to Use:\nDetermine Todo ID: Identify the ID of the todo item that needs to be deleted.\nCall the Function: Execute the deleteTodo function with the identified todo ID. Manage the promise to address any errors and confirm deletion.\nVerify Deletion: The function returns a boolean value indicating the success of the deletion operation. Use this to provide feedback to the user or to update the application state accordingly. Returns: A promise that resolves to true if the deletion was successful, false otherwise.",
+      "parameters": [
+        {
+          "name": "todoId",
+          "description": "ID of the todo to be deleted."
+        }
+      ]
+    },
+    {
+      "name": "todo:updateTodo()",
+      "description": "Updates an existing todo item in the database. Returns: A promise that resolves to the updated todo item.",
+      "parameters": [
+        {
+          "name": "todoId",
+          "description": "ID of the todo to be updated."
+        },
+        {
+          "name": "updates",
+          "description": "Object containing the fields to update."
+        }
+      ]
+    },
+    {
+      "name": "todo:listTodos()",
+      "description": "Lists all todo items in the database.\nThis capability allows for the retrieval of all todo items from the database. It is a simple function that returns an array of all todo items, which can be used for display, processing, or further manipulation.\nWhen to Use: Utilize this capability when you need to display all the todo items in a project, or when you need to process or manipulate the entire list of todos.\nHow to Use:\nCall the Function: Execute the listTodos function. Handle the promise to catch any errors and process the array of todo items returned.\nProcess Response: Use the array of todo items for display, processing, or further manipulation as needed. Returns: A promise that resolves to an array of all todo items.",
+      "parameters": [
+        {
+          "name": "projectId",
+          "description": "ID of the project to list todos for."
+        }
       ]
     }
   ],
