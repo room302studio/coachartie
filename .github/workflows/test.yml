@@ -23,7 +23,7 @@ jobs:
       run: npm ci
     - name: Create fake .env
       run: |
-        echo "SUPABASE_URL=fake.supase.co" > .env
+        echo "SUPABASE_URL=https://fake.supase.co" > .env
         echo "SUPABASE_API_KEY=fake_key_for_testing" >> .env
         echo "SUPABASE_API_SECRET=fake_secret_for_testing" >> .env
         echo "DISCORD_PUBLIC_KEY=fake_public_key_for_testing" >> .env
