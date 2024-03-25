@@ -414,7 +414,8 @@ app.post("/api/webhook-prompt", async (req, res) => {
         content: `${prompt.prompt_text} \n ${message}`
       },
     ],
-    username,
+    {username},
+
   );
 
   logger.info(`Processed message: ${JSON.stringify(processedMessage)}`);
