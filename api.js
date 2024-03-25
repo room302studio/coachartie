@@ -526,12 +526,25 @@ app.post("/api/webhook-reply", async (req, res) => {
   // Send body.content to the robot as if it were a user message
   const message = req.body.content;
   const username = req.body.username || "PGCron Webhook";
+  const promptSlug = req.body.promptSlug;
+
+  // get the prompt from the prompt table
+  const allPrompts = await getPromptsFromSupabase();
+
+  // look for the prompt slug in allPrompts
+  let prompt = allPrompts.find((p) => p.slug === promptSlug);
+
+  // if prompt is null / undefined make it an empty string
+  if (!prompt) {
+    prompt = "";
+  }
 
   const processedMessage = await processMessageChain(
     [
       {
         role: "user",
-        content: message,
+        // content: message,
+        content: `${prompt.prompt} \n ${message}`
       },
     ],
     username,
