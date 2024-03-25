@@ -1,5 +1,5 @@
 const { destructureArgs } = require("../helpers");
-const { logger } = require("../src/logger")('capability-supabasetodo')
+const logger = require("../src/logger")('capability-supabasetodo')
 /**
  * Creates a new todo item in the database. This capability allows for the creation of a new todo item within a specified project. It supports optional details such as description, status, priority, due date, external URLs, and attachments, making it flexible for various use cases. The function defaults to setting the todo's status to "To Do" if not specified, ensuring a new todo is actionable immediately upon creation.
  * When to Use: Use this capability when a new task arises that needs tracking within a project's context. It's suitable for user-driven todo creation based on input or automated task generation from project activities or milestones.
