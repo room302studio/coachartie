@@ -65,6 +65,9 @@ async function getConfigFromSupabase() {
 
   // turn the array of objects into a big object that can be destructured
   const configArray = data;
+  if(!Array.isArray(configArray)) {
+    return {};
+  }
   // get all the keys and values
   const configKeys = configArray.map((config) => config.config_key);
   const configValues = configArray.map((config) => config.config_value);
