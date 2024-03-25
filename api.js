@@ -401,6 +401,8 @@ app.post("/api/webhook-prompt", async (req, res) => {
 
   let prompt = allPrompts[promptSlug];
 
+  logger.info(`Prompt: ${JSON.stringify(prompt)}`);
+
   // if prompt is null / undefined make it an empty string
   if (!prompt) {
     prompt = "";
