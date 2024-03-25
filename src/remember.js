@@ -157,13 +157,20 @@ async function storeUserMemory(
   );
 
   // const { embedding1: embedding, embedding2, embedding3, embedding4 } = embeddings;
-  const openAiEmbeddingResponse = await openai.embeddings.create({
-    model: "text-embedding-ada-002",
-    input: value,
-  });
+  let embedding;
+  try {
+    const openAiEmbeddingResponse = await openai.embeddings.create({
+      model: "text-embedding-ada-002",
+      input: value,
+    });
 
-  const [{ embedding }] = openAiEmbeddingResponse.data;
-  logger.info(`Embedding length: ${embedding.length}`);
+    const [{ embedding: fetchedEmbedding }] = openAiEmbeddingResponse.data;
+    embedding = fetchedEmbedding; // Assign the fetched embedding to the outer scope variable
+    logger.info(`Embedding length: ${embedding.length}`);
+  } catch (error) {
+    logger.info(`Error fetching embedding: ${error.message}`);
+    embedding = null; // Ensure embedding is null if there was an error
+  }
 
   const { supabase } = require("./supabaseclient.js");
   const { data, error } = await supabase
@@ -179,11 +186,10 @@ async function storeUserMemory(
       resource_id: resourceId,
     });
 
-  // logger.info(
-  //   `Stored memory for ${username}: ${value} in ${memoryType} memory ${JSON.stringify(
-  //     data,
-  //   )}`,
-  // );
+  logger.info(
+    `Stored memory for ${username}: ${value} in ${memoryType} memory -- ${resourceId}`,
+    data,
+  );
 
   if (error) {
     logger.info(`Error storing user memory: ${error.message}`);

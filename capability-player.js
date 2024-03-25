@@ -70,14 +70,19 @@ async function processInputAsMessage(input) {
   delete require.cache[require.resolve("./src/chain")];
 
   // Re-require the chain module to get the latest version
-  const chain = require("./src/chain");
+  // const chain = require("./src/chain");
 
   // Initialize an empty messages array to simulate the message chain
   let messages = [];
 
-  const { processAndLogCapabilityResponse } = await chain;
+  // MAYBE THIS?
+  const chain = await require("./src/chain");
+  const { processAndLogCapabilityResponse } = chain;
 
-  // console.log("processAndLogCapabilityResponse", processAndLogCapabilityResponse);
+  console.log(
+    "processAndLogCapabilityResponse",
+    processAndLogCapabilityResponse
+  );
 
   messages = await processAndLogCapabilityResponse(messages, [
     null,

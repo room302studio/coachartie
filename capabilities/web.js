@@ -11,7 +11,7 @@ const {
   destructureArgs,
   countMessageTokens,
   lastUserMessage,
-  sleep
+  sleep,
 } = require("../helpers");
 const fs = require("fs");
 const path = require("path");
@@ -26,7 +26,7 @@ const openai = new OpenAI();
 // TODO: Pull this in from config
 // const CHUNK_TOKEN_AMOUNT = 7000
 // const CHUNK_TOKEN_AMOUNT = 10952;
-const CHUNK_TOKEN_AMOUNT = 120 * 1024 // 128k tokens
+const CHUNK_TOKEN_AMOUNT = 120 * 1024; // 128k tokens
 
 dotenv.config();
 
@@ -93,24 +93,26 @@ async function webPageToText(url) {
   await page.waitForSelector("body");
 
   // Extract text from the page
-  const text = await page.$$eval(allowedTextEls, elements => {
-    return elements.map(element => {
-      if (element.tagName === "PRE") {
-        return "```\n" + element.textContent + "\n```";
-      }
-      if (element.tagName === "A") {
-        // const url = new URL(element.href);
-        return `${element.textContent} (${element.href}) `;
-      }
-      return element.textContent + " ";
-    }).join(" ");
+  const text = await page.$$eval(allowedTextEls, (elements) => {
+    return elements
+      .map((element) => {
+        if (element.tagName === "PRE") {
+          return "```\n" + element.textContent + "\n```";
+        }
+        if (element.tagName === "A") {
+          // const url = new URL(element.href);
+          return `${element.textContent} (${element.href}) `;
+        }
+        return element.textContent + " ";
+      })
+      .join(" ");
   });
 
   const trimmedText = text.replace(/\s+/g, " ").trim();
 
   await browser.close();
 
-  return {title, text: trimmedText};
+  return { title, text: trimmedText };
 }
 
 async function webpageToHTML(url) {
@@ -125,11 +127,10 @@ async function webpageToHTML(url) {
   await page.waitForSelector("body");
 
   // wait a second or two for javascript to run
-  await sleep(2000);
+  await sleep(5000);
 
   // Extract text from the page body tag
-  const html
-    = await page.$eval("body", body => body.innerHTML);
+  const html = await page.$eval("body", (body) => body.innerHTML);
 
   await browser.close();
 
@@ -137,7 +138,7 @@ async function webpageToHTML(url) {
 }
 
 async function fetchAndParseURL(url) {
-  const {title, text} = await webPageToText(url);
+  const { title, text } = await webPageToText(url);
 
   return { title, text };
 }
@@ -327,7 +328,7 @@ async function processChunks(chunks, data, limit = 2, userPrompt = "") {
             },
           ],
         });
-        return completion.choices[0]
+        return completion.choices[0];
       });
 
     const chunkResults = await Promise.all(chunkPromises);
@@ -357,8 +358,8 @@ async function fetchAndSummarizeUrl(url, userPrompt = "") {
   }
 
   logger.info(`📝  Fetching URL: ${cleanedUrl}`);
-  const {text} = await fetchAndParseURL(cleanedUrl);
-  logger.info(`📝  Fetched text: ${text}`)
+  const { text } = await fetchAndParseURL(cleanedUrl);
+  logger.info(`📝  Fetched text: ${text}`);
   logger.info(`📝  Fetched URL: ${cleanedUrl}`);
 
   logger.info("📝  Generating summary...");
@@ -409,15 +410,15 @@ async function fetchAndSummarizeUrl(url, userPrompt = "") {
       chunkResponses = JSON.parse(
         fs.readFileSync(
           path.join(__dirname, `../cache/${cacheKey}.json`),
-          "utf8",
-        ),
+          "utf8"
+        )
       );
     } else {
       chunkResponses = await processChunks(chunks, cleanText);
       // Cache the chunks
       fs.writeFileSync(
         path.join(__dirname, `../cache/${cacheKey}.json`),
-        JSON.stringify(chunkResponses),
+        JSON.stringify(chunkResponses)
       );
     }
 
@@ -454,7 +455,7 @@ ${factList}`,
       },
     ],
   });
-  
+
   const summary = summaryCompletion.choices[0].message.content;
 
   logger.info(`📝  Generated summary for URL: ${cleanedUrl}`, summary);
@@ -507,5 +508,5 @@ module.exports = {
   fetchAllLinks,
   handleCapabilityMethod,
   webPageToText,
-  webpageToHTML
+  webpageToHTML,
 };

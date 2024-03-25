@@ -3,9 +3,18 @@ const cheerio = require("cheerio");
 const dotenv = require("dotenv");
 dotenv.config();
 const { webPageToText, webpageToHTML } = require("./web.js"); // Adjust the path as necessary
-const { destructureArgs } = require("../helpers");
+const { destructureArgs, createChatCompletion } = require("../helpers");
+const { storeUserMemory } = require("../src/remember");
 const logger = require("../src/logger.js")("ingest-capability");
+const { convert } = require("html-to-text");
+const fs = require("fs");
+const path = require("path");
+const crypto = require("crypto");
 
+const cacheDir = path.join(__dirname, "cache");
+if (!fs.existsSync(cacheDir)) {
+  fs.mkdirSync(cacheDir, { recursive: true });
+}
 
 async function handleCapabilityMethod(method, args) {
   const [arg1] = destructureArgs(args);
@@ -17,120 +26,93 @@ async function handleCapabilityMethod(method, args) {
   }
 }
 
-
 /**
  * @async
  * @function deepDocumentIngest
- * @param {string} urlOrText - The arguments object that contains the URL or the text of the document to be ingested
+ * @param {string} url - The arguments object that contains the URL or the text of the document to be ingested
  * @returns {string} - The meta-summary of the document
- * 
+ *
  */
-async function deepDocumentIngest(urlOrText) {
-  if (!urlOrText) {
-    throw new Error("No URL or text provided to ingest.");
-  }
+async function deepDocumentIngest(url) {
+  // For testing:
+  // node capability-player.js --runCapability="ingest:deepDocumentIngest(https://docs.pdw.co/tachio-overview)"
 
-  // check if the input is a URL
-  const isUrl = urlOrText.startsWith("http");
-  
-  
+  // TODO: Cache the text-ified version of the URL for a certain amount of time
+  // Generate a hash for the URL
+  // const urlHash = crypto.createHash("md5").update(url).digest("hex");
+  // const cacheFilePath = path.join(cacheDir, `${urlHash}.json`);
+
+  // // Check if cache exists and is recent (e.g., less than 1 hour old)
+  // if (
+  //   fs.existsSync(cacheFilePath) &&
+  //   Date.now() - fs.statSync(cacheFilePath).mtimeMs < 3600000
+  // ) {
+  //   console.log("Using cached data");
+  //   return fs.readFileSync(cacheFilePath, "utf8");
+  // }
+
   try {
-    
+    const { html } = await webpageToHTML(url);
+    const document = convert(html, {
+      wordwrap: 130,
+    });
 
-    // First we need to figure out what kind of document we are looking at so we can process it properly
-    // If it's Markdown we can skip a few steps
+    const messages = [
+      {
+        role: "user",
+        content: `Can you please write an extremely long and thorough reiteration of the following document: 
+${JSON.stringify(document, null, 2)}
 
-    // First, use our puppeteer web browser to turn the page into text
-    // const {text: documentString} = await webPageToText(urlOrText);  
-    const { html } = await webpageToHTML(urlOrText);
+When analyzing this document, your goal is to distill its content into concise, standalone facts, as many as you possibly can. Each fact should encapsulate a key piece of information, complete in itself, and easily understandable without needing further context. Pay special attention to precise details, especially if they involve code or search queries - accuracy in phrasing is crucial here. It's important to include relevant URLs, specific search queries, project IDs that are associated with these facts. Respond ONLY with the facts, do not greet me or confirm the request. Keep your response above 1000 words and below 5000 words, please.
 
-    let document
-    if (isUrl) {
-      // documentText = documentString;
-      document = parseHtmlToSections(html);
-    } else {
-      // documentText = urlOrText;
-      // if it's a string, parse it as markdown
-      document = parseMarkdownToSections(urlOrText);
-    }
+Make separate sections of facts for each section of the document, using \`\`\`---\`\`\` between each section. Respond immediately, beginning with the first section, no introductions or confirmation.`,
+      },
+    ];
+    const completion = await createChatCompletion(messages, {
+      max_tokens: 4000,
+    });
 
-    console.log(document);
+    // because the robot was instructed to deliniate the facts with '---' we can split the response into facts
+    // we need to be aware the first fact MAY be blank
+    const facts = completion.split("\n---\n");
 
-    // Then, if it's a web page we use headers elements to try to split the page into logical sections
-    // If it's markdown we will do the same, but with a Markdown parser
+    // now that each fact is separated we can store them in the database
+    facts.forEach(async (fact, index) => {
+      const factAsMemory = `Memory about RESOURCE_ID: ${url}\n${fact}
+(${index + 1}/${facts.length})
+      `;
+      await storeUserMemory(
+        { username: "capability-deepdocumentingest", guild: "" },
+        fact,
+        "capability",
+        url,
+      );
+    });
 
-    // First we prepare by taking the headers and as much of the sections as we can, and asking the LLM to send back a list of the sections/concepts in the document
+    const metaSummaryMessages = [
+      {
+        role: "user",
+        content: `Can you please provide a high-level summary of the most important facts in this document: 
+  ${JSON.stringify(document, null, 2)}`
+      }
+    ];
 
-    // Once we've created our sections, we can create memories of them and store them in the database
+    const metaSummaryCompletion = await createChatCompletion(metaSummaryMessages, {
+      max_tokens: 2000,
+    });
 
-    // Then we want to generate a meta-summary of the document based on all of those memories, and store that in the database as well
+    // Store the meta-summary in the database
+    await storeUserMemory(
+      { username: "capability-deepdocumentingest", guild: "" },
+      metaSummaryCompletion,
+      "capability-deepdocumentingest",
+      url,
+    );
 
-
-
-    return "Document ingested successfully.";
+    return `Document ingested successfully. ${facts.length} groups of facts were extracted from the ${url}.`;
   } catch (error) {
     throw new Error(`Error occurred while making external request: ${error}`);
   }
-}
-
-async function parseHtmlToSections(htmlText) {
-  const $ = cheerio.load(htmlText);
-  const sections = [];
-  let currentSection = { header: null, content: [] };
-
-  $('h1, h2, h3, h4, h5, h6, p').each((index, element) => {
-    const $element = $(element);
-    const tagName = $element.prop('tagName').toLowerCase();
-    const text = $element.text();
-
-    if (tagName === 'h1' || tagName === 'h2' || tagName === 'h3' || tagName === 'h4' || tagName === 'h5' || tagName === 'h6') {
-      // When we hit a heading, we start a new section
-      if (currentSection.header || currentSection.content.length) {
-        // Save the previous section if it has content
-        sections.push(currentSection);
-      }
-      // Start a new section with the current header
-      currentSection = { header: text, content: [] };
-    } else {
-      // Add non-heading elements to the current section's content
-      currentSection.content.push(text);
-    }
-  });
-
-  // Add the last section if it has content
-  if (currentSection.header || currentSection.content.length) {
-    sections.push(currentSection);
-  }
-
-  return sections;
-}
-
-function parseMarkdownToSections(markdownText) {
-  const tokens = marked.lexer(markdownText);
-  const sections = [];
-  let currentSection = { header: null, content: [] };
-
-  tokens.forEach(token => {
-    if (token.type === 'heading') {
-      // When we hit a heading, we start a new section
-      if (currentSection.header || currentSection.content.length) {
-        // Save the previous section if it has content
-        sections.push(currentSection);
-      }
-      // Start a new section with the current header
-      currentSection = { header: token.text, content: [] };
-    } else {
-      // Add non-heading tokens to the current section's content
-      currentSection.content.push(token);
-    }
-  });
-
-  // Add the last section if it has content
-  if (currentSection.header || currentSection.content.length) {
-    sections.push(currentSection);
-  }
-
-  return sections;
 }
 
 module.exports = {
