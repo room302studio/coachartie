@@ -5,6 +5,11 @@ const {
   storeUserMemory,
   getRelevantMemories,
 } = require("./remember.js");
+const {
+  createTodo,
+  deleteTodo,
+  updateTodo,
+} = require("../capabilities/supabasetodo.js");
 const chance = require("chance").Chance();
 const vision = require("./vision.js");
 const logger = require("../src/logger.js")("memory");
@@ -190,7 +195,58 @@ module.exports = (async () => {
     if (rememberText.length <= 0) return rememberText;
     await storeUserMemory({ username: "capability" }, rememberText);
 
-    return rememberText;
+
+
+    // TODO: ANALYZE EXCHANGE FOR ANY TODOS/TASKS AND THEN MODIFY THE TODOS TABLE BASED ON WHAT IS NEEDED
+
+    const taskAnalysisMessages = [
+      ...memoryMessages,
+      ...conversationHistory,
+      {
+        role: "system",
+        content: `Analyze the previous messages for any content that could be a task or todo. If found, please add or modify the todo list using a few simple capabilities: 
+
+        - todo:createTodo(name, description)
+        - todo:deleteTodo(todoId)
+        - todo:updateTodo(todoId, updates)
+        `
+      }
+    ];
+
+    const taskAnalysisCompletion = await openai.chat.completions.create({
+      model: REMEMBER_MODEL,
+      presence_penalty: -0.1,
+      max_tokens: 256,
+      messages: taskAnalysisMessages,
+    });
+
+    const taskAnalysisText = taskAnalysisCompletion.choices[0].message.content;
+
+    // TODO: Look for any commands in the response and execute them - note: a response could contain MANY commands
+    const createTodoRegex = /todo:createTodo\((.*)\)/g;
+    const deleteTodoRegex = /todo:deleteTodo\((.*)\)/g;
+    const updateTodoRegex = /todo:updateTodo\((.*)\)/g;
+
+    // look for createTodo commands
+    const createTodoMatches = taskAnalysisText.match(createTodoRegex);
+
+    const createTodosPromises = createTodoMatches ? createTodoMatches.map((match) => {
+      const [name, description] = match.split(",");
+      return createTodo(name, description);
+    }) : [];
+
+    const deleteTodosPromises = deleteTodoMatches ? deleteTodoMatches.map((match) => {
+      const [todoId] = match.split(",");
+      return deleteTodo(todoId);
+    }) : [];
+
+    const updateTodosPromises = updateTodoMatches ? updateTodoMatches.map((match) => {
+      const [todoId, updates] = match.split(",");
+      return updateTodo(todoId, updates);
+    }) : [];
+
+    const promises = await Promise.all([...createTodosPromises, ...deleteTodosPromises, ...updateTodosPromises]);
+    return JSON.stringify(promises);
   }
 
   return {

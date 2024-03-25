@@ -46,7 +46,7 @@ async function getPromptsFromSupabase() {
   const promptValues = promptArray.map((prompt) => prompt.prompt_text);
   // return an object with all the keys and values
   const prompts = Object.fromEntries(
-    promptKeys.map((_, i) => [promptKeys[i], promptValues[i]]),
+    promptKeys.map((_, i) => [promptKeys[i], promptValues[i]])
   );
   // logger.info(`Prompts: ${JSON.stringify(prompts, null, 2)}`);
   return prompts;
@@ -66,7 +66,7 @@ async function getConfigFromSupabase() {
   const configValues = configArray.map((config) => config.config_value);
   // return an object with all the keys and values
   const config = Object.fromEntries(
-    configKeys.map((_, i) => [configKeys[i], configValues[i]]),
+    configKeys.map((_, i) => [configKeys[i], configValues[i]])
   );
   return config;
 }
@@ -543,7 +543,7 @@ async function generateAiCompletion(prompt, username, messages, config) {
     completion = await createChatCompletion(
       messages,
       temperature,
-      presence_penalty,
+      presence_penalty
     );
   } catch (err) {
     logger.info(`Error creating chat completion ${err}`);
@@ -606,7 +606,7 @@ async function createChatCompletion(
     temperature: 0,
     presence_penalty: 0.01,
     max_tokens: 2400,
-  },
+  }
 ) {
   const {
     CHAT_MODEL,
@@ -833,7 +833,7 @@ async function addCapabilityManifestMessage(messages) {
         role: "user",
         // content: `Capability manifest: ${JSON.stringify(manifest)}`,
         content: `## CAPABILITY MANIFEST\n\n${formatCapabilityManifest(
-          manifest,
+          manifest
         )}`,
       });
     }
@@ -903,13 +903,13 @@ function convertCapabilityManifestToXML(manifest) {
           ? `    <parameters>\n${capability.parameters
               .map(
                 (parameter) =>
-                  `      <parameter>\n        <name>${parameter.name}</name>\n        <description>${parameter.description}</description>\n      </parameter>\n`,
+                  `      <parameter>\n        <name>${parameter.name}</name>\n        <description>${parameter.description}</description>\n      </parameter>\n`
               )
               .join("")}    </parameters>\n`
           : "";
 
         return `  <capability>\n${nameXml}${descriptionXml}${parametersXml}  </capability>\n`;
-      }),
+      })
     )
     .join("");
 
@@ -924,12 +924,12 @@ function convertCapabilityManifestToXML(manifest) {
 async function addUserMessages(username, messages) {
   const userMessageCount = chance.integer({ min: 10, max: 32 });
   logger.info(
-    `🔧 Retrieving ${userMessageCount} previous messages for ${username}`,
+    `🔧 Retrieving ${userMessageCount} previous messages for ${username}`
   );
   try {
     const userMessages = await getUserMessageHistory(
       username,
-      userMessageCount,
+      userMessageCount
     );
     if (!userMessages) {
       logger.info(`No previous messages found for ${username}`);
@@ -991,16 +991,16 @@ async function addRelevantMemories(username, messages) {
 
   const queryString = lastUserMessage.content;
   logger.info(
-    `🔧 Querying for relevant memories for ${username}: ${queryString}`,
+    `🔧 Querying for relevant memories for ${username}: ${queryString}`
   );
 
   try {
     const relevantMemories = await getRelevantMemories(
       queryString,
-      relevantMemoryCount,
+      relevantMemoryCount
     );
     logger.info(
-      `🔧 Retrieving ${relevantMemoryCount} relevant memories for ${queryString}`,
+      `🔧 Retrieving ${relevantMemoryCount} relevant memories for ${queryString}`
     );
 
     if (relevantMemories.length === 0) {
@@ -1159,6 +1159,21 @@ function isExceedingTokenLimit(messages) {
  */
 function destructureArgs(args) {
   return args.split(",").map((arg) => arg.trim());
+}
+
+/**
+ * Parses a JSON string into a JavaScript object.
+ *
+ * This function takes a JSON string as an argument, replaces single quotes with double quotes to ensure valid JSON format,
+ * and then parses it into a JavaScript object.
+ * If the input string is not a valid JSON, parseJSONArgs() will throw an error.
+ *
+ * @param {string} arg - The JSON string to be parsed.
+ * @returns {Object} - The JavaScript object parsed from the input JSON string.
+ * @throws {SyntaxError} If the input string is not a valid JSON.
+ */
+function parseJSONArg(arg) {
+  return JSON.parse(arg.replace(/'/g, '"'));
 }
 
 /**
@@ -1500,6 +1515,7 @@ module.exports = {
   getConfigFromSupabase,
   capabilityRegex,
   createChatCompletion,
+  parseJSONArg,
   convertCapabilityManifestToXML,
   convertMessagesToXML,
   cleanUrlForPuppeteer,

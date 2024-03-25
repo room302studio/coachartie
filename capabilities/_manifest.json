@@ -599,6 +599,75 @@
       ]
     }
   ],
+  "manageorgs": [
+    {
+      "name": "manageorgs:createOrg()",
+      "description": "Creates a new organization, label and post Returns: A promise that resolves to a string message indicating the result of the operation.",
+      "parameters": [
+        {
+          "name": "name",
+          "description": "The name of the organization."
+        },
+        {
+          "name": "shortname",
+          "description": "The short name of the organization. If not provided, the name is used and spaces are replaced with hyphens."
+        },
+        {
+          "name": "aliases",
+          "description": "The aliases of the organization."
+        },
+        {
+          "name": "summary",
+          "description": "The summary of the organization."
+        },
+        {
+          "name": "note",
+          "description": "The note for the organization."
+        },
+        {
+          "name": "firstContact",
+          "description": "The date of the first contact with the organization. If not provided, the current date is used."
+        },
+        {
+          "name": "primaryEmailAddress",
+          "description": "The primary email address of the organization."
+        },
+        {
+          "name": "emailAddresses",
+          "description": "The email addresses of the organization."
+        }
+      ],
+      "exceptions": [
+        "If there is an error with the Supabase operations."
+      ]
+    },
+    {
+      "name": "manageorgs:updateOrg()",
+      "description": "Updates an existing organization in the database and sends a notification. Returns: A promise that resolves to a string message indicating the result of the operation.",
+      "parameters": [
+        {
+          "name": "name",
+          "description": "The current name of the organization."
+        },
+        {
+          "name": "newName",
+          "description": "The new name of the organization."
+        },
+        {
+          "name": "newAliases",
+          "description": "The new aliases of the organization."
+        },
+        {
+          "name": "newFirstContact",
+          "description": "The new date of the first contact with the organization."
+        }
+      ],
+      "exceptions": [
+        "If there is an error with the Supabase operations."
+      ]
+    }
+  ],
+  "manageprojects": [],
   "mastodon": [
     {
       "name": "mastodon:postStatus()",
@@ -634,85 +703,19 @@
       "examples": "    convertMermaidDiagram(graph LR; A-->B;); // Returns { image: <Buffer> }\n    convertMermaidToDiagram(```mermaid\n    graph LR;\n     A-->B;\n    ```); // Returns { image: <Buffer> }"
     }
   ],
-  "pgcron": [
+  "readrepo": [
     {
-      "name": "pgcron:createJob()",
-      "description": "Creates a new cron job with pg_cron in Supabase.",
+      "name": "readrepo:RepoReader()",
+      "description": "\"Reads all code/text files from a specified GitHub repository, concatenates them into a single string,\nand prepends the path and filename to each file's content. Useful for reviewing or modifying repository content.\" Returns: A promise that resolves to a string containing the concatenated contents of the repository's code/text files.",
       "parameters": [
         {
-          "name": "schedule",
-          "description": "The schedule for the cron job (e.g., '0 0 * * *' for daily at midnight)."
+          "name": "owner",
+          "description": "The GitHub username or organization name of the repository owner."
         },
         {
-          "name": "command",
-          "description": "The command to be executed by the cron job."
+          "name": "repo",
+          "description": "The name of the repository."
         }
-      ],
-      "examples": "    createJob('0 0 * * *', 'DELETE FROM table WHERE created_at < NOW() - INTERVAL '1 month';') -- Deletes old records from a table every day at midnight."
-    },
-    {
-      "name": "pgcron:createWebhook()",
-      "description": "Creates a webhook and sends a POST request to the specified URL with the provided body and headers. Returns: A promise that resolves to a success message if the webhook is created successfully, or an error message if there is an error.",
-      "parameters": [
-        {
-          "name": "schedule",
-          "description": "The schedule for the webhook."
-        },
-        {
-          "name": "url",
-          "description": "The URL to send the POST request to."
-        },
-        {
-          "name": "body",
-          "description": "The body of the POST request."
-        },
-        {
-          "name": "headers",
-          "description": "The headers of the POST request."
-        },
-        {
-          "name": "name",
-          "description": "The name of the job to create."
-        }
-      ],
-      "examples": "    pgcron:createWebhook(0 0 * * *, \"http://webhook-dev.room302.studio/api/webhook\", \"{}\", \"{}\", \"Test Webhook Call\")"
-    },
-    {
-      "name": "pgcron:listJobs()",
-      "description": "Lists the cron jobs currently scheduled with pg_cron in Supabase."
-    },
-    {
-      "name": "pgcron:deleteJob()",
-      "description": "Deletes a job scheduled with pg_cron in Supabase. Returns: A promise that resolves to a success message when the job is successfully deleted.",
-      "parameters": [
-        {
-          "name": "name",
-          "description": "The name of the job to delete."
-        }
-      ],
-      "exceptions": [
-        "If there is an error deleting the job."
-      ]
-    },
-    {
-      "name": "pgcron:updateJob()",
-      "description": "Updates a job scheduled with pg_cron in Supabase. Returns: A promise that resolves to a success message when the job is successfully updated.",
-      "parameters": [
-        {
-          "name": "name",
-          "description": "The name of the job to update."
-        },
-        {
-          "name": "schedule",
-          "description": "The new schedule for the job."
-        },
-        {
-          "name": "command",
-          "description": "The new command for the job."
-        }
-      ],
-      "exceptions": [
-        "If there is an error updating the job."
       ]
     }
   ],
@@ -865,24 +868,9 @@
       "examples": "    supabaseraw:delete(\"todos\", { id: 1 })"
     }
   ],
-  "svg": [
+  "supabasetodo": [
     {
-      "name": "svg:convertSvgToImage()",
-      "description": "Converts an SVG string to an image using Puppeteer. Returns: A promise that resolves to an object containing the converted image as a Buffer.",
-      "parameters": [
-        {
-          "name": "svgString",
-          "description": "The SVG string to convert."
-        }
-      ],
-      "exceptions": [
-        "If an error occurs while converting SVG to image."
-      ]
-    }
-  ],
-  "todo": [
-    {
-      "name": "todo:createTodo()",
+      "name": "supabasetodo:createTodo()",
       "description": "Creates a new todo item in the database. This capability allows for the creation of a new todo item within a specified project. It supports optional details such as description, status, priority, due date, external URLs, and attachments, making it flexible for various use cases. The function defaults to setting the todo's status to \"To Do\" if not specified, ensuring a new todo is actionable immediately upon creation.\nWhen to Use: Use this capability when a new task arises that needs tracking within a project's context. It's suitable for user-driven todo creation based on input or automated task generation from project activities or milestones.\nHow to Use:\nPrepare Todo Details: Construct an object containing the details of the todo to be created, including the mandatory projectId and name fields, along with any other optional information.\nCall the Function: Invoke the createTodo function with the prepared object. Handle the promise returned by the function to deal with the newly created todo or to catch any errors.\nProcess Response: On successful creation, use the returned todo item for display, further processing, or confirmation to the user. Returns: A promise that resolves to a success message.",
       "parameters": [
         {
@@ -896,7 +884,7 @@
       ]
     },
     {
-      "name": "todo:deleteTodo()",
+      "name": "supabasetodo:deleteTodo()",
       "description": "Deletes a todo item from the database.\nThis capability allows for the deletion of a specified todo item from the database. It is a straightforward function that requires only the ID of the todo item to be deleted. This capability is essential for maintaining the relevance and accuracy of the todo list by removing completed, cancelled, or outdated tasks.\nWhen to Use: Utilize this capability when a todo item is no longer needed or relevant. This could be after the completion of a task, cancellation of a project, or any situation where a todo does not need to be tracked anymore.\nHow to Use:\nDetermine Todo ID: Identify the ID of the todo item that needs to be deleted.\nCall the Function: Execute the deleteTodo function with the identified todo ID. Manage the promise to address any errors and confirm deletion.\nVerify Deletion: The function returns a boolean value indicating the success of the deletion operation. Use this to provide feedback to the user or to update the application state accordingly. Returns: A promise that resolves to true if the deletion was successful, false otherwise.",
       "parameters": [
         {
@@ -906,7 +894,7 @@
       ]
     },
     {
-      "name": "todo:updateTodo()",
+      "name": "supabasetodo:updateTodo()",
       "description": "Updates an existing todo item in the database. Returns: A promise that resolves to the updated todo item.",
       "parameters": [
         {
@@ -920,13 +908,28 @@
       ]
     },
     {
-      "name": "todo:listTodos()",
+      "name": "supabasetodo:listTodos()",
       "description": "Lists all todo items in the database.\nThis capability allows for the retrieval of all todo items from the database. It is a simple function that returns an array of all todo items, which can be used for display, processing, or further manipulation.\nWhen to Use: Utilize this capability when you need to display all the todo items in a project, or when you need to process or manipulate the entire list of todos.\nHow to Use:\nCall the Function: Execute the listTodos function. Handle the promise to catch any errors and process the array of todo items returned.\nProcess Response: Use the array of todo items for display, processing, or further manipulation as needed. Returns: A promise that resolves to an array of all todo items.",
       "parameters": [
         {
           "name": "projectId",
           "description": "ID of the project to list todos for."
         }
+      ]
+    }
+  ],
+  "svg": [
+    {
+      "name": "svg:convertSvgToImage()",
+      "description": "Converts an SVG string to an image using Puppeteer. Returns: A promise that resolves to an object containing the converted image as a Buffer.",
+      "parameters": [
+        {
+          "name": "svgString",
+          "description": "The SVG string to convert."
+        }
+      ],
+      "exceptions": [
+        "If an error occurs while converting SVG to image."
       ]
     }
   ],
