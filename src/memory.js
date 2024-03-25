@@ -219,7 +219,7 @@ module.exports = (async () => {
       model: REMEMBER_MODEL,
       presence_penalty: -0.1,
       max_tokens: 256,
-      taskAnalysisMessages,
+      messages: taskAnalysisMessages,
     });
 
     const taskAnalysisText = taskAnalysisCompletion.choices[0].message.content;
