@@ -231,6 +231,8 @@ module.exports = (async () => {
 
     // look for createTodo commands
     const createTodoMatches = taskAnalysisText.match(createTodoRegex);
+    const deleteTodoMatches = taskAnalysisText.match(deleteTodoRegex);
+    const updateTodoMatches = taskAnalysisText.match(updateTodoRegex);
 
     const createTodosPromises = createTodoMatches ? createTodoMatches.map((match) => {
       const [name, description] = match.split(",");
