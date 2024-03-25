@@ -60,7 +60,6 @@ async function deepDocumentIngest(url) {
     const messages = [
       {
         role: "user",
-        // content: "Give me 3 rhymes for apple",
         content: `Can you please write an extremely long and thorough reiteration of the following document: 
 ${JSON.stringify(document, null, 2)}
 
@@ -89,12 +88,6 @@ Make separate sections of facts for each section of the document, using \`\`\`--
         url,
       );
     });
-
-    // Sketch (Phase II):
-    //  - For each section,
-    //    - Pass the meta-summary AND the detailed section itself to the LLM
-    //    - We ask for a fact list of the section
-    //    - We create a memory with the fact list (which becomes an embedding)
 
     const metaSummaryMessages = [
       {
