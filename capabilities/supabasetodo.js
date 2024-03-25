@@ -1,4 +1,4 @@
-const { supabase, destructureArgs } = require("../helpers");
+// const { supabase, destructureArgs } = require("../helpers");
 const { logger } = require("../src/logger")('capability-supabasetodo')
 /**
  * Creates a new todo item in the database. This capability allows for the creation of a new todo item within a specified project. It supports optional details such as description, status, priority, due date, external URLs, and attachments, making it flexible for various use cases. The function defaults to setting the todo's status to "To Do" if not specified, ensuring a new todo is actionable immediately upon creation.
@@ -13,6 +13,7 @@ const { logger } = require("../src/logger")('capability-supabasetodo')
  * @returns {Promise<string>} A promise that resolves to a success message.
  */
 async function createTodo(name, description = "") {
+  const { supabase } = require("../src/supabaseclient");
   const { data, error } = await supabase.from("todos").insert([
     {
       name,
@@ -38,6 +39,7 @@ async function createTodo(name, description = "") {
  * @returns {Promise<boolean>} A promise that resolves to true if the deletion was successful, false otherwise.
  */
 async function deleteTodo(todoId) {
+  const { supabase } = require("../src/supabaseclient");
   const { data, error } = await supabase
     .from("todos")
     .delete()
@@ -61,6 +63,7 @@ async function deleteTodo(todoId) {
  * @returns {Promise<Object>} A promise that resolves to the updated todo item.
  */
 async function updateTodo(todoId, updates) {
+  const { supabase } = require("../src/supabaseclient");
   const { data, error } = await supabase
     .from("todos")
     .update(updates)
@@ -95,6 +98,7 @@ Process Response: Use the updated todo item returned by the function to verify t
  *
  */
 async function listTodos() {
+  const { supabase } = require("../src/supabaseclient");
   const { data, error } = await supabase.from("todos").select("*");
 
   if (error) throw new Error(error.message);
