@@ -21,15 +21,6 @@ const BOT_NAME = process.env.BOT_NAME;
 
 app.use(express.json());
 
-// const basicAuth = require("express-basic-auth");
-// app.use(
-//   basicAuth({
-//     users: { admin: "supersecret" },
-//     challenge: true,
-//   })
-// );
-
-/* Basic, simple Coach Artie messaging */
 
 app.post("/api/message", async (req, res) => {
   const { processMessageChain } = await require("./src/chain");
@@ -128,288 +119,155 @@ async function listMessages(emailMessageId) {
   */
   return data.messages;
 }
+function processWebhookPayload(payload) {
+  const userMessage = payload.userMessage;
+  const userName = payload.userName;
+  const userEmail = payload.userEmail;
+  const conversationId = payload.conversationId;
+  const attachments = payload.attachments;
+  const hasEmailMessages = payload.hasEmailMessages;
+  const webhookTimestamp = payload.webhookTimestamp;
+  const ruleName = payload.ruleName;
+  const ruleType = payload.ruleType;
 
+  const simplifiedPayload = {
+    userMessage,
+    userName,
+    userEmail,
+    conversationId,
+    attachments,
+    hasEmailMessages,
+    webhookTimestamp,
+    ruleName,
+    ruleType
+  };
+
+  if (hasEmailMessages) {
+    simplifiedPayload.emailMessageCount = payload.emailMessageCount;
+
+    if (payload.conversationContext) {
+      simplifiedPayload.conversationContext = payload.conversationContext;
+    }
+  }
+
+  if (payload.conversationLabels) {
+    simplifiedPayload.conversationLabels = payload.conversationLabels;
+  }
+
+  if (payload.conversationSubject) {
+    simplifiedPayload.conversationSubject = payload.conversationSubject;
+  }
+
+  return simplifiedPayload;
+}
 async function processMissiveRequest(body) {
+  // Require the processMessageChain function from the chain module
   const { processMessageChain } = await require("./src/chain");
-  let formattedMessages = []; // the array of messages we will send to processMessageChain
-  // everything gets added to this
 
-  // const body = req.body;
-  // the webhook description explains why the webhook was triggered
+  // Initialize an empty array to store formatted messages
+  let formattedMessages = [];
+
+  // Extract the webhook description from the request body
   const webhookDescription = `${body?.rule?.description}`;
+
+  // Extract the username from the comment author's email or use "API User" as a default
   const username = body.comment.author.email || "API User";
-  // the conversationID is the ID of the conversation that the webhook was triggered from and is used to look up other messages in the conversation outside of the webhook
+
+  // Extract the conversation ID from the request body
   const conversationId = body.conversation.id;
 
-  // logger.info(`Body: ${JSON.stringify(body)}`);
+  // Process the webhook payload using the processWebhookPayload function
+  const simplifiedPayload = processWebhookPayload(body);
 
-  // the user message might be in body.comment.message
-  // or it might be in body.comment.body
-  let userMessage;
-  if (body.comment.message) {
-    userMessage = body.comment.message;
-  } else if (body.comment.body) {
-    userMessage = body.comment.body;
-  } else {
-    // If we can't find a comment, just send the whole body
-    userMessage = JSON.stringify(body, null, 2);
-  }
-
-  // Take a look at the latest message in the conversation
-  const latestMessageId = body.latest_message?.id;
-  const latestMessageAttachments = body?.latest_message?.attachments;
-  // logger.info(`Latest message ID: ${latestMessageId}`);
-  // logger.info(
-  //   `Latest message attachments: ${JSON.stringify(latestMessageAttachments)}`,
-  // );
-
-  if (latestMessageId) {
-    // we also need to check if there is an attachment, and if there is, we need to process it and turn it into text
-
-    const fullLatestMessage = await getMessage(latestMessageId);
-    // logger.info(`Full latest message: ${JSON.stringify(fullLatestMessage)}`);
-
-    // we need to get the HTML email body out of the message, sanitize it a bit to save on tokens, and add that as a system message
-    const latestMessageHtmlBody = fullLatestMessage?.messages?.body;
-
-    // now we need to strip out all the newlines, HTML tags, and any styles/css
-    const latestMessageTextBody = latestMessageHtmlBody
-      ?.replace(`\n`, " ")
-      .replace(/<style([\s\S]*?)<\/style>/gi, "")
-      .replace(/<script([\s\S]*?)<\/script>/gi, "")
-      .replace(/<[^>]+>/gi, "");
-
-    // logger.info(`Latest message text body: ${latestMessageTextBody}`);
-
-    // now lets add that as a system message
-    formattedMessages.push({
-      role: "user",
-      content: `# Latest message in Missive conversation: 
-${latestMessageTextBody}`,
-    });
-
-    // we can also add the JSON of the fullLatestMessage MINUS the body
-    // as a system message
-    const latestMessageMinusBody = { ...fullLatestMessage };
-    delete latestMessageMinusBody.body;
-
-    formattedMessages.push({
-      role: "system",
-      content: `## Latest message in conversation: 
-${jsonToMarkdownList(latestMessageMinusBody)}`,
-    });
-  }
-
-  logger.info(`Looking for messages in conversation ${conversationId}`);
-  const conversationMessages = await listMessages(conversationId);
-  logger.info(
-    `${conversationMessages.length} messages found in conversation ${conversationId}`,
-  );
-  // logger.info(`Conversation messages: ${JSON.stringify(conversationMessages)}`);
-
-  // add the previous conversationMessages to the formattedMessages array
-  formattedMessages.push(
-    ...conversationMessages.map((m) => {
-      return {
-        role: "user",
-        content: `### Previous message in conversation:
-${jsonToMarkdownList(m)}`,
-      };
-    }),
-  );
-
-  // check for any attachments in ANY of the conversation messages also
-  // and if there are any memories of them, add them to the formattedMessages array
-  conversationMessages.forEach((message) => {
-    logger.info(`Checking message ${message?.id} for attachments`);
-    const attachments = message.attachment;
-
-    // log the keys available in message
-    logger.info(`Message keys: ${Object.keys(message)}`);
-    logger.info(`Attachments: ${JSON.stringify(attachments)}`);
-
-    if (attachments) {
-      attachments.forEach(async (attachment) => {
-        const resourceId = attachment?.id;
-        logger.info(`Checking for memories of resource ${resourceId}`);
-        const isInMemory = await hasRecentMemoryOfResource(resourceId); // check if we have ANY memory of this resource
-        if (isInMemory) {
-          logger.info(
-            `Memory of resource ${resourceId} found, adding to formattedMessages`,
-          );
-          // if it is in the memory, let's grab all of the memories of it and add them to the formattedMessages array
-          const resourceMemories = await getResourceMemories(resourceId);
-          logger.info(
-            `${resourceMemories.length} memories found for resource ${resourceId}`,
-          );
-          formattedMessages.push(
-            ...resourceMemories.map((m) => {
-              const msg = {
-                role: "user",
-                // content: m.value,
-                content: `### Memory of resource ${resourceId}:
-${m.value}`,
-              };
-              // logger.info(`Adding message to formattedMessages: ${JSON.stringify(msg)}`);
-              return msg;
-            }),
-          );
-        } else {
-          logger.info(`No memory of resource ${resourceId} found`);
-          try {
-            vision.setImageUrl(body.comment.attachment.url);
-            const attachmentDescription = await vision.fetchImageDescription();
-
-            logger.info(`Attachment description: ${attachmentDescription}`);
-
-            // form a memory of the resource
-            await storeUserMemory(
-              { username, channel: conversationId, guild: "missive" },
-              // attachmentDescription,
-              // add the filename to the description
-              `Attachment ${body.comment.attachment.filename}: ${attachmentDescription}`,
-              "attachment",
-              resourceId,
-            );
-
-            // add the description of the attachment to the formattedMessages array
-            formattedMessages.push({
-              role: "user",
-              content: `Attachment ${body.comment.attachment.filename}: ${attachmentDescription}`,
-            });
-          } catch (error) {
-            logger.error(`Error processing image: ${error.message}`);
-          }
-        }
-      });
-    }
-  });
-
-  // there might be an attachment in body.comment.attchment
+  // Check if there are any attachments in the comment
   const attachment = body.comment.attachment;
-  // logger.info(`Attachment: ${JSON.stringify(attachment)}`);
 
   if (attachment) {
-    // TODO: Turn this into processMissiveAttachment method
-    logger.info(`Attachment found in body: ${JSON.stringify(attachment)}`);
-
+    // Extract the resource ID from the attachment
     const resourceId = attachment.id;
 
-    logger.info(`Checking for memories of resource ${resourceId}`);
-    const isInMemory = await hasMemoryOfResource(resourceId); // check if we have ANY memory of this resource
-
-    logger.info(`isInMemory: ${isInMemory} resourceId: ${resourceId}`);
+    // Check if there are any memories of the resource in the database
+    const isInMemory = await hasMemoryOfResource(resourceId);
 
     if (!isInMemory) {
-      logger.info(
-        `No memory of resource ${resourceId} found, fetching description ${attachment.url}`,
-      );
-      // we don't have any memory of this resource, so we need to store it
-      // we need to use the vision API to get a description of the image
+      // If there are no memories of the resource, fetch the attachment description using the vision API
       try {
+        // Set the image URL for the vision API
         vision.setImageUrl(body.comment.attachment.url);
+
+        // Fetch the attachment description using the vision API
         const attachmentDescription = await vision.fetchImageDescription();
 
-        logger.info(`Attachment description: ${attachmentDescription}`);
-
-        // form a memory of the resource
+        // Store the attachment description as a memory in the database
         await storeUserMemory(
           { username, channel: conversationId, guild: "missive" },
-          // attachmentDescription,
-          // add the filename to the description
           `Attachment ${body.comment.attachment.filename}: ${attachmentDescription}`,
           "attachment",
-          resourceId,
+          resourceId
         );
 
-        // add the description of the attachment to the formattedMessages array
+        // Add the attachment description to the formatted messages array
         formattedMessages.push({
           role: "user",
           content: `Attachment ${body.comment.attachment.filename}: ${attachmentDescription}`,
         });
       } catch (error) {
+        // Log any errors that occur during image processing
         logger.error(`Error processing image: ${error.message}`);
       }
     } else {
-      logger.info(
-        `Memory of resource ${resourceId} found, adding to formattedMessages`,
-      );
-
       try {
-        // if it is in the memory, let's grab all of the memories of it and add them to the formattedMessages array
+        // If there are memories of the resource, fetch them from the database
         const resourceMemories = await getResourceMemories(resourceId);
-        logger.info(
-          `${resourceMemories.length} memories found for resource ${resourceId}`,
-        );
+
+        // Add the resource memories to the formatted messages array
         formattedMessages.push(
           ...resourceMemories.map((m) => {
             return {
               role: "user",
               content: m.value,
             };
-          }),
+          })
         );
       } catch (error) {
+        // Log any errors that occur during fetching resource memories
         logger.error(`Error fetching resource memories: ${error.message}`);
       }
     }
-
-    try {
-      // if it is in the memory, let's grab all of the memories of it and add them to the formattedMessages array
-      const resourceMemories = await getResourceMemories(resourceId);
-      logger.info(
-        `${resourceMemories.length} memories found for resource ${resourceId}`,
-      );
-      formattedMessages.push(
-        ...resourceMemories.map((m) => {
-          return {
-            role: "user",
-            content: m.value,
-          };
-        }),
-      );
-    } catch (error) {
-      logger.error(`Error fetching resource memories: ${error.message}`);
-    }
   } else {
+    // Log if no attachment is found in the comment
     logger.info(`No attachment found in body.comment`);
   }
+
+  // Fetch the context messages for the conversation from the database
   const contextMessages = await getChannelMessageHistory(conversationId);
 
-  logger.info(
-    `${contextMessages.length} context messages found in conversation ${conversationId}`,
-  );
-
-  // add the contextMessages to the formattedMessages array
+  // Add the context messages to the formatted messages array
   formattedMessages.push(
     ...contextMessages.map((m) => {
       const obj = {
         role: "user",
-        content: `#### Contextual message in conversation:
-${m.content}`,
+        content: `#### Contextual message in conversation:\n${m.content}`,
       };
-
       return obj;
-    }),
+    })
   );
 
-  // add the webhook description to the formattedMessages array
-  // as a system message
+  // Add the webhook description to the formatted messages array as a system message
   formattedMessages.push({
     role: "system",
     content: `Webhook description: ${webhookDescription}`,
   });
 
+  // Add the webhook contents to the formatted messages array as a user message
   formattedMessages.push({
     role: "user",
-    // content: `Webhook contents: ${JSON.stringify(body)}`,
     content: `During this conversation, I might reference some of this information: ${jsonToMarkdownList(
-      body,
+      body
     )}`,
   });
 
-  // go through all of the messages and make sure they don't have an embedding object
-  // if they do, we need to remove it
+  // Remove any embedding objects from the formatted messages
   for (const message of formattedMessages) {
     if (message.embedding) {
       delete message.embedding;
@@ -419,32 +277,33 @@ ${m.content}`,
   let processedMessage;
 
   try {
-    // we need to pull in all of the formattedMessages before the final user message
+    // Construct the final message chain by combining the formatted messages and the user's message
     const allMessages = [
       ...formattedMessages,
       {
         role: "user",
-        content: `<${username}> \n ${userMessage}`,
+        content: `<${username}> \n ${simplifiedPayload.userMessage}`,
       },
     ];
 
-    // logger.info(`All messages: ${JSON.stringify(allMessages)}`);
-
+    // Process the message chain using the processMessageChain function
     processedMessage = await processMessageChain(allMessages, {
       username,
       channel: conversationId,
       guild: "missive",
     });
   } catch (error) {
+    // Log any errors that occur during message chain processing
     logger.error(`Error processing message chain: ${error.message}`);
     res
       .status(500)
       .json({ error: `Error processing message chain: ${error.message}` });
   }
 
+  // Extract the last message from the processed message chain
   const lastMessage = processedMessage[processedMessage.length - 1];
 
-  // Now we need to POST the response back to the Missive API using the conversationId
+  // POST the response back to the Missive API using the conversation ID
   const responsePost = await fetch(`${apiFront}/posts/`, {
     method: "POST",
     headers: {
@@ -456,16 +315,15 @@ ${m.content}`,
         conversation: conversationId,
         notification: {
           title: BOT_NAME,
-          // body: lastMessage.content,
           body: "",
         },
-        // text: lastMessage.content,
         username: BOT_NAME,
         markdown: lastMessage.content,
       },
     }),
   });
 
+  // Log the response status and body from the Missive API
   logger.info(`Response post status: ${responsePost.status}`);
   logger.info(`Response post body: ${JSON.stringify(responsePost)}`);
 }
