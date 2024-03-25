@@ -129,4 +129,7 @@ module.exports = {
     }
   },
   listTodos,
+  createTodo,
+  deleteTodo,
+  updateTodo,
 };

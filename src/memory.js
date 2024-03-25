@@ -5,6 +5,11 @@ const {
   storeUserMemory,
   getRelevantMemories,
 } = require("./remember.js");
+const {
+  createTodo,
+  deleteTodo,
+  updateTodo,
+} = require("./capabilities/supabasetodo.js");
 const chance = require("chance").Chance();
 const vision = require("./vision.js");
 const logger = require("../src/logger.js")("memory");
@@ -191,6 +196,68 @@ module.exports = (async () => {
     // if remember text length is 0 or less, we don't wanna store it
     if (rememberText.length <= 0) return rememberText;
     await storeUserMemory({ username: "capability" }, rememberText);
+
+
+
+    // TODO: ANALYZE EXCHANGE FOR ANY TODOS/TASKS AND THEN MODIFY THE TODOS TABLE BASED ON WHAT IS NEEDED
+
+    const taskAnalysisMessages = [
+      ...memoryMessages,
+      ...conversationHistory,
+      {
+        role: "system",
+        content: `Analyze the previous messages for any content that could be a task or todo. If found, please add or modify the todo list using a few simple capabilities: 
+
+        - todo:createTodo(name, description)
+        - todo:deleteTodo(todoId)
+        - todo:updateTodo(todoId, updates)
+        `
+      }
+    ];
+
+    const taskAnalysisCompletion = await openai.chat.completions.create({
+      model: REMEMBER_MODEL,
+      presence_penalty: -0.1,
+      max_tokens: 256,
+      taskAnalysisMessages,
+    });
+
+    const taskAnalysisText = taskAnalysisCompletion.choices[0].message.content;
+
+    // TODO: Look for any commands in the response and execute them - note: a response could contain MANY commands
+    const createTodoRegex = /todo:createTodo\((.*)\)/g;
+    const deleteTodoRegex = /todo:deleteTodo\((.*)\)/g;
+    const updateTodoRegex = /todo:updateTodo\((.*)\)/g;
+
+    // look for createTodo commands
+    const createTodoMatches = taskAnalysisText.match(createTodoRegex);
+
+    if (createTodoMatches) {
+      createTodoMatches.forEach((match) => {
+        const [name, description] = match.split(",");
+        createTodo(name, description);
+      });
+    }
+
+    // look for deleteTodo commands
+    const deleteTodoMatches = taskAnalysisText.match(deleteTodoRegex);
+
+    if (deleteTodoMatches) {
+      deleteTodoMatches.forEach((match) => {
+        const [todoId] = match.split(",");
+        deleteTodo(todoId);
+      });
+    }
+
+    // look for updateTodo commands
+    const updateTodoMatches = taskAnalysisText.match(updateTodoRegex);
+
+    if (updateTodoMatches) {
+      updateTodoMatches.forEach((match) => {
+        const [todoId, updates] = match.split(",");
+        updateTodo(todoId, updates);
+      });
+    }
 
     return rememberText;
   }
