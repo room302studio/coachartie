@@ -707,8 +707,8 @@ async function assembleMessagePreamble(username) {
   logger.info(`🔧 Assembling message preamble for <${username}> message`);
   const messages = [];
   addCurrentDateTime(messages);
-  await addHexagramPrompt(messages);
-  await addTodosToMessages(messages);
+  await addHexagramPrompt(messages); 
+  await addTodosToMessages(messages); // This is a list of all the current todos
   await addUserMessages(username, messages);
   await addUserMemories(username, messages);
   // add memories relevant to the user's message
@@ -1505,4 +1505,5 @@ module.exports = {
   cleanUrlForPuppeteer,
   processChunks,
   sleep,
+  trimResponseByLineCount
 };
