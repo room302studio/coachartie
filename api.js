@@ -366,6 +366,52 @@ app.post("/api/missive-reply", async (req, res) => {
     });
 });
 
+app.post("/api/webhook-reply", async (req, res) => {
+  // this is will be an authorized call from pgcron to send a request to the robot as if a user sent, but specifiying a prompt from the prompts table to use 
+
+  const passphrase = process.env.WEBHOOK_PASSPHRASE; // Assuming PASSPHRASE is the environment variable name
+
+  // use basicauth to make sure passphrase in body matches passphrase in env
+  let payloadPassword = req.body.password;
+  if (payloadPassword !== passphrase) {
+    logger.error(`Password does not match passphrase`);
+    return res.status(401).send("Unauthorized request");
+  }
+
+  // send a 200 response
+  res.status(200).end();
+
+  // Send body.content to the robot as if it were a user message
+  const message = req.body.content;
+  const username = req.body.username || "PGCron Webhook";
+  const promptSlug = req.body.promptSlug;
+
+  // get the prompt from the prompt table
+  const allPrompts = await getPromptsFromSupabase();
+
+  // look for the prompt slug in allPrompts
+  let prompt = allPrompts.find((p) => p.slug === promptSlug);
+
+  // if prompt is null / undefined make it an empty string
+  if (!prompt) {
+    prompt = "";
+  }
+
+  const processedMessage = await processMessageChain(
+    [
+      {
+        role: "user",
+        // content: message,
+        content: `${prompt.prompt} \n ${message}`
+      },
+    ],
+    username,
+  );
+
+  logger.info(`Processed message: ${JSON.stringify(processedMessage)}`);
+})
+
+
 function jsonToMarkdownList(jsonObj, indentLevel = 0) {
   let str = "";
   const indentSpaces = " ".repeat(indentLevel * 2);
