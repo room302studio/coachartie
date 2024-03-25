@@ -8,6 +8,7 @@ const {
   getUniqueEmoji,
   getConfigFromSupabase,
   createTokenLimitWarning,
+  trimResponseByLineCount
 } = require("../helpers");
 
 // const {
@@ -444,6 +445,10 @@ module.exports = (async () => {
     });
 
     logInteraction(prompt, aiResponse, { username, channel, guild }, messages);
+
+    // In addition- do a specific check for todos / task management
+    // and run a little loop where we add/edit/delete todos based 
+    // on the todo assessment from the exchange
 
     return messages;
   }
