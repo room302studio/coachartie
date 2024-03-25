@@ -232,34 +232,23 @@ module.exports = (async () => {
     // look for createTodo commands
     const createTodoMatches = taskAnalysisText.match(createTodoRegex);
 
-    if (createTodoMatches) {
-      createTodoMatches.forEach((match) => {
-        const [name, description] = match.split(",");
-        createTodo(name, description);
-      });
-    }
+    const createTodosPromises = createTodoMatches ? createTodoMatches.map((match) => {
+      const [name, description] = match.split(",");
+      return createTodo(name, description);
+    }) : [];
 
-    // look for deleteTodo commands
-    const deleteTodoMatches = taskAnalysisText.match(deleteTodoRegex);
+    const deleteTodosPromises = deleteTodoMatches ? deleteTodoMatches.map((match) => {
+      const [todoId] = match.split(",");
+      return deleteTodo(todoId);
+    }) : [];
 
-    if (deleteTodoMatches) {
-      deleteTodoMatches.forEach((match) => {
-        const [todoId] = match.split(",");
-        deleteTodo(todoId);
-      });
-    }
+    const updateTodosPromises = updateTodoMatches ? updateTodoMatches.map((match) => {
+      const [todoId, updates] = match.split(",");
+      return updateTodo(todoId, updates);
+    }) : [];
 
-    // look for updateTodo commands
-    const updateTodoMatches = taskAnalysisText.match(updateTodoRegex);
-
-    if (updateTodoMatches) {
-      updateTodoMatches.forEach((match) => {
-        const [todoId, updates] = match.split(",");
-        updateTodo(todoId, updates);
-      });
-    }
-
-    return rememberText;
+    const promises = await Promise.all([...createTodosPromises, ...deleteTodosPromises, ...updateTodosPromises]);
+    return JSON.stringify(promises);
   }
 
   return {
