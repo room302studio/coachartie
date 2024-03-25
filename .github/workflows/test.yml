@@ -22,6 +22,34 @@ jobs:
     - name: Install dependencies
       run: npm ci
     - name: Create fake .env
-      run: echo "OPENAI_API_KEY=fake_key_for_testing" > .env
+      run: |
+        echo "SUPABASE_URL=fake_supabase_url_for_testing" > .env
+        echo "SUPABASE_API_KEY=fake_key_for_testing" >> .env
+        echo "SUPABASE_API_SECRET=fake_secret_for_testing" >> .env
+        echo "DISCORD_PUBLIC_KEY=fake_public_key_for_testing" >> .env
+        echo "DISCORD_APP_ID=fake_app_id_for_testing" >> .env
+        echo "DISCORD_BOT_TOKEN=fake_bot_token_for_testing" >> .env
+        echo "DISCORD_VOICE_CHANNEL_ID=fake_channel_id_for_testing" >> .env
+        echo "DISCORD_GUILD_ID=fake_guild_id_for_testing" >> .env
+        echo "DISCORD_USER_ID=fake_user_id_for_testing" >> .env
+        echo "OPENAI_API_KEY=fake_openai_api_key_for_testing" >> .env
+        echo "OPENAI_API_ORGANIZATION=fake_organization_for_testing" >> .env
+        echo "GITHUB_USER=fake_user_for_testing" >> .env
+        echo "GITHUB_TOKEN=fake_token_for_testing" >> .env
+        echo "GITHUB_APP_ID=fake_app_id_for_testing" >> .env
+        echo "GITHUB_INSTALLATION_ID=fake_installation_id_for_testing" >> .env
+        echo "GITHUB_PERSONAL_ACCESS_TOKEN=fake_access_token_for_testing" >> .env
+        echo "WOLFRAM_APP_ID=fake_app_id_for_testing" >> .env
+        echo "ELEVENLABS_VOICE_ID=fake_voice_id_for_testing" >> .env
+        echo "ELEVEN_LABS_API_KEY=fake_api_key_for_testing" >> .env
+        echo "GOOGLE_CLIENT_ID=fake_client_id_for_testing" >> .env
+        echo "GOOGLE_SECRET=fake_secret_for_testing" >> .env
+        echo "PORT=3000" >> .env
+        echo "STABLE_DIFFUSION_API_KEY=fake_api_key_for_testing" >> .env
+        echo "MASTODON_API_URL=fake_url_for_testing" >> .env
+        echo "MASTODON_ACCESS_TOKEN=fake_access_token_for_testing" >> .env
+        echo 'BOT_NAME="Coach Artie"' >> .env
+        echo "ORG_NAME=fake_org_name_for_testing" >> .env
+        echo "BOT_EMAIL=fake_email_for_testing" >> .env
     - name: Run Jest tests
       run: npm run test
