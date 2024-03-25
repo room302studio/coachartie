@@ -2,9 +2,8 @@ const axios = require("axios");
 const dotenv = require("dotenv");
 const { destructureArgs } = require("../helpers");
 const logger = require("../src/logger.js")("wikipedia");
-const {openai} = require("../src/openai.js")
+const { openai } = require("../src/openai.js");
 dotenv.config();
-
 
 async function handleCapabilityMethod(method, args) {
   const [arg1] = destructureArgs(args);

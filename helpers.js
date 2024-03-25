@@ -42,6 +42,10 @@ const capabilityRegex = /(\w+):(\w+)\(([^]*?)\)/; // captures newlines in the  t
 async function getPromptsFromSupabase() {
   const { data, error } = await supabase.from("prompts").select("*");
   const promptArray = data;
+  // if promptArray is not an array, exit out early
+  if (!Array.isArray(promptArray)) {
+    return {};
+  }
   const promptKeys = promptArray.map((prompt) => prompt.prompt_name);
   const promptValues = promptArray.map((prompt) => prompt.prompt_text);
   // return an object with all the keys and values
@@ -61,6 +65,9 @@ async function getConfigFromSupabase() {
 
   // turn the array of objects into a big object that can be destructured
   const configArray = data;
+  if(!Array.isArray(configArray)) {
+    return {};
+  }
   // get all the keys and values
   const configKeys = configArray.map((config) => config.config_key);
   const configValues = configArray.map((config) => config.config_value);

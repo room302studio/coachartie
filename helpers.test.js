@@ -19,7 +19,7 @@ const {
   addUserMessages,
   addUserMemories,
   addRelevantMemories,
-  addGeneralMemories
+  addGeneralMemories,
 } = require("./helpers.js");
 
 // Mocking the dependent functions
@@ -38,7 +38,6 @@ const {
 // }));
 
 describe("Helpers", () => {
-
   describe("destructureArgs", () => {
     it("should destructure arguments correctly", () => {
       const args = "arg1, arg2, arg3";
@@ -152,7 +151,9 @@ describe("Helpers", () => {
         expect(messages).toHaveLength(1);
         expect(messages[0].role).toEqual("system");
         // Adjusted the regex to match the received string format including AM/PM
-        expect(messages[0].content).toMatch(/Today is \d{1,2}\/\d{1,2}\/\d{4} at \d{1,2}:\d{2}:\d{2} [AP]M/);
+        expect(messages[0].content).toMatch(
+          /Today is \d{1,2}\/\d{1,2}\/\d{4} at \d{1,2}:\d{2}:\d{2} [AP]M/,
+        );
       });
     });
 
@@ -174,7 +175,5 @@ describe("Helpers", () => {
     //     expect(messages).toHaveLength(1);
     //   });
     // });
-
-
   });
 });

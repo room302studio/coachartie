@@ -430,7 +430,7 @@ async function generateProjectSummary({
   });
 
   const completion = await createChatCompletion(messages);
-  const aiResponse = completion//.choices[0].message.content;
+  const aiResponse = completion; //.choices[0].message.content;
   return aiResponse;
 }
 

@@ -8,10 +8,10 @@ const { hideBin } = require("yargs/helpers");
 const capabilityManifestPath = path.join(
   __dirname,
   "capabilities",
-  "_manifest.json"
+  "_manifest.json",
 );
 const capabilityManifest = JSON.parse(
-  fs.readFileSync(capabilityManifestPath, "utf8")
+  fs.readFileSync(capabilityManifestPath, "utf8"),
 );
 
 // Create readline interface for command line input
@@ -45,7 +45,7 @@ function displayCapabilities() {
     });
   });
   console.log(
-    "\nType the capability and method you want to use in the format: capability:methodName(args)"
+    "\nType the capability and method you want to use in the format: capability:methodName(args)",
   );
 }
 
@@ -60,7 +60,7 @@ async function processInputAsMessage(input) {
   lastCommand = input;
   if (!capabilityMatch) {
     console.log(
-      "Invalid format. Please use the format: capabilitySlug:methodName(args)"
+      "Invalid format. Please use the format: capabilitySlug:methodName(args)",
     );
     return;
   }
@@ -81,7 +81,7 @@ async function processInputAsMessage(input) {
 
   console.log(
     "processAndLogCapabilityResponse",
-    processAndLogCapabilityResponse
+    processAndLogCapabilityResponse,
   );
 
   messages = await processAndLogCapabilityResponse(messages, [

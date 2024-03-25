@@ -13,7 +13,12 @@ describe("Capabilities", () => {
       methodName,
       args,
     );
-    expect(response).toContain("Error");
+    // expect(response).toContain("Error");
+    // expect an object with an error field with "Cannot find module in it"
+    expect(response).toEqual(
+      expect.objectContaining({ error: expect.stringContaining("Cannot find module") }),
+    );
+    
   });
 
   it("should match capabilities in user messages", () => {

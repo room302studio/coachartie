@@ -2,8 +2,6 @@ const { destructureArgs } = require("../helpers");
 const { supabase } = require("../src/supabaseclient");
 const logger = require("../src/logger.js")("capabilities");
 
-
-
 /**
  * Executes a SELECT query on the specified table with the given columns and conditions.
  * @param {string} table - The name of the table to select from.
@@ -34,9 +32,7 @@ async function select(table, columns, where) {
  * @example supabaseraw:insert("todos", { value: "Buy groceries", completed: false })
  */
 async function insert(table, values) {
-  const { data, error } = await supabase
-    .from(table)
-    .insert(values);
+  const { data, error } = await supabase.from(table).insert(values);
 
   if (error) {
     console.error("Error running SQL query:", error.message);
@@ -75,10 +71,8 @@ async function update(table, values, where) {
  * @example supabaseraw:delete("todos", { id: 1 })
  */
 async function del(table, where) {
-  return 'Delete not implemented yet.'
-  const { data, error } = await supabase
-    .from(table)
-    .delete({ ...where });
+  return "Delete not implemented yet.";
+  const { data, error } = await supabase.from(table).delete({ ...where });
 
   if (error) {
     console.error("Error running SQL query:", error.message);
@@ -93,7 +87,7 @@ module.exports = {
     // const [arg1, arg2] = desArgs;
     const [arg1, arg2, arg3] = destructureArgs(args);
     logger.info(
-      `⚡️ Calling capability method: supabasetodo.${method} with args: ${arg1}, ${arg2}, ${arg3}`
+      `⚡️ Calling capability method: supabaseraw.${method} with args: ${arg1}, ${arg2}, ${arg3}`,
     );
 
     if (method === "select") {
@@ -103,7 +97,7 @@ module.exports = {
     } else if (method === "update") {
       return await update(arg1, JSON.parse(arg2), JSON.parse(arg3));
     } else if (method === "delete") {
-      return await del(arg1, JSON.parse(arg2));      
+      return await del(arg1, JSON.parse(arg2));
     } else {
       throw new Error(`Invalid method: ${method}`);
     }

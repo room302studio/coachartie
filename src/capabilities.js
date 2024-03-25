@@ -57,14 +57,25 @@ ${prepareCapabilities.join("\n")}
  * @param {Array} messages - All of the conversation messages so far
  * @returns {Promise<*>} - The response from the capability method.
  */
-async function callCapabilityMethod(capabilitySlug, methodName, args, messages) {
+async function callCapabilityMethod(
+  capabilitySlug,
+  methodName,
+  args,
+  messages,
+) {
   try {
     const capability = require(`../capabilities/${capabilitySlug}`);
-    const capabilityResponse = await capability.handleCapabilityMethod(methodName, args, messages);
+    const capabilityResponse = await capability.handleCapabilityMethod(
+      methodName,
+      args,
+      messages,
+    );
 
     // Ensure there's a response
     if (!capabilityResponse) {
-      throw new Error(`Capability ${capabilitySlug} did not return a response.`);
+      throw new Error(
+        `Capability ${capabilitySlug} did not return a response.`,
+      );
     }
 
     // Return a success response

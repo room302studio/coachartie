@@ -93,13 +93,16 @@ Make separate sections of facts for each section of the document, using \`\`\`--
       {
         role: "user",
         content: `Can you please provide a high-level summary of the most important facts in this document: 
-  ${JSON.stringify(document, null, 2)}`
-      }
+  ${JSON.stringify(document, null, 2)}`,
+      },
     ];
 
-    const metaSummaryCompletion = await createChatCompletion(metaSummaryMessages, {
-      max_tokens: 2000,
-    });
+    const metaSummaryCompletion = await createChatCompletion(
+      metaSummaryMessages,
+      {
+        max_tokens: 2000,
+      },
+    );
 
     // Store the meta-summary in the database
     await storeUserMemory(
