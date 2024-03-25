@@ -9,7 +9,7 @@ const {
   createTodo,
   deleteTodo,
   updateTodo,
-} = require("./capabilities/supabasetodo.js");
+} = require("../capabilities/supabasetodo.js");
 const chance = require("chance").Chance();
 const vision = require("./vision.js");
 const logger = require("../src/logger.js")("memory");
