@@ -371,6 +371,8 @@ app.post("/api/webhook-prompt", async (req, res) => {
 
   const passphrase = process.env.WEBHOOK_PASSPHRASE; // Assuming PASSPHRASE is the environment variable name
 
+  logger.info(JSON.stringify(req.body));
+
   // use basicauth to make sure passphrase in body matches passphrase in env
   let payloadPassword = req.body.password;
   if (payloadPassword !== passphrase) {
