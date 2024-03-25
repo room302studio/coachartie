@@ -37,8 +37,6 @@ async function deepDocumentIngest(url) {
   // For testing:
   // node capability-player.js --runCapability="ingest:deepDocumentIngest(https://docs.pdw.co/tachio-overview)"
 
-
-
   // TODO: Cache the text-ified version of the URL for a certain amount of time
   // Generate a hash for the URL
   // const urlHash = crypto.createHash("md5").update(url).digest("hex");
@@ -122,103 +120,6 @@ Make separate sections of facts for each section of the document, using \`\`\`--
   } catch (error) {
     throw new Error(`Error occurred while making external request: ${error}`);
   }
-}
-
-/**
- * Parses HTML into sections based on heading/delimiter elements
- * @param {string} html - The HTML string to parse into sections
- * @param {Object} [config] - Optional configuration settings
- * @param {string|string[]} [config.delimiters='h1,h2,h3,h4,h5,h6'] - CSS selector(s) for elements to treat as section delimiters
- * @param {string} [config.container='body'] - CSS selector for the container element holding the sectioned content
- * @param {boolean} [config.keepAttributes=true] - Whether to keep element attributes in the output sections
- * @param {boolean} [config.lenient=true] - Whether to parse in a lenient mode (handles encoding issues, XML-style tags, etc.)
- * @param {boolean} [config.stripNonParseable=true] - Whether to strip non-parseable elements and extract visible text
- * @returns {Object[]} - An array of section objects, each with a 'header' and 'content' property
- */
-const parseHtmlToSections = (html, config = {}) => {
-  const $ = cheerio.load(html, {
-    decodeEntities: config.lenient !== false,
-    xmlMode: !!config.lenient,
-  });
-  const keepAttributes = config.keepAttributes !== false;
-  // const containerSelector = config.container || 'body';
-  // html string is often parsed out of body so we just find the first parent element
-  const containerSelector = config.container || "body > *";
-  const delimiterSelectors = Array.isArray(config.delimiters)
-    ? config.delimiters
-    : (config.delimiters || "h1,h2,h3,h4,h5,h6")
-        .split(",")
-        .map((sel) => sel.trim());
-
-  const isDelimiter = (node) =>
-    delimiterSelectors.some((sel) => $(node).is(sel));
-
-  const sections = [];
-  let currentSection = { header: null, content: [] };
-
-  const traverseNode = (node) => {
-    if (isDelimiter(node)) {
-      if (currentSection.content.length) sections.push(currentSection);
-      currentSection = {
-        header: keepAttributes
-          ? `<${node.name} ${Object.entries(node.attribs)
-              .map(([key, val]) => `${key}="${val}"`)
-              .join(" ")}>${$(node).html()}</${node.name}>`
-          : $(node).html().trim(),
-        content: [],
-      };
-    } else if (node.type === "text") {
-      const text = $(node).text().trim();
-      if (text) currentSection.content.push(text);
-    } else {
-      currentSection.content.push($.html(node));
-    }
-
-    if (node.children) node.children.forEach(traverseNode);
-  };
-
-  const $container = $(containerSelector);
-  $container.children().each((_, node) => traverseNode(node));
-
-  if (currentSection.content.length) sections.push(currentSection);
-
-  if (config.stripNonParseable) {
-    sections.forEach((section) => {
-      section.content = section.content.filter(
-        (content) => typeof content === "string",
-      );
-    });
-  }
-
-  return sections;
-};
-
-function parseMarkdownToSections(markdownText) {
-  const tokens = marked.lexer(markdownText);
-  const sections = [];
-  let currentSection = { header: null, content: [] };
-
-  tokens.forEach((token) => {
-    if (token.type === "heading") {
-      // When we hit a heading, we start a new section
-      if (currentSection.header || currentSection.content.length) {
-        // Save the previous section if it has content
-        sections.push(currentSection);
-      }
-      // Start a new section with the current header
-      currentSection = { header: token.text, content: [] };
-    } else {
-      // Add non-heading tokens to the current section's content
-      currentSection.content.push(token);
-    }
-  });
-
-  // Add the last section if it has content
-  if (currentSection.header || currentSection.content.length) {
-    sections.push(currentSection);
-  }
-
-  return sections;
 }
 
 module.exports = {
