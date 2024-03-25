@@ -1,71 +1,102 @@
 {
-  "_generate-manifest": [],
-  "calendar": [
+  "briefing": [
     {
-      "name": "calendar:listAllCalendars()",
-      "description": "This function uses the Google Calendar API to retrieve a list of all calendars available to the authenticated user. Returns: An array of calendar summaries and IDs.",
-      "exceptions": [
-        "If no calendars are found or an error occurs."
-      ]
+      "name": "briefing:makeWeeklyBriefing()",
+      "description": "Makes a weekly briefing. Returns: A promise that resolves to a string indicating the status of the weekly briefing.",
+      "examples": "    await makeWeeklyBriefing();"
     },
     {
-      "name": "calendar:accessEvent()",
-      "description": "Retrieves a specific event from a Google Calendar. Returns: A promise that resolves to the event object.",
+      "name": "briefing:makeDailyBriefing()",
+      "description": "Makes a daily briefing across all projects Returns: A promise that resolves to a string indicating the status of the daily briefing."
+    },
+    {
+      "name": "briefing:makeProjectBriefing()",
+      "description": "Makes a briefing on one particular project.",
       "parameters": [
         {
-          "name": "calendarId",
-          "description": "The ID of the calendar."
-        },
-        {
-          "name": "eventId",
-          "description": "The ID of the event."
+          "name": "project",
+          "description": "The project name to make a briefing on."
         }
       ]
     },
     {
-      "name": "calendar:addPersonToEvent()",
-      "description": "Adds a person to an event in the Google Calendar. Returns: A promise that resolves to the updated event.",
+      "name": "briefing:retrieveFeedback()",
+      "description": "Retrieves feedback on previous weekly summaries. Returns: A promise that resolves to an array of feedback items."
+    },
+    {
+      "name": "briefing:identifyProjectsInMemories()",
+      "description": "Identifies projects, project IDs, or project slugs mentioned in the memories. Returns: A promise that resolves to an array of project identifiers.",
       "parameters": [
         {
-          "name": "calendarId",
-          "description": "The ID of the calendar."
-        },
-        {
-          "name": "eventId",
-          "description": "Th e ID of the event."
-        },
-        {
-          "name": "attendeeEmail",
-          "description": "The email address of the attendee to be added."
+          "name": "processedMemories",
+          "description": "The processed memories to identify projects in."
         }
       ]
     },
     {
-      "name": "calendar:createEvent()",
-      "description": "Creates a new event in the specified calendar. Returns: A promise that resolves to the created event.",
+      "name": "briefing:listTodoChanges()",
+      "description": "Lists all todo changes from this week (added, edited, deleted). Returns: A promise that resolves to an array of todo changes."
+    },
+    {
+      "name": "briefing:readCalendar()",
+      "description": "Reads the calendar for the current week. Returns: A promise that resolves to an object containing calendar entries."
+    },
+    {
+      "name": "briefing:generateProjectSummary()",
+      "description": "Generates summary by project. Returns: A promise that resolves to an array of project summaries.",
       "parameters": [
         {
-          "name": "calendarId",
-          "description": "The ID of the calendar."
-        },
+          "name": "worldInfoObject",
+          "description": "An object containing information about the various projects."
+        }
+      ],
+      "examples": "    await generateProjectSummary({ project, projectMemoryMap, todoChanges, calendarEntries });"
+    },
+    {
+      "name": "briefing:generateMetaSummary()",
+      "description": "Generates a meta-summary based on project summaries. Returns: A promise that resolves to a string containing the meta-summary.",
+      "parameters": [
         {
-          "name": "event",
-          "description": "The event object to be created."
+          "name": "projectSummaries",
+          "description": "The project summaries to base the meta-summary on."
         }
       ]
     },
     {
-      "name": "calendar:listEventsThisWeek()",
-      "description": "Retrieves a list of events occurring within the current week for the specified calendar. Returns: A promise that resolves to the list of events.",
+      "name": "briefing:formatSummary()",
+      "description": "Formats the fact-based summary through a weekly summary prompt/template. Returns: A promise that resolves to a string containing the formatted summary.",
       "parameters": [
         {
-          "name": "calendarId",
-          "description": "The ID of the calendar to retrieve events from."
+          "name": "summary",
+          "description": "The summary to format."
+        }
+      ]
+    },
+    {
+      "name": "briefing:communicateSummary()",
+      "description": "Creates new posts or threads in communication platforms. Returns: ",
+      "parameters": [
+        {
+          "name": "message",
+          "description": "The message to post."
+        },
+        {
+          "name": "service",
+          "description": "The service to post the message to - could be either  discord  or  missive  so far"
+        }
+      ]
+    },
+    {
+      "name": "briefing:archiveSummary()",
+      "description": "Saves an archived copy of the weekly summary. Returns: ",
+      "parameters": [
+        {
+          "name": "summary",
+          "description": "The summary to archive."
         }
       ]
     }
   ],
-  "chance": [],
   "calculator": [
     {
       "name": "calculator:add()",
@@ -138,23 +169,101 @@
       ]
     }
   ],
-  "discord-events": [],
-  "evaluate": [
+  "calendar": [
     {
-      "name": "evaluate:runCodeInSandbox()",
-      "description": "Runs the provided code in a sandboxed environment. Returns: The result of the code execution.",
+      "name": "calendar:listAllCalendars()",
+      "description": "This function uses the Google Calendar API to retrieve a list of all calendars available to the authenticated user. Returns: An array of calendar summaries and IDs.",
+      "exceptions": [
+        "If no calendars are found or an error occurs."
+      ]
+    },
+    {
+      "name": "calendar:accessEvent()",
+      "description": "Retrieves a specific event from a Google Calendar. Returns: A promise that resolves to the event object.",
       "parameters": [
         {
-          "name": "code",
-          "description": "The code to be executed."
+          "name": "calendarId",
+          "description": "The ID of the calendar."
         },
         {
-          "name": "sandbox",
-          "description": "The sandbox object to provide the execution context."
+          "name": "eventId",
+          "description": "The ID of the event."
+        }
+      ]
+    },
+    {
+      "name": "calendar:addPersonToEvent()",
+      "description": "Adds a person to an event in the Google Calendar. Returns: A promise that resolves to the updated event.",
+      "parameters": [
+        {
+          "name": "calendarId",
+          "description": "The ID of the calendar."
+        },
+        {
+          "name": "eventId",
+          "description": "Th e ID of the event."
+        },
+        {
+          "name": "attendeeEmail",
+          "description": "The email address of the attendee to be added."
+        }
+      ]
+    },
+    {
+      "name": "calendar:createEvent()",
+      "description": "Creates a new event in the specified calendar. Returns: A promise that resolves to the created event.",
+      "parameters": [
+        {
+          "name": "calendarId",
+          "description": "The ID of the calendar."
+        },
+        {
+          "name": "event",
+          "description": "The event object to be created."
+        }
+      ]
+    },
+    {
+      "name": "calendar:listEventsThisWeek()",
+      "description": "Retrieves a list of events occurring within the current week for the specified calendar. Returns: A promise that resolves to the list of events.",
+      "parameters": [
+        {
+          "name": "calendarId",
+          "description": "The ID of the calendar to retrieve events from."
+        }
+      ]
+    },
+    {
+      "name": "calendar:listEventsPrevWeek()",
+      "description": "Retrieves a list of events occurring within the previous week for the specified calendar. Returns: A promise that resolves to the list of events.",
+      "parameters": [
+        {
+          "name": "calendarId",
+          "description": "The ID of the calendar to retrieve events from."
+        }
+      ]
+    },
+    {
+      "name": "calendar:listEventsBetweenDates()",
+      "description": "Retrieves a list of events occurring between the specified dates for the specified calendar. Returns: A promise that resolves to the list of events.",
+      "parameters": [
+        {
+          "name": "calendarId",
+          "description": "The ID of the calendar to retrieve events from."
+        },
+        {
+          "name": "startDate",
+          "description": "The start date of the range."
+        },
+        {
+          "name": "endDate",
+          "description": "The end date of the range."
         }
       ]
     }
   ],
+  "chance": [],
+  "discord-events": [],
   "drive": [
     {
       "name": "drive:getDriveInstance()",
@@ -198,68 +307,19 @@
       ]
     }
   ],
-  "js": [
+  "evaluate": [
     {
-      "name": "js:executeJavascriptAndCaptureImage()",
-      "description": "Executes the provided JavaScript code in a headless browser using Puppeteer and captures a screenshot of the resulting page. Returns: A promise that resolves to an object containing the captured screenshot image as a Buffer.",
+      "name": "evaluate:runCodeInSandbox()",
+      "description": "Runs the provided code in a sandboxed environment. Returns: The result of the code execution.",
       "parameters": [
         {
-          "name": "javascriptCode",
-          "description": "The JavaScript code to be executed in the browser."
-        }
-      ],
-      "exceptions": [
-        "If an error occurs while executing the JavaScript code and capturing the image."
-      ]
-    }
-  ],
-  "mastodon": [
-    {
-      "name": "mastodon:postStatus()",
-      "description": "Posts a status to Mastodon. Returns: A promise that resolves to the response data from Mastodon.",
-      "parameters": [
-        {
-          "name": "text",
-          "description": "The text content of the status."
+          "name": "code",
+          "description": "The code to be executed."
         },
         {
-          "name": "image",
-          "description": "The ID of the image to attach to the status."
+          "name": "sandbox",
+          "description": "The sandbox object to provide the execution context."
         }
-      ],
-      "exceptions": [
-        "If an error occurs while posting to Mastodon."
-      ]
-    }
-  ],
-  "readrepo": [
-    {
-      "name": "readrepo:RepoReader()",
-      "description": "\"Reads all code/text files from a specified GitHub repository, concatenates them into a single string,\nand prepends the path and filename to each file's content. Useful for reviewing or modifying repository content.\" Returns: A promise that resolves to a string containing the concatenated contents of the repository's code/text files.",
-      "parameters": [
-        {
-          "name": "owner",
-          "description": "The GitHub username or organization name of the repository owner."
-        },
-        {
-          "name": "repo",
-          "description": "The name of the repository."
-        }
-      ]
-    }
-  ],
-  "mermaid": [
-    {
-      "name": "mermaid:convertMermaidDiagram()",
-      "description": "Converts a Mermaid diagram text into an image. Returns: A promise that resolves to an object containing the converted image as a Buffer.",
-      "parameters": [
-        {
-          "name": "diagramText",
-          "description": "The Mermaid diagram text to convert."
-        }
-      ],
-      "exceptions": [
-        "If an error occurs while converting the Mermaid diagram."
       ]
     }
   ],
@@ -513,18 +573,108 @@
       ]
     }
   ],
-  "stablediffusion": [
+  "js": [
     {
-      "name": "stablediffusion:generateImageFromText()",
-      "description": "Generates an image from the given text using the Stable Diffusion API. Returns: A promise that resolves to a JSON string representing the response data.",
+      "name": "js:executeJavascriptAndCaptureImage()",
+      "description": "Executes the provided JavaScript code in a headless browser using Puppeteer and captures a screenshot of the resulting page. Returns: A promise that resolves to an object containing the captured screenshot image as a Buffer.",
       "parameters": [
         {
-          "name": "args",
-          "description": "The arguments for generating the image."
+          "name": "javascriptCode",
+          "description": "The JavaScript code to be executed in the browser."
         }
       ],
       "exceptions": [
-        "If an error occurs during the API request."
+        "If an error occurs while executing the JavaScript code and capturing the image."
+      ]
+    }
+  ],
+  "mastodon": [
+    {
+      "name": "mastodon:postStatus()",
+      "description": "Posts a status to Mastodon. Returns: A promise that resolves to the response data from Mastodon.",
+      "parameters": [
+        {
+          "name": "text",
+          "description": "The text content of the status."
+        },
+        {
+          "name": "image",
+          "description": "The ID of the image to attach to the status."
+        }
+      ],
+      "exceptions": [
+        "If an error occurs while posting to Mastodon."
+      ]
+    }
+  ],
+  "mermaid": [
+    {
+      "name": "mermaid:convertMermaidDiagram()",
+      "description": "Converts a Mermaid diagram text into an image. Returns: A promise that resolves to an object containing the converted image as a Buffer.",
+      "parameters": [
+        {
+          "name": "diagramText",
+          "description": "The Mermaid diagram text to convert."
+        }
+      ],
+      "exceptions": [
+        "If an error occurs while converting the Mermaid diagram."
+      ],
+      "examples": "    convertMermaidDiagram(graph LR; A-->B;); // Returns { image: <Buffer> }\n    convertMermaidToDiagram(```mermaid\n    graph LR;\n     A-->B;\n    ```); // Returns { image: <Buffer> }"
+    }
+  ],
+  "pgcron": [
+    {
+      "name": "pgcron:createJob()",
+      "description": "Creates a new cron job with pg_cron in Supabase.",
+      "parameters": [
+        {
+          "name": "schedule",
+          "description": "The schedule for the cron job (e.g., '0 0 * * *' for daily at midnight)."
+        },
+        {
+          "name": "command",
+          "description": "The command to be executed by the cron job."
+        }
+      ],
+      "examples": "    createJob('0 0 * * *', 'DELETE FROM table WHERE created_at < NOW() - INTERVAL '1 month';') -- Deletes old records from a table every day at midnight.\n      -- Makes a webhook request to the specified URL every day at midnight.\n    createJob('0 0 * * *', 'select\n    net.http_post(\n    url:='https://project-ref.supabase.co/functions/v1/function-name',\n    headers:='{\"Content-Type\": \"application/json\", \"Authorization\": \"Bearer YOUR_ANON_KEY\"}'::jsonb,\n    body:=concat('{\"time\": \"', now(), '\"}')::jsonb\n    ) as request_id;')"
+    },
+    {
+      "name": "pgcron:listJobs()",
+      "description": "Lists the cron jobs currently scheduled with pg_cron in Supabase."
+    },
+    {
+      "name": "pgcron:deleteJob()",
+      "description": "Deletes a job scheduled with pg_cron in Supabase. Returns: A promise that resolves to a success message when the job is successfully deleted.",
+      "parameters": [
+        {
+          "name": "name",
+          "description": "The name of the job to delete."
+        }
+      ],
+      "exceptions": [
+        "If there is an error deleting the job."
+      ]
+    },
+    {
+      "name": "pgcron:updateJob()",
+      "description": "Updates a job scheduled with pg_cron in Supabase. Returns: A promise that resolves to a success message when the job is successfully updated.",
+      "parameters": [
+        {
+          "name": "name",
+          "description": "The name of the job to update."
+        },
+        {
+          "name": "schedule",
+          "description": "The new schedule for the job."
+        },
+        {
+          "name": "command",
+          "description": "The new command for the job."
+        }
+      ],
+      "exceptions": [
+        "If there is an error updating the job."
       ]
     }
   ],
@@ -592,18 +742,18 @@
       ]
     }
   ],
-  "svg": [
+  "stablediffusion": [
     {
-      "name": "svg:convertSvgToImage()",
-      "description": "Converts an SVG string to an image using Puppeteer. Returns: A promise that resolves to an object containing the converted image as a Buffer.",
+      "name": "stablediffusion:generateImageFromText()",
+      "description": "Generates an image from the given text using the Stable Diffusion API. Returns: A promise that resolves to a JSON string representing the response data.",
       "parameters": [
         {
-          "name": "svgString",
-          "description": "The SVG string to convert."
+          "name": "args",
+          "description": "The arguments for generating the image."
         }
       ],
       "exceptions": [
-        "If an error occurs while converting SVG to image."
+        "If an error occurs during the API request."
       ]
     }
   ],
@@ -673,57 +823,18 @@
       ]
     }
   ],
-  "pgcron": [
+  "svg": [
     {
-      "name": "pgcron:createJob()",
-      "description": "Creates a new cron job with pg_cron in Supabase.",
+      "name": "svg:convertSvgToImage()",
+      "description": "Converts an SVG string to an image using Puppeteer. Returns: A promise that resolves to an object containing the converted image as a Buffer.",
       "parameters": [
         {
-          "name": "schedule",
-          "description": "The schedule for the cron job (e.g., '0 0 * * *' for daily at midnight)."
-        },
-        {
-          "name": "command",
-          "description": "The command to be executed by the cron job."
-        }
-      ]
-    },
-    {
-      "name": "pgcron:listJobs()",
-      "description": "Lists the cron jobs currently scheduled with pg_cron in Supabase."
-    },
-    {
-      "name": "pgcron:deleteJob()",
-      "description": "Deletes a job scheduled with pg_cron in Supabase. Returns: A promise that resolves to a success message when the job is successfully deleted.",
-      "parameters": [
-        {
-          "name": "name",
-          "description": "The name of the job to delete."
+          "name": "svgString",
+          "description": "The SVG string to convert."
         }
       ],
       "exceptions": [
-        "If there is an error deleting the job."
-      ]
-    },
-    {
-      "name": "pgcron:updateJob()",
-      "description": "Updates a job scheduled with pg_cron in Supabase. Returns: A promise that resolves to a success message when the job is successfully updated.",
-      "parameters": [
-        {
-          "name": "name",
-          "description": "The name of the job to update."
-        },
-        {
-          "name": "schedule",
-          "description": "The new schedule for the job."
-        },
-        {
-          "name": "command",
-          "description": "The new command for the job."
-        }
-      ],
-      "exceptions": [
-        "If there is an error updating the job."
+        "If an error occurs while converting SVG to image."
       ]
     }
   ],
@@ -769,18 +880,6 @@
       ]
     }
   ],
-  "wolframalpha": [
-    {
-      "name": "wolframalpha:askWolframAlpha()",
-      "description": "This function gives you the ability to ask Wolfram Alpha questions and get answers. If you're ever unsure about a calculation, a conversion, or a general fact about the world, then you can ask Wolfram Alpha to double check it for you by asking it as a simple question. Wolfram Alpha can perform all types of calculations, conversions between units or currencies, and lookup most basic facts about the world. Wolfram Alpha provides information that is always up-to-date.  Wolfram Alpha understands natural language queries about entities in government, politics, economics, chemistry, physics, geography, history, art, astronomy, and more. WolframAlpha performs mathematical calculations, date and unit conversions, formula solving, etc. Be sure to convert inputs to simplified keyword queries whenever possible (e.g. convert \"how many people live in France\" to \"France population\"). ALWAYS use this exponent notation:  6*10^14 , NEVER  6e14 . ALWAYS use {\"input\": query} structure for queries to Wolfram endpoints;  query  must ONLY be a single-line string. ALWAYS use proper Markdown formatting for all math, scientific, and chemical formulas, symbols, etc.:  '$$\\n[expression]\\n$$' for standalone cases and '( [expression] )' when inline. Never mention your knowledge cutoff date; Wolfram may return more recent data. Use ONLY single-letter variable names, with or without integer subscript (e.g., n, n1, n_1). Send queries in English only; translate non-English queries before sending. Returns: The answer from Wolfram Alpha, or an alternative suggestion for how to phrase the question if Wolfram Alpha could not understand the question, or an error message if an error occurred. Returns: The answer from Wolfram Alpha, or an error message if an error occurred.",
-      "parameters": [
-        {
-          "name": "question",
-          "description": "The question to ask Wolfram Alpha."
-        }
-      ]
-    }
-  ],
   "wikipedia": [
     {
       "name": "wikipedia:askWikipedia()",
@@ -793,6 +892,18 @@
       ],
       "exceptions": [
         "If an error occurs while contacting Wikipedia or OpenAI."
+      ]
+    }
+  ],
+  "wolframalpha": [
+    {
+      "name": "wolframalpha:askWolframAlpha()",
+      "description": "This function gives you the ability to ask Wolfram Alpha questions and get answers. If you're ever unsure about a calculation, a conversion, or a general fact about the world, then you can ask Wolfram Alpha to double check it for you by asking it as a simple question. Wolfram Alpha can perform all types of calculations, conversions between units or currencies, and lookup most basic facts about the world. Wolfram Alpha provides information that is always up-to-date.  Wolfram Alpha understands natural language queries about entities in government, politics, economics, chemistry, physics, geography, history, art, astronomy, and more. WolframAlpha performs mathematical calculations, date and unit conversions, formula solving, etc. Be sure to convert inputs to simplified keyword queries whenever possible (e.g. convert \"how many people live in France\" to \"France population\"). ALWAYS use this exponent notation:  6*10^14 , NEVER  6e14 . ALWAYS use {\"input\": query} structure for queries to Wolfram endpoints;  query  must ONLY be a single-line string. ALWAYS use proper Markdown formatting for all math, scientific, and chemical formulas, symbols, etc.:  '$$\\n[expression]\\n$$' for standalone cases and '( [expression] )' when inline. Never mention your knowledge cutoff date; Wolfram may return more recent data. Use ONLY single-letter variable names, with or without integer subscript (e.g., n, n1, n_1). Send queries in English only; translate non-English queries before sending. Returns: The answer from Wolfram Alpha, or an alternative suggestion for how to phrase the question if Wolfram Alpha could not understand the question, or an error message if an error occurred. Returns: The answer from Wolfram Alpha, or an error message if an error occurred.",
+      "parameters": [
+        {
+          "name": "question",
+          "description": "The question to ask Wolfram Alpha."
+        }
       ]
     }
   ]

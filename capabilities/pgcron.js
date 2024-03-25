@@ -1,6 +1,7 @@
 const dotenv = require("dotenv");
 const { createClient } = require("@supabase/supabase-js");
 dotenv.config();
+const logger = require("../src/logger.js")("pgcron-capability");
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_API_KEY,
@@ -34,10 +35,75 @@ async function createJob(schedule, command) {
     console.error("Error creating job with pg_cron:", error);
     throw error;
   }
-
-  console.log("Job created:", data);
   return `Job created: ${data}`;
 }
+
+
+
+// we also need a function that makes it REALLY easy to make a webhook
+/**
+ * Creates a webhook and sends a POST request to the specified URL with the provided body and headers.
+ * @param {string} schedule - The schedule for the webhook.
+ * @param {string} url - The URL to send the POST request to.
+ * @param {object} body - The body of the POST request.
+ * @param {object} headers - The headers of the POST request.
+ * @param {string} name - The name of the job to create.
+ * @returns {Promise<string>} A promise that resolves to a success message if the webhook is created successfully, or an error message if there is an error.
+ * @example pgcron:createWebhook(0 0 * * *, "http://webhook-dev.room302.studio/api/webhook", "{}", "{}", "Test Webhook Call")
+ */
+async function createWebhook(schedule, url, body, headers, name) {
+  // if there are no headers we can make them
+  if (!headers) {
+    headers = {
+      "Content-Type": "application/json",
+    };
+  }
+  
+  // if there is no body we need to return an error about it
+  if (!body) {
+    return `Error: No body provided for the webhook`;
+  }
+
+  // load webhook-authentication key from environment
+  const webhookAuthentication = process.env.OUTGOING_WEBHOOK_AUTHENTICATION;
+  if!webhookAuthentication) {
+    headers["Authorization"] = `Bearer ${webhookAuthentication}`;
+  }
+
+  const { data, error } = await supabase.rpc("schedule", {
+    command: `select
+      net.http_post(
+          url:='${url}',
+          headers:='${JSON.stringify(headers)}'::jsonb,
+          body:='${JSON.stringify(body)}'::jsonb
+      ) as request_id;`,
+    job_name: name ? name : `webhook-${Math.floor(Math.random() * 1000000)}`,
+    schedule: schedule,
+  });
+
+  if (error) {
+    return `Error creating webhook: ${error.message}`;
+  }
+
+  return `Webhook created: ${data}`;
+  }
+
+  // lets also make another function to list the current webhook jobs
+
+  async function listWebhookJobs() {
+    const { data, error } = await supabase.from("job").select("*").limit(100);
+
+    if (error) {
+      console.error("Error listing webhook jobs with pg_cron:", error);
+      throw error;
+    }
+
+    // no jobs without `net.http_post(`
+    const filteredJobs = data.filter((job) => job.command.includes("net.http_post("));
+
+    logger.info("Webhook Jobs:", data);
+    return JSON.stringify(data, null, 2);
+  }
 
 /**
  * Lists the cron jobs currently scheduled with pg_cron in Supabase.
@@ -52,7 +118,7 @@ async function listJobs() {
       throw error;
     }
 
-    console.log("Jobs:", data);
+    logger.info("Jobs:", data);
     return JSON.stringify(data, null, 2);
   } catch (err) {
     console.error("Failed to list jobs:", err.message);
@@ -68,14 +134,14 @@ async function listJobs() {
  */
 async function deleteJob(name) {
   try {
-    const { data, error } = await supabase.rpc("cron.delete", { name });
+    const { data, error } = await supabase.rpc("cron.delete", { jobname: name });
 
     if (error) {
       console.error("Error deleting job with pg_cron:", error.message);
       throw error;
     }
 
-    console.log("Successfully deleted job:", data);
+    logger.info("Successfully deleted job:", data);
     return `Successfully deleted job: ${name}`;
   } catch (err) {
     console.error("Failed to delete job:", err.message);
@@ -104,7 +170,7 @@ async function updateJob(name, schedule, command) {
       throw error;
     }
 
-    console.log("Successfully updated job:", data);
+    logger.info("Successfully updated job:", data);
     return `Successfully updated job: ${name}`;
   } catch (err) {
     console.error("Failed to update job:", err.message);
@@ -115,7 +181,7 @@ async function updateJob(name, schedule, command) {
 module.exports = {
   handleCapabilityMethod: async (method, args) => {
     const [arg1, arg2, arg3] = destructureArgs(args);
-    console.log(`⚡️ Calling capability method: supabasetodo.${method}`);
+    logger.info(`⚡️ Calling capability method: supabasetodo.${method}`);
 
     /* args is a string passed in like
       pgcron:createJob(
@@ -153,6 +219,10 @@ module.exports = {
       return await deleteJob(arg1);
     } else if (method === "updateJob") {
       return await updateJob(arg1, arg2, arg3);
+    } else if (method === "createWebhook") {
+      return await createWebhook(processedArgs[0], processedArgs[1], processedArgs[2], processedArgs[3], processedArgs[4]);
+    } else if (method === "listWebhookJobs") {
+      return await listWebhookJobs();
     }
   },
 };

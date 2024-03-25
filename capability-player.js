@@ -1,11 +1,8 @@
 const readline = require("readline");
 const fs = require("fs");
 const path = require("path");
-// Process the capability, passing capArgsString directly
-// const { processCapability } = require("./src/chain");
-
-// console.log('--------')
-// console.log("processCapability", processCapability);
+const yargs = require("yargs");
+const { hideBin } = require("yargs/helpers");
 
 // Load and parse the capability manifest
 const capabilityManifestPath = path.join(
@@ -70,33 +67,59 @@ async function processInputAsMessage(input) {
 
   const [, capSlug, capMethod, capArgsString] = capabilityMatch;
 
-  delete require.cache[require.resolve('./src/chain')];
+  delete require.cache[require.resolve("./src/chain")];
 
-    // Re-require the chain module to get the latest version
-  const chain = require('./src/chain');
+  // Re-require the chain module to get the latest version
+  // const chain = require("./src/chain");
 
   // Initialize an empty messages array to simulate the message chain
   let messages = [];
 
-  const { processCapability } = await chain;
+  // MAYBE THIS?
+  const chain = await require("./src/chain");
+  const { processAndLogCapabilityResponse } = chain;
 
-  // console.log("processCapability", processCapability);
+  console.log(
+    "processAndLogCapabilityResponse",
+    processAndLogCapabilityResponse
+  );
 
-  messages = await processCapability(messages, [
+  messages = await processAndLogCapabilityResponse(messages, [
     null,
     capSlug,
     capMethod,
     capArgsString,
   ]);
 
-  // Output the response
-  const lastMessage = messages[messages.length - 1];
-  // console.log("Capability Response:", lastMessage);
+  // process Capability already logs the capability chain which is why we don't need to do it here
+  return true;
 }
-// Main function to run the CLI
+
+// Function to parse command-line arguments for a specific option
+function getCommandLineOption(optionName) {
+  const option = process.argv.find((arg) => arg.startsWith(`${optionName}=`));
+  return option ? option.split("=")[1] : null;
+}
+
 async function main() {
   console.log("Capability Player CLI");
   console.log('Type "exit" to quit.');
+
+  // Use yargs to parse command line arguments
+  const argv = yargs(hideBin(process.argv)).option("runCapability", {
+    describe: "Run a specific capability",
+    type: "string",
+  }).argv;
+
+  const runCapability = argv.runCapability;
+
+  if (runCapability) {
+    console.log(`Running capability: ${runCapability}`);
+    await processInputAsMessage(runCapability);
+    rl.close(); // Close readline interface
+    process.exit(0);
+    return;
+  }
 
   displayCapabilities();
 

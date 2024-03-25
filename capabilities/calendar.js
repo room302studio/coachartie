@@ -51,7 +51,7 @@ async function listAllCalendars() {
     }
 
     const calendars = response.data.items.map(
-      ({ summary, id }) => `${summary} (${id})`
+      ({ summary, id }) => `${summary} (${id})`,
     );
     return calendars;
   } catch (error) {
@@ -114,7 +114,7 @@ async function createEvent(calendarId, event) {
           value: "room302.studio",
         },
       },
-    })
+    }),
   );
 
   await batch.execute();
@@ -166,11 +166,11 @@ async function listEventsPrevWeek(calendarId) {
 }
 
 /**
-  * Retrieves a list of events occurring between the specified dates for the specified calendar.
-  * @param {string} calendarId - The ID of the calendar to retrieve events from.
-  * @param {Date} startDate - The start date of the range.
-  * @param {Date} endDate - The end date of the range.
-  * @returns {Promise<object>} - A promise that resolves to the list of events.
+ * Retrieves a list of events occurring between the specified dates for the specified calendar.
+ * @param {string} calendarId - The ID of the calendar to retrieve events from.
+ * @param {Date} startDate - The start date of the range.
+ * @param {Date} endDate - The end date of the range.
+ * @returns {Promise<object>} - A promise that resolves to the list of events.
  */
 async function listEventsBetweenDates(calendarId, startDate, endDate) {
   const calendar = await getCalendarInstance();
