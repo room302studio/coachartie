@@ -15,13 +15,6 @@ const { destructureArgs } = require("../helpers");
  * @param {string} command - The command to be executed by the cron job.
  * @returns {Promise<{ data: any, error: Error | null }>} - A promise that resolves with the result of the cron job creation.
  * @example createJob('0 0 * * *', 'DELETE FROM table WHERE created_at < NOW() - INTERVAL '1 month';') -- Deletes old records from a table every day at midnight.
- *   -- Makes a webhook request to the specified URL every day at midnight.
- * @example createJob('0 0 * * *', 'select
-      net.http_post(
-          url:='https://project-ref.supabase.co/functions/v1/function-name',
-          headers:='{"Content-Type": "application/json", "Authorization": "Bearer YOUR_ANON_KEY"}'::jsonb,
-          body:=concat('{"time": "', now(), '"}')::jsonb
-      ) as request_id;')
  */
 async function createJob(schedule, command) {
   const randomJobName = `job-${Math.floor(Math.random() * 1000000)}`;
@@ -37,8 +30,6 @@ async function createJob(schedule, command) {
   }
   return `Job created: ${data}`;
 }
-
-
 
 // we also need a function that makes it REALLY easy to make a webhook
 /**
@@ -58,7 +49,7 @@ async function createWebhook(schedule, url, body, headers, name) {
       "Content-Type": "application/json",
     };
   }
-  
+
   // if there is no body we need to return an error about it
   if (!body) {
     return `Error: No body provided for the webhook`;
@@ -66,7 +57,7 @@ async function createWebhook(schedule, url, body, headers, name) {
 
   // load webhook-authentication key from environment
   const webhookAuthentication = process.env.OUTGOING_WEBHOOK_AUTHENTICATION;
-  if!webhookAuthentication) {
+  if (webhookAuthentication) {
     headers["Authorization"] = `Bearer ${webhookAuthentication}`;
   }
 
@@ -86,24 +77,26 @@ async function createWebhook(schedule, url, body, headers, name) {
   }
 
   return `Webhook created: ${data}`;
+}
+
+// lets also make another function to list the current webhook jobs
+
+async function listWebhookJobs() {
+  const { data, error } = await supabase.from("job").select("*").limit(100);
+
+  if (error) {
+    console.error("Error listing webhook jobs with pg_cron:", error);
+    throw error;
   }
 
-  // lets also make another function to list the current webhook jobs
+  // no jobs without `net.http_post(`
+  const filteredJobs = data.filter((job) =>
+    job.command.includes("net.http_post("),
+  );
 
-  async function listWebhookJobs() {
-    const { data, error } = await supabase.from("job").select("*").limit(100);
-
-    if (error) {
-      console.error("Error listing webhook jobs with pg_cron:", error);
-      throw error;
-    }
-
-    // no jobs without `net.http_post(`
-    const filteredJobs = data.filter((job) => job.command.includes("net.http_post("));
-
-    logger.info("Webhook Jobs:", data);
-    return JSON.stringify(data, null, 2);
-  }
+  logger.info("Webhook Jobs:", data);
+  return JSON.stringify(data, null, 2);
+}
 
 /**
  * Lists the cron jobs currently scheduled with pg_cron in Supabase.
@@ -134,7 +127,9 @@ async function listJobs() {
  */
 async function deleteJob(name) {
   try {
-    const { data, error } = await supabase.rpc("cron.delete", { jobname: name });
+    const { data, error } = await supabase.rpc("cron.delete", {
+      jobname: name,
+    });
 
     if (error) {
       console.error("Error deleting job with pg_cron:", error.message);
@@ -181,7 +176,7 @@ async function updateJob(name, schedule, command) {
 module.exports = {
   handleCapabilityMethod: async (method, args) => {
     const [arg1, arg2, arg3] = destructureArgs(args);
-    logger.info(`⚡️ Calling capability method: supabasetodo.${method}`);
+    logger.info(`⚡️ Calling capability method: pgcron.${method}`);
 
     /* args is a string passed in like
       pgcron:createJob(
@@ -220,7 +215,13 @@ module.exports = {
     } else if (method === "updateJob") {
       return await updateJob(arg1, arg2, arg3);
     } else if (method === "createWebhook") {
-      return await createWebhook(processedArgs[0], processedArgs[1], processedArgs[2], processedArgs[3], processedArgs[4]);
+      return await createWebhook(
+        processedArgs[0],
+        processedArgs[1],
+        processedArgs[2],
+        processedArgs[3],
+        processedArgs[4],
+      );
     } else if (method === "listWebhookJobs") {
       return await listWebhookJobs();
     }

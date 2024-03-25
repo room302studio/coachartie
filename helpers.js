@@ -46,7 +46,7 @@ async function getPromptsFromSupabase() {
   const promptValues = promptArray.map((prompt) => prompt.prompt_text);
   // return an object with all the keys and values
   const prompts = Object.fromEntries(
-    promptKeys.map((_, i) => [promptKeys[i], promptValues[i]])
+    promptKeys.map((_, i) => [promptKeys[i], promptValues[i]]),
   );
   // logger.info(`Prompts: ${JSON.stringify(prompts, null, 2)}`);
   return prompts;
@@ -66,7 +66,7 @@ async function getConfigFromSupabase() {
   const configValues = configArray.map((config) => config.config_value);
   // return an object with all the keys and values
   const config = Object.fromEntries(
-    configKeys.map((_, i) => [configKeys[i], configValues[i]])
+    configKeys.map((_, i) => [configKeys[i], configValues[i]]),
   );
   return config;
 }
@@ -543,7 +543,7 @@ async function generateAiCompletion(prompt, username, messages, config) {
     completion = await createChatCompletion(
       messages,
       temperature,
-      presence_penalty
+      presence_penalty,
     );
   } catch (err) {
     logger.info(`Error creating chat completion ${err}`);
@@ -565,7 +565,7 @@ async function generateAiCompletion(prompt, username, messages, config) {
   //   );
   //     }
 
-  const aiResponse = completion//.choices[0].message.content;
+  const aiResponse = completion; //.choices[0].message.content;
 
   logger.info("🔧 AI Response: " + aiResponse);
   completionLogger.info("🔧 AI Response: " + aiResponse);
@@ -605,8 +605,8 @@ async function createChatCompletion(
   config = {
     temperature: 0,
     presence_penalty: 0.01,
-    max_tokens: 2400
-  }
+    max_tokens: 2400,
+  },
 ) {
   const {
     CHAT_MODEL,
@@ -654,13 +654,13 @@ async function createChatCompletion(
       max_tokens: +config.max_tokens,
     });
 
-    console.log(res)
+    console.log(res);
 
     // logger.info("---");
     // logger.info(`res: ${JSON.stringify(res, null, 2)}`);
     // logger.info("---");
 
-    return res.content[0].text
+    return res.content[0].text;
   }
 }
 
@@ -707,8 +707,8 @@ async function assembleMessagePreamble(username) {
   logger.info(`🔧 Assembling message preamble for <${username}> message`);
   const messages = [];
   addCurrentDateTime(messages);
-  await addHexagramPrompt(messages);
-  await addTodosToMessages(messages);
+  await addHexagramPrompt(messages); 
+  await addTodosToMessages(messages); // This is a list of all the current todos
   await addUserMessages(username, messages);
   await addUserMemories(username, messages);
   // add memories relevant to the user's message
@@ -833,7 +833,7 @@ async function addCapabilityManifestMessage(messages) {
         role: "user",
         // content: `Capability manifest: ${JSON.stringify(manifest)}`,
         content: `## CAPABILITY MANIFEST\n\n${formatCapabilityManifest(
-          manifest
+          manifest,
         )}`,
       });
     }
@@ -903,13 +903,13 @@ function convertCapabilityManifestToXML(manifest) {
           ? `    <parameters>\n${capability.parameters
               .map(
                 (parameter) =>
-                  `      <parameter>\n        <name>${parameter.name}</name>\n        <description>${parameter.description}</description>\n      </parameter>\n`
+                  `      <parameter>\n        <name>${parameter.name}</name>\n        <description>${parameter.description}</description>\n      </parameter>\n`,
               )
               .join("")}    </parameters>\n`
           : "";
 
         return `  <capability>\n${nameXml}${descriptionXml}${parametersXml}  </capability>\n`;
-      })
+      }),
     )
     .join("");
 
@@ -924,12 +924,12 @@ function convertCapabilityManifestToXML(manifest) {
 async function addUserMessages(username, messages) {
   const userMessageCount = chance.integer({ min: 10, max: 32 });
   logger.info(
-    `🔧 Retrieving ${userMessageCount} previous messages for ${username}`
+    `🔧 Retrieving ${userMessageCount} previous messages for ${username}`,
   );
   try {
     const userMessages = await getUserMessageHistory(
       username,
-      userMessageCount
+      userMessageCount,
     );
     if (!userMessages) {
       logger.info(`No previous messages found for ${username}`);
@@ -991,16 +991,16 @@ async function addRelevantMemories(username, messages) {
 
   const queryString = lastUserMessage.content;
   logger.info(
-    `🔧 Querying for relevant memories for ${username}: ${queryString}`
+    `🔧 Querying for relevant memories for ${username}: ${queryString}`,
   );
 
   try {
     const relevantMemories = await getRelevantMemories(
       queryString,
-      relevantMemoryCount
+      relevantMemoryCount,
     );
     logger.info(
-      `🔧 Retrieving ${relevantMemoryCount} relevant memories for ${queryString}`
+      `🔧 Retrieving ${relevantMemoryCount} relevant memories for ${queryString}`,
     );
 
     if (relevantMemories.length === 0) {
@@ -1505,4 +1505,5 @@ module.exports = {
   cleanUrlForPuppeteer,
   processChunks,
   sleep,
+  trimResponseByLineCount
 };

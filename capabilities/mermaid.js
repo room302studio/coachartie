@@ -56,10 +56,6 @@ const convertMermaidDiagram = async (diagramText) => {
       diagramText = diagramText.replace("```", "");
     }
 
-    
-
-
-
     // Load the Mermaid library
     await page.addScriptTag({
       path: require.resolve("mermaid/dist/mermaid.min.js"),
@@ -85,7 +81,7 @@ const convertMermaidDiagram = async (diagramText) => {
         x: svgBoundingBox.x,
         y: svgBoundingBox.y,
         width: svgBoundingBox.width,
-        height: svgBoundingBox.height
+        height: svgBoundingBox.height,
       },
       // quality: 100, // Increase the quality to 100
       // fullPage: true, // Capture the full page

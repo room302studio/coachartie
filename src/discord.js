@@ -37,7 +37,6 @@ class DiscordBot {
       logger.info(`Supabase config: ${JSON.stringify(config)}`);
     });
 
-
     client = this.bot;
   }
 
