@@ -797,6 +797,20 @@
   ],
   "supabaseraw": [
     {
+      "name": "supabaseraw:listAllTables()",
+      "description": "Retrieves a list of all tables from the \"information_schema.tables\" table. Returns: A promise that resolves to an array of table objects."
+    },
+    {
+      "name": "supabaseraw:listTableColumns()",
+      "description": "Retrieves the list of column names for a given table name from the information_schema.columns table. Returns: The list of column names.",
+      "parameters": [
+        {
+          "name": "tableName",
+          "description": "The name of the table."
+        }
+      ]
+    },
+    {
       "name": "supabaseraw:select()",
       "description": "Executes a SELECT query on the specified table with the given columns and conditions. Returns: A promise that resolves to the result of the SELECT query.",
       "parameters": [
