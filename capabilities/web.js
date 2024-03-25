@@ -1,5 +1,5 @@
 const dotenv = require("dotenv");
-const { Configuration, OpenAIApi } = require("openai");
+// const { Configuration, OpenAIApi } = require("openai");
 const puppeteer = require("puppeteer");
 const { getPromptsFromSupabase } = require("../helpers");
 const { WEBPAGE_UNDERSTANDER_PROMPT, WEBPAGE_CHUNK_UNDERSTANDER_PROMPT } =
@@ -11,23 +11,30 @@ const {
   destructureArgs,
   countMessageTokens,
   lastUserMessage,
+  sleep,
 } = require("../helpers");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const logger = require("../src/logger.js")("web");
 
+// import OpenAI from "openai";
+// conver to require
+const OpenAI = require("openai");
+const openai = new OpenAI();
+
 // TODO: Pull this in from config
 // const CHUNK_TOKEN_AMOUNT = 7000
-const CHUNK_TOKEN_AMOUNT = 10952;
+// const CHUNK_TOKEN_AMOUNT = 10952;
+const CHUNK_TOKEN_AMOUNT = 120 * 1024; // 128k tokens
 
 dotenv.config();
 
-const configuration = new Configuration({
-  organization: process.env.OPENAI_API_ORGANIZATION,
-  apiKey: process.env.OPENAI_API_KEY,
-});
-const openai = new OpenAIApi(configuration);
+// const configuration = new Configuration({
+//   organization: process.env.OPENAI_API_ORGANIZATION,
+//   apiKey: process.env.OPENAI_API_KEY,
+// });
+// const openai = new OpenAIApi(configuration);
 
 // This file will serve as a module used by the main discord bot
 
@@ -71,14 +78,44 @@ function cleanUrlForPuppeteer(dirtyUrl) {
   return dirtyUrl;
 }
 
-// quick promise sleep function
-function sleep(ms) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
+// Refactored function to be exported
+async function webPageToText(url) {
+  const browser = await puppeteer.launch();
+  const page = await browser.newPage();
+  await page.setUserAgent(randomUserAgent());
+  await page.goto(url);
+
+  logger.info("🕸️  Navigating to " + url);
+
+  const title = await page.title();
+
+  // wait for body to load
+  await page.waitForSelector("body");
+
+  // Extract text from the page
+  const text = await page.$$eval(allowedTextEls, (elements) => {
+    return elements
+      .map((element) => {
+        if (element.tagName === "PRE") {
+          return "```\n" + element.textContent + "\n```";
+        }
+        if (element.tagName === "A") {
+          // const url = new URL(element.href);
+          return `${element.textContent} (${element.href}) `;
+        }
+        return element.textContent + " ";
+      })
+      .join(" ");
   });
+
+  const trimmedText = text.replace(/\s+/g, " ").trim();
+
+  await browser.close();
+
+  return { title, text: trimmedText };
 }
 
-async function fetchAndParseURL(url) {
+async function webpageToHTML(url) {
   const browser = await puppeteer.launch();
   const page = await browser.newPage();
   await page.setUserAgent(randomUserAgent());
@@ -89,57 +126,21 @@ async function fetchAndParseURL(url) {
   // wait for body to load
   await page.waitForSelector("body");
 
-  // get the page title and description
-  const title = await page.title();
+  // wait a second or two for javascript to run
+  await sleep(5000);
 
-  // go through every element on the page and extract just the visible text, and concatenate into one long string
-  const text = await page.$$eval(allowedTextEls, function (elements) {
-    function trimHref(href) {
-      // given a string like https://nytimes.com/article/12345, return /article/12345
-      try {
-        const url = new URL(href);
-        return url.pathname;
-      } catch (e) {
-        return href;
-      }
-    }
-
-    return elements
-      .map((element) => {
-        // sanitize any HTML content out of the text
-        // return element.textContent.replace(/<[^>]*>?/gm, '') + ' ';
-        // if <pre> wrap in backticks
-        if (element.tagName === "PRE") {
-          return (
-            "```\n" + element.textContent.replace(/<[^>]*>?/gm, "") + "\n```"
-          );
-        }
-
-        // if it is a link, grab the URL out too
-        if (element.tagName === "A") {
-          return (
-            element.textContent.replace(/<[^>]*>?/gm, "") +
-            " (" +
-            // element.href +
-            trimHref(element.href) +
-            ") "
-          );
-        }
-
-        return element.textContent.replace(/<[^>]*>?/gm, "") + " ";
-      })
-      .join(" ");
-    // .join("\n");
-  });
-
-  // trim whitespace out of the text
-  const trimmedText = text.replace(/\s+/g, " ").trim();
-
-  logger.info("📝  Page raw text:", trimmedText);
+  // Extract text from the page body tag
+  const html = await page.$eval("body", (body) => body.innerHTML);
 
   await browser.close();
 
-  return { title, text: trimmedText };
+  return { html };
+}
+
+async function fetchAndParseURL(url) {
+  const { title, text } = await webPageToText(url);
+
+  return { title, text };
 }
 
 /**
@@ -309,9 +310,10 @@ async function processChunks(chunks, data, limit = 2, userPrompt = "") {
         logger.info(`📝  Sending chunk ${i + index + 1} of ${chunkLength}...`);
         logger.info(`Chunk text: ${chunk}`);
 
-        const completion = await openai.createChatCompletion({
-          model: "gpt-3.5-turbo-16k",
-          max_tokens: 1024,
+        const completion = await openai.chat.completions.create({
+          // model: "gpt-3.5-turbo-16k",
+          model: "gpt-4-0125-preview",
+          max_tokens: 2048,
           // temperature: 0.5,
           // presence_penalty: 0.66,
           presence_penalty: -0.05,
@@ -326,8 +328,7 @@ async function processChunks(chunks, data, limit = 2, userPrompt = "") {
             },
           ],
         });
-
-        return completion.data.choices[0].message.content;
+        return completion.choices[0];
       });
 
     const chunkResults = await Promise.all(chunkPromises);
@@ -357,23 +358,22 @@ async function fetchAndSummarizeUrl(url, userPrompt = "") {
   }
 
   logger.info(`📝  Fetching URL: ${cleanedUrl}`);
-  const data = await fetchAndParseURL(cleanedUrl);
+  const { text } = await fetchAndParseURL(cleanedUrl);
+  logger.info(`📝  Fetched text: ${text}`);
   logger.info(`📝  Fetched URL: ${cleanedUrl}`);
 
   logger.info("📝  Generating summary...");
 
   // if data.text is longer than 4096 characters, split it into chunks of 4096 characters and send each chunk as a separate message and then combine the responses
 
-  let text = data.text;
-
   // remove newlines
-  text = text.replace(/\n/g, " ");
+  let cleanText = text.replace(/\n/g, " ");
 
   // remove tabs
-  text = text.replace(/\t/g, " ");
+  cleanText = cleanText.replace(/\t/g, " ");
 
   // remove multiple spaces
-  text = text.replace(/ +(?= )/g, "");
+  cleanText = cleanText.replace(/ +(?= )/g, "");
 
   // we need to refactor to use countMessageTokens instead of character count, so we split the text into chunks with CHUNK_TOKEN_AMOUNT tokens each
   let chunks = [];
@@ -410,15 +410,15 @@ async function fetchAndSummarizeUrl(url, userPrompt = "") {
       chunkResponses = JSON.parse(
         fs.readFileSync(
           path.join(__dirname, `../cache/${cacheKey}.json`),
-          "utf8",
-        ),
+          "utf8"
+        )
       );
     } else {
-      chunkResponses = await processChunks(chunks, data);
+      chunkResponses = await processChunks(chunks, cleanText);
       // Cache the chunks
       fs.writeFileSync(
         path.join(__dirname, `../cache/${cacheKey}.json`),
-        JSON.stringify(chunkResponses),
+        JSON.stringify(chunkResponses)
       );
     }
 
@@ -434,8 +434,9 @@ async function fetchAndSummarizeUrl(url, userPrompt = "") {
   logger.info(`📝  Generating summary of: ${factList}`);
 
   // use gpt-3.5-turbo-16k for the final summary
-  const summaryCompletion = await openai.createChatCompletion({
-    model: "gpt-3.5-turbo-16k",
+  const summaryCompletion = await openai.chat.completions.create({
+    // model: "gpt-3.5-turbo-16k",
+    model: "gpt-4-0125-preview",
     // max_tokens: 2048,
     max_tokens: 3072,
     // temperature: 0.5,
@@ -455,7 +456,7 @@ ${factList}`,
     ],
   });
 
-  const summary = summaryCompletion.data.choices[0].message.content;
+  const summary = summaryCompletion.choices[0].message.content;
 
   logger.info(`📝  Generated summary for URL: ${cleanedUrl}`, summary);
 
@@ -506,4 +507,6 @@ module.exports = {
   fetchLargestImage,
   fetchAllLinks,
   handleCapabilityMethod,
+  webPageToText,
+  webpageToHTML,
 };

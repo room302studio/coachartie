@@ -163,40 +163,42 @@ async function processMissiveRequest(body) {
   //   `Latest message attachments: ${JSON.stringify(latestMessageAttachments)}`,
   // );
 
-  // we also need to check if there is an attachment, and if there is, we need to process it and turn it into text
+  if (latestMessageId) {
+    // we also need to check if there is an attachment, and if there is, we need to process it and turn it into text
 
-  const fullLatestMessage = await getMessage(latestMessageId);
-  // logger.info(`Full latest message: ${JSON.stringify(fullLatestMessage)}`);
+    const fullLatestMessage = await getMessage(latestMessageId);
+    // logger.info(`Full latest message: ${JSON.stringify(fullLatestMessage)}`);
 
-  // we need to get the HTML email body out of the message, sanitize it a bit to save on tokens, and add that as a system message
-  const latestMessageHtmlBody = fullLatestMessage?.messages?.body;
+    // we need to get the HTML email body out of the message, sanitize it a bit to save on tokens, and add that as a system message
+    const latestMessageHtmlBody = fullLatestMessage?.messages?.body;
 
-  // now we need to strip out all the newlines, HTML tags, and any styles/css
-  const latestMessageTextBody = latestMessageHtmlBody
-    ?.replace(`\n`, " ")
-    .replace(/<style([\s\S]*?)<\/style>/gi, "")
-    .replace(/<script([\s\S]*?)<\/script>/gi, "")
-    .replace(/<[^>]+>/gi, "");
+    // now we need to strip out all the newlines, HTML tags, and any styles/css
+    const latestMessageTextBody = latestMessageHtmlBody
+      ?.replace(`\n`, " ")
+      .replace(/<style([\s\S]*?)<\/style>/gi, "")
+      .replace(/<script([\s\S]*?)<\/script>/gi, "")
+      .replace(/<[^>]+>/gi, "");
 
-  // logger.info(`Latest message text body: ${latestMessageTextBody}`);
+    // logger.info(`Latest message text body: ${latestMessageTextBody}`);
 
-  // now lets add that as a system message
-  formattedMessages.push({
-    role: "user",
-    content: `# Latest message in Missive conversation: 
+    // now lets add that as a system message
+    formattedMessages.push({
+      role: "user",
+      content: `# Latest message in Missive conversation: 
 ${latestMessageTextBody}`,
-  });
+    });
 
-  // we can also add the JSON of the fullLatestMessage MINUS the body
-  // as a system message
-  const latestMessageMinusBody = { ...fullLatestMessage };
-  delete latestMessageMinusBody.body;
+    // we can also add the JSON of the fullLatestMessage MINUS the body
+    // as a system message
+    const latestMessageMinusBody = { ...fullLatestMessage };
+    delete latestMessageMinusBody.body;
 
-  formattedMessages.push({
-    role: "system",
-    content: `## Latest message in conversation: 
+    formattedMessages.push({
+      role: "system",
+      content: `## Latest message in conversation: 
 ${jsonToMarkdownList(latestMessageMinusBody)}`,
-  });
+    });
+  }
 
   logger.info(`Looking for messages in conversation ${conversationId}`);
   const conversationMessages = await listMessages(conversationId);

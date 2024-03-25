@@ -157,13 +157,20 @@ async function storeUserMemory(
   );
 
   // const { embedding1: embedding, embedding2, embedding3, embedding4 } = embeddings;
-  const openAiEmbeddingResponse = await openai.createEmbedding({
-    model: "text-embedding-ada-002",
-    input: value,
-  });
+  let embedding;
+  try {
+    const openAiEmbeddingResponse = await openai.embeddings.create({
+      model: "text-embedding-ada-002",
+      input: value,
+    });
 
-  const [{ embedding }] = openAiEmbeddingResponse.data.data;
-  logger.info(`Embedding length: ${embedding.length}`);
+    const [{ embedding: fetchedEmbedding }] = openAiEmbeddingResponse.data;
+    embedding = fetchedEmbedding; // Assign the fetched embedding to the outer scope variable
+    logger.info(`Embedding length: ${embedding.length}`);
+  } catch (error) {
+    logger.info(`Error fetching embedding: ${error.message}`);
+    embedding = null; // Ensure embedding is null if there was an error
+  }
 
   const { supabase } = require("./supabaseclient.js");
   const { data, error } = await supabase
@@ -180,9 +187,8 @@ async function storeUserMemory(
     });
 
   logger.info(
-    `Stored memory for ${username}: ${value} in ${memoryType} memory ${JSON.stringify(
-      data,
-    )}`,
+    `Stored memory for ${username}: ${value} in ${memoryType} memory -- ${resourceId}`,
+    data,
   );
 
   if (error) {
@@ -382,7 +388,7 @@ async function voyageEmbedding(string, model = "voyage-large-2") {
  * @throws {Error} If there is an error generating any of the embeddings.
  */
 async function stringToEmbedding(string) {
-  const openAiEmbeddingResponse = await openai.createEmbedding({
+  const openAiEmbeddingResponse = await openai.embeddings.create({
     model: "text-embedding-ada-002",
     input: string,
   });
@@ -421,7 +427,7 @@ async function stringToEmbedding(string) {
     };
   }
 
-  const openAiLargeEmbeddingResponse = await openai.createEmbedding({
+  const openAiLargeEmbeddingResponse = await openai.embeddings.create({
     model: "text-embedding-large",
     input: string,
   });
@@ -447,7 +453,7 @@ async function memoryToEmbedding(memory) {
     return logger.info("No memory provided to memoryToEmbedding");
   }
 
-  // const embeddingResponse = await openai.createEmbedding({
+  // const embeddingResponse = await openai.embeddings.create({
   //   model: "text-embedding-ada-002",
   //   input: memory,
   // });
@@ -494,12 +500,12 @@ async function getRelevantMemories(queryString, limit = 5) {
 
   // const { embedding1: embedding } = await stringToEmbedding(queryString);
 
-  const openAiEmbeddingResponse = await openai.createEmbedding({
+  const openAiEmbeddingResponse = await openai.embeddings.create({
     model: "text-embedding-ada-002",
     input: queryString,
   });
 
-  const [{ embedding }] = openAiEmbeddingResponse.data.data;
+  const [{ embedding }] = openAiEmbeddingResponse.data;
 
   // query the database for the most relevant memories, currently this is only supported on the openai embeddings
   const { data, error } = await supabase.rpc("match_memories", {

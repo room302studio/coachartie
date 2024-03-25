@@ -7,12 +7,11 @@ coachartiegithub.2023-05-02.private-key.pem
 /capabilities/cache/*
 *.log
 artie.log
-artie.log
 capabilities/cache/*.json
 /cache/*.json
 
 auth/coach-artie-5f8c6debae41.json
 auth/coach-artie-e95c8660132f.json
 auth/coach-artie-*.json
-
 .idea
+.DS_Store

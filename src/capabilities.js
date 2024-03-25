@@ -57,44 +57,22 @@ ${prepareCapabilities.join("\n")}
  * @param {Array} messages - All of the conversation messages so far
  * @returns {Promise<*>} - The response from the capability method.
  */
-async function callCapabilityMethod(
-  capabilitySlug,
-  methodName,
-  args,
-  messages,
-) {
-  logger.info(`⚡️ Calling capability method: ${capabilitySlug}.${methodName}`);
-
-  if (args) {
-    logger.info(`⚡️ With arguments: ${args}`);
-  }
-
+async function callCapabilityMethod(capabilitySlug, methodName, args, messages) {
   try {
-    // get the capability from the capabilities folder
     const capability = require(`../capabilities/${capabilitySlug}`);
+    const capabilityResponse = await capability.handleCapabilityMethod(methodName, args, messages);
 
-    // every capability exports a handleCapabilityMethod method
-    // which we will call
-    // call the capability method
-    const capabilityResponse = await capability.handleCapabilityMethod(
-      methodName,
-      args,
-      messages,
-    );
+    // Ensure there's a response
     if (!capabilityResponse) {
-      throw new Error(
-        `Capability ${capabilitySlug} did not return a response.`,
-      );
+      throw new Error(`Capability ${capabilitySlug} did not return a response.`);
     }
 
-    if (capabilityResponse.image) {
-      logger.info(`⚡️ Capability response is an image`);
-      return capabilityResponse;
-    }
-    return capabilityResponse;
+    // Return a success response
+    return { success: true, data: capabilityResponse };
   } catch (error) {
     logger.info(`Error running ${capabilitySlug}.${methodName}: ${error}`);
-    return `Error: ${error.message}`;
+    // Return an error response
+    return { success: false, error: error.message };
   }
 }
 
