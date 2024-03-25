@@ -4,7 +4,17 @@ const dotenv = require("dotenv");
 dotenv.config();
 const { webPageToText, webpageToHTML } = require("./web.js"); // Adjust the path as necessary
 const { destructureArgs, createChatCompletion } = require("../helpers");
+const { storeUserMemory } = require("../src/remember");
 const logger = require("../src/logger.js")("ingest-capability");
+const { convert } = require("html-to-text");
+const fs = require("fs");
+const path = require("path");
+const crypto = require("crypto");
+
+const cacheDir = path.join(__dirname, "cache");
+if (!fs.existsSync(cacheDir)) {
+  fs.mkdirSync(cacheDir, { recursive: true });
+}
 
 async function handleCapabilityMethod(method, args) {
   const [arg1] = destructureArgs(args);
@@ -27,57 +37,60 @@ async function deepDocumentIngest(url) {
   // For testing:
   // node capability-player.js --runCapability="ingest:deepDocumentIngest(https://docs.pdw.co/tachio-overview)"
 
+
+
+  // TODO: Cache the text-ified version of the URL for a certain amount of time
+  // Generate a hash for the URL
+  // const urlHash = crypto.createHash("md5").update(url).digest("hex");
+  // const cacheFilePath = path.join(cacheDir, `${urlHash}.json`);
+
+  // // Check if cache exists and is recent (e.g., less than 1 hour old)
+  // if (
+  //   fs.existsSync(cacheFilePath) &&
+  //   Date.now() - fs.statSync(cacheFilePath).mtimeMs < 3600000
+  // ) {
+  //   console.log("Using cached data");
+  //   return fs.readFileSync(cacheFilePath, "utf8");
+  // }
+
   try {
-    // First we need to figure out what kind of document we are looking at so we can process it properly
-    // If it's Markdown we can skip a few steps
-
-    // First, use our puppeteer web browser to turn the page into text
-    // const {text: documentString} = await webPageToText(url);
     const { html } = await webpageToHTML(url);
-
-    // let document;
-    // if (isUrl) {
-    //   // documentText = documentString;
-    //   document = await parseHtmlToSections(html);
-    // } else {
-    //   // documentText = url;
-    //   // if it's a string, parse it as markdown
-    //   document = parseMarkdownToSections(url);
-    // }
-
-    // TODO handle long unstructured text, like this:
-    // 0:03:42	S: Of
-    // 0:03:42	J: like,
-    // 0:03:43	S: me.
-    // 0:03:43	J: usually, I'll just be like because, like, sometimes the summary has, like, points and, like, set points. Sometimes I just copy and paste the points. The
-    // 0:03:49	S: Gotcha.
-    // 0:03:49	J: FYI, like, that's helpful knowledge.
-    // 0:03:51	S: Yeah. Yeah. Cool. So and you you mentioned that it would be nice to have a simpler workflow for this. Do you have anything in mind and just, like, what we could build in to make that a bit easier? I
-    // 0:04:04	J: Yeah,
-    // Do we pass this to the LLM as is? Or do we need to do some pre-processing?
-
-    console.log("html:");
-    console.log(html);
-
-    // Sketch (Phase I):
-    //  - Send the entire document to the LLM
-    //  - Generate the meta-summary
-    //  - Store the meta-summary as a memory
+    const document = convert(html, {
+      wordwrap: 130,
+    });
 
     const messages = [
       {
         role: "user",
         // content: "Give me 3 rhymes for apple",
-        content: `Can you please write a 1000-3000 word detailed overview summary of the following document: 
-${JSON.stringify(html, null, 2)}
+        content: `Can you please write an extremely long and thorough reiteration of the following document: 
+${JSON.stringify(document, null, 2)}
 
-When analyzing this document, your goal is to distill its content into concise, standalone facts. Each fact should encapsulate a key piece of information, complete in itself, and easily understandable without needing further context. Pay special attention to precise details, especially if they involve code or search queries - accuracy in phrasing is crucial here. It's important to include relevant URLs or specific search queries that are associated with these facts, as they can serve as gateways for deeper exploration later on. The facts should not depend on each other for context, and each should be as self-contained as possible. Remember, less is more in this task; prioritize quality and relevance over quantity.`,
+When analyzing this document, your goal is to distill its content into concise, standalone facts, as many as you possibly can. Each fact should encapsulate a key piece of information, complete in itself, and easily understandable without needing further context. Pay special attention to precise details, especially if they involve code or search queries - accuracy in phrasing is crucial here. It's important to include relevant URLs, specific search queries, project IDs that are associated with these facts. Respond ONLY with the facts, do not greet me or confirm the request. Keep your response above 1000 words and below 5000 words, please.
+
+Make separate sections of facts for each section of the document, using \`\`\`---\`\`\` between each section. Respond immediately, beginning with the first section, no introductions or confirmation.`,
       },
     ];
-    const completion = await createChatCompletion(messages);
+    const completion = await createChatCompletion(messages, {
+      max_tokens: 4000,
+    });
 
-    console.log("completion");
-    console.log(JSON.stringify(completion, null, 2));
+    // because the robot was instructed to deliniate the facts with '---' we can split the response into facts
+    // we need to be aware the first fact MAY be blank
+    const facts = completion.split("\n---\n");
+
+    // now that each fact is separated we can store them in the database
+    facts.forEach(async (fact, index) => {
+      const factAsMemory = `Memory about RESOURCE_ID: ${url}\n${fact}
+(${index + 1}/${facts.length})
+      `;
+      await storeUserMemory(
+        { username: "capability-deepdocumentingest", guild: "" },
+        fact,
+        "capability",
+        url,
+      );
+    });
 
     // Sketch (Phase II):
     //  - For each section,
@@ -85,61 +98,100 @@ When analyzing this document, your goal is to distill its content into concise, 
     //    - We ask for a fact list of the section
     //    - We create a memory with the fact list (which becomes an embedding)
 
-    // Then, if it's a web page we use headers elements to try to split the page into logical sections
-    // If it's markdown we will do the same, but with a Markdown parser
+    const metaSummaryMessages = [
+      {
+        role: "user",
+        content: `Can you please provide a high-level summary of the most important facts in this document: 
+  ${JSON.stringify(document, null, 2)}`
+      }
+    ];
 
-    // First we prepare by taking the headers and as much of the sections as we can, and asking the LLM to send back a list of the sections/concepts in the document
+    const metaSummaryCompletion = await createChatCompletion(metaSummaryMessages, {
+      max_tokens: 2000,
+    });
 
-    // Once we've created our sections, we can create memories of them and store them in the database
+    // Store the meta-summary in the database
+    await storeUserMemory(
+      { username: "capability-deepdocumentingest", guild: "" },
+      metaSummaryCompletion,
+      "capability-deepdocumentingest",
+      url,
+    );
 
-    // await storeUserMemory({ username: "capability" }, rememberText);
-
-    // Then we want to generate a meta-summary of the document based on all of those memories, and store that in the database as well
-
-    return "Document ingested successfully.";
+    return `Document ingested successfully. ${facts.length} groups of facts were extracted from the ${url}.`;
   } catch (error) {
     throw new Error(`Error occurred while making external request: ${error}`);
   }
 }
 
-async function parseHtmlToSections(htmlText) {
-  const $ = cheerio.load(htmlText);
+/**
+ * Parses HTML into sections based on heading/delimiter elements
+ * @param {string} html - The HTML string to parse into sections
+ * @param {Object} [config] - Optional configuration settings
+ * @param {string|string[]} [config.delimiters='h1,h2,h3,h4,h5,h6'] - CSS selector(s) for elements to treat as section delimiters
+ * @param {string} [config.container='body'] - CSS selector for the container element holding the sectioned content
+ * @param {boolean} [config.keepAttributes=true] - Whether to keep element attributes in the output sections
+ * @param {boolean} [config.lenient=true] - Whether to parse in a lenient mode (handles encoding issues, XML-style tags, etc.)
+ * @param {boolean} [config.stripNonParseable=true] - Whether to strip non-parseable elements and extract visible text
+ * @returns {Object[]} - An array of section objects, each with a 'header' and 'content' property
+ */
+const parseHtmlToSections = (html, config = {}) => {
+  const $ = cheerio.load(html, {
+    decodeEntities: config.lenient !== false,
+    xmlMode: !!config.lenient,
+  });
+  const keepAttributes = config.keepAttributes !== false;
+  // const containerSelector = config.container || 'body';
+  // html string is often parsed out of body so we just find the first parent element
+  const containerSelector = config.container || "body > *";
+  const delimiterSelectors = Array.isArray(config.delimiters)
+    ? config.delimiters
+    : (config.delimiters || "h1,h2,h3,h4,h5,h6")
+        .split(",")
+        .map((sel) => sel.trim());
+
+  const isDelimiter = (node) =>
+    delimiterSelectors.some((sel) => $(node).is(sel));
+
   const sections = [];
   let currentSection = { header: null, content: [] };
 
-  $("h1, h2, h3, h4, h5, h6, p").each((index, element) => {
-    const $element = $(element);
-    const tagName = $element.prop("tagName").toLowerCase();
-    const text = $element.text();
-
-    if (
-      tagName === "h1" ||
-      tagName === "h2" ||
-      tagName === "h3" ||
-      tagName === "h4" ||
-      tagName === "h5" ||
-      tagName === "h6"
-    ) {
-      // When we hit a heading, we start a new section
-      if (currentSection.header || currentSection.content.length) {
-        // Save the previous section if it has content
-        sections.push(currentSection);
-      }
-      // Start a new section with the current header
-      currentSection = { header: text, content: [] };
+  const traverseNode = (node) => {
+    if (isDelimiter(node)) {
+      if (currentSection.content.length) sections.push(currentSection);
+      currentSection = {
+        header: keepAttributes
+          ? `<${node.name} ${Object.entries(node.attribs)
+              .map(([key, val]) => `${key}="${val}"`)
+              .join(" ")}>${$(node).html()}</${node.name}>`
+          : $(node).html().trim(),
+        content: [],
+      };
+    } else if (node.type === "text") {
+      const text = $(node).text().trim();
+      if (text) currentSection.content.push(text);
     } else {
-      // Add non-heading elements to the current section's content
-      currentSection.content.push(text);
+      currentSection.content.push($.html(node));
     }
-  });
 
-  // Add the last section if it has content
-  if (currentSection.header || currentSection.content.length) {
-    sections.push(currentSection);
+    if (node.children) node.children.forEach(traverseNode);
+  };
+
+  const $container = $(containerSelector);
+  $container.children().each((_, node) => traverseNode(node));
+
+  if (currentSection.content.length) sections.push(currentSection);
+
+  if (config.stripNonParseable) {
+    sections.forEach((section) => {
+      section.content = section.content.filter(
+        (content) => typeof content === "string",
+      );
+    });
   }
 
   return sections;
-}
+};
 
 function parseMarkdownToSections(markdownText) {
   const tokens = marked.lexer(markdownText);
