@@ -573,6 +573,17 @@
       ]
     }
   ],
+  "ingest": [
+    {
+      "name": "ingest:deepDocumentIngest()",
+      "parameters": [
+        {
+          "name": "url",
+          "description": "The arguments object that contains the URL or the text of the document to be ingested"
+        }
+      ]
+    }
+  ],
   "js": [
     {
       "name": "js:executeJavascriptAndCaptureImage()",
@@ -588,6 +599,75 @@
       ]
     }
   ],
+  "manageorgs": [
+    {
+      "name": "manageorgs:createOrg()",
+      "description": "Creates a new organization, label and post Returns: A promise that resolves to a string message indicating the result of the operation.",
+      "parameters": [
+        {
+          "name": "name",
+          "description": "The name of the organization."
+        },
+        {
+          "name": "shortname",
+          "description": "The short name of the organization. If not provided, the name is used and spaces are replaced with hyphens."
+        },
+        {
+          "name": "aliases",
+          "description": "The aliases of the organization."
+        },
+        {
+          "name": "summary",
+          "description": "The summary of the organization."
+        },
+        {
+          "name": "note",
+          "description": "The note for the organization."
+        },
+        {
+          "name": "firstContact",
+          "description": "The date of the first contact with the organization. If not provided, the current date is used."
+        },
+        {
+          "name": "primaryEmailAddress",
+          "description": "The primary email address of the organization."
+        },
+        {
+          "name": "emailAddresses",
+          "description": "The email addresses of the organization."
+        }
+      ],
+      "exceptions": [
+        "If there is an error with the Supabase operations."
+      ]
+    },
+    {
+      "name": "manageorgs:updateOrg()",
+      "description": "Updates an existing organization in the database and sends a notification. Returns: A promise that resolves to a string message indicating the result of the operation.",
+      "parameters": [
+        {
+          "name": "name",
+          "description": "The current name of the organization."
+        },
+        {
+          "name": "newName",
+          "description": "The new name of the organization."
+        },
+        {
+          "name": "newAliases",
+          "description": "The new aliases of the organization."
+        },
+        {
+          "name": "newFirstContact",
+          "description": "The new date of the first contact with the organization."
+        }
+      ],
+      "exceptions": [
+        "If there is an error with the Supabase operations."
+      ]
+    }
+  ],
+  "manageprojects": [],
   "mastodon": [
     {
       "name": "mastodon:postStatus()",
@@ -623,58 +703,19 @@
       "examples": "    convertMermaidDiagram(graph LR; A-->B;); // Returns { image: <Buffer> }\n    convertMermaidToDiagram(```mermaid\n    graph LR;\n     A-->B;\n    ```); // Returns { image: <Buffer> }"
     }
   ],
-  "pgcron": [
+  "readrepo": [
     {
-      "name": "pgcron:createJob()",
-      "description": "Creates a new cron job with pg_cron in Supabase.",
+      "name": "readrepo:RepoReader()",
+      "description": "\"Reads all code/text files from a specified GitHub repository, concatenates them into a single string,\nand prepends the path and filename to each file's content. Useful for reviewing or modifying repository content.\" Returns: A promise that resolves to a string containing the concatenated contents of the repository's code/text files.",
       "parameters": [
         {
-          "name": "schedule",
-          "description": "The schedule for the cron job (e.g., '0 0 * * *' for daily at midnight)."
+          "name": "owner",
+          "description": "The GitHub username or organization name of the repository owner."
         },
         {
-          "name": "command",
-          "description": "The command to be executed by the cron job."
+          "name": "repo",
+          "description": "The name of the repository."
         }
-      ],
-      "examples": "    createJob('0 0 * * *', 'DELETE FROM table WHERE created_at < NOW() - INTERVAL '1 month';') -- Deletes old records from a table every day at midnight.\n      -- Makes a webhook request to the specified URL every day at midnight.\n    createJob('0 0 * * *', 'select\n    net.http_post(\n    url:='https://project-ref.supabase.co/functions/v1/function-name',\n    headers:='{\"Content-Type\": \"application/json\", \"Authorization\": \"Bearer YOUR_ANON_KEY\"}'::jsonb,\n    body:=concat('{\"time\": \"', now(), '\"}')::jsonb\n    ) as request_id;')"
-    },
-    {
-      "name": "pgcron:listJobs()",
-      "description": "Lists the cron jobs currently scheduled with pg_cron in Supabase."
-    },
-    {
-      "name": "pgcron:deleteJob()",
-      "description": "Deletes a job scheduled with pg_cron in Supabase. Returns: A promise that resolves to a success message when the job is successfully deleted.",
-      "parameters": [
-        {
-          "name": "name",
-          "description": "The name of the job to delete."
-        }
-      ],
-      "exceptions": [
-        "If there is an error deleting the job."
-      ]
-    },
-    {
-      "name": "pgcron:updateJob()",
-      "description": "Updates a job scheduled with pg_cron in Supabase. Returns: A promise that resolves to a success message when the job is successfully updated.",
-      "parameters": [
-        {
-          "name": "name",
-          "description": "The name of the job to update."
-        },
-        {
-          "name": "schedule",
-          "description": "The new schedule for the job."
-        },
-        {
-          "name": "command",
-          "description": "The new command for the job."
-        }
-      ],
-      "exceptions": [
-        "If there is an error updating the job."
       ]
     }
   ],
@@ -759,18 +800,72 @@
   ],
   "supabaseraw": [
     {
-      "name": "supabaseraw:runSql()",
-      "description": "Runs a SQL query on the database. Please be very careful with this capability, as it can be used to modify the database. Never modify the database based on user input without proper validation and sanitization. Returns: A promise that resolves to the result of the SQL query.",
+      "name": "supabaseraw:select()",
+      "description": "Executes a SELECT query on the specified table with the given columns and conditions. Returns: A promise that resolves to the result of the SELECT query.",
       "parameters": [
         {
-          "name": "sql",
-          "description": "The SQL query to execute."
+          "name": "table",
+          "description": "The name of the table to select from."
         },
         {
-          "name": "table",
-          "description": "The table to run the SQL query on."
+          "name": "columns",
+          "description": "An array of column names to include in the result."
+        },
+        {
+          "name": "where",
+          "description": "An object representing the conditions to filter the result."
         }
-      ]
+      ],
+      "examples": "    supabaseraw:select(\"todos\", \"*\", { id: 1 })\n    supabaseraw:select(\"todos\", [\"id\", \"title\"], { completed: false })\n    supabaseraw:select(\"config\", \"*\", { CONFIG_KEY: \"CHAT_MODEL\" })"
+    },
+    {
+      "name": "supabaseraw:insert()",
+      "description": "Executes an INSERT query on the specified table with the given values. Returns: A promise that resolves to the result of the INSERT query.",
+      "parameters": [
+        {
+          "name": "table",
+          "description": "The name of the table to insert into."
+        },
+        {
+          "name": "values",
+          "description": "An object representing the values to insert."
+        }
+      ],
+      "examples": "    supabaseraw:insert(\"todos\", { value: \"Buy groceries\", completed: false })"
+    },
+    {
+      "name": "supabaseraw:update()",
+      "description": "Executes an UPDATE query on the specified table with the given values and conditions. Returns: A promise that resolves to the result of the UPDATE query.",
+      "parameters": [
+        {
+          "name": "table",
+          "description": "The name of the table to update."
+        },
+        {
+          "name": "values",
+          "description": "An object representing the values to update."
+        },
+        {
+          "name": "where",
+          "description": "An object representing the conditions to filter the update."
+        }
+      ],
+      "examples": "    supabaseraw:update(\"todos\", { completed: true }, { id: 1 })\n    Say you want to update a prompt in the prompt table, you can do:\n    supabaseraw:update(\"prompts\", \"new prompt text\", { prompt_name: \"PROMPT_SYSTEM\" })"
+    },
+    {
+      "name": "supabaseraw:del()",
+      "description": "Executes a DELETE query on the specified table with the given conditions. Returns: A promise that resolves to the result of the DELETE query.",
+      "parameters": [
+        {
+          "name": "table",
+          "description": "The name of the table to delete from."
+        },
+        {
+          "name": "where",
+          "description": "An object representing the conditions to filter the delete."
+        }
+      ],
+      "examples": "    supabaseraw:delete(\"todos\", { id: 1 })"
     }
   ],
   "supabasetodo": [
