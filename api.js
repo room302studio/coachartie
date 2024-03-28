@@ -120,7 +120,7 @@ async function listMessages(emailMessageId) {
   return data.messages;
 }
 function processWebhookPayload(payload) {
-  const userMessage = payload.userMessage;
+  const userMessage = payload.comment.body
   const userName = payload.userName;
   const userEmail = payload.userEmail;
   const conversationId = payload.conversationId;
