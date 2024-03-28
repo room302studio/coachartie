@@ -124,11 +124,7 @@ function countTokensInMessage(message) {
  * @returns {string} - The message with the mention removed.
  */
 function removeMentionFromMessage(message, mention) {
-  // we want to remove the entire
-  // <@number> section from
-  // <@1086489885269037128> what's up
-  // so we need to use a regex
-  const mentionRegex = new RegExp(mention, "g");
+  const mentionRegex = new RegExp(`<@${mention}>`, "g"); // Modify the regular expression to include the <@> section
   return message.replace(mentionRegex, "").trim();
 }
 
