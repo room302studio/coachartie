@@ -4,6 +4,7 @@ const {
   getAllMemories,
   storeUserMemory,
   getRelevantMemories,
+  storeRobotMessage
 } = require("./remember.js");
 const {
   createTodo,
@@ -13,16 +14,14 @@ const {
 const chance = require("chance").Chance();
 const vision = require("./vision.js");
 const logger = require("../src/logger.js")("memory");
-// const preambleLogger = require("../src/logger.js")("preamble");
-
-const preambleLogger = {
-  info: (message) => {},
-};
 
 
-const { getPromptsFromSupabase, getConfigFromSupabase } = require("../helpers");
+
+
 
 module.exports = (async () => {
+  const { getPromptsFromSupabase, getConfigFromSupabase } = require("../helpers");
+
   const { PROMPT_REMEMBER, PROMPT_CAPABILITY_REMEMBER, PROMPT_REMEMBER_INTRO } =
     await getPromptsFromSupabase();
 
@@ -55,6 +54,8 @@ module.exports = (async () => {
     if(!channel) logger.info(`logInteraction: No channel provided`);
     if(!guild) logger.info(`logInteraction: No guild provided`);
     if(!related_message_id) logger.info(`logInteraction: No related_message_id provided`);
+
+    const robotMessageId = await storeRobotMessage({ channel, guild, related_message_id }, response);
     
 
 
