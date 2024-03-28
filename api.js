@@ -173,7 +173,7 @@ async function processMissiveRequest(body) {
     }
   } else {
     // Log if no attachment is found in the comment
-    logger.info(`No attachment found in body.comment`);
+    // logger.info(`No attachment found in body.comment`);
   }
 
   // Fetch the context messages for the conversation from the database
@@ -227,8 +227,7 @@ async function processMissiveRequest(body) {
     processedMessage = await processMessageChain(allMessages, {
       username,
       channel: conversationId,
-      guild: "missive",
-      related_message_id: body.comment.id,
+      guild: "missive"
     });
   } catch (error) {
     // Log any errors that occur during message chain processing
