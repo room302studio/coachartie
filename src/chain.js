@@ -117,9 +117,19 @@ module.exports = (async () => {
     let capabilityCallIndex = 0;
     let chainReport = "";
 
+    if(!messages.length) {
+      logger.warn(`${chainId} - Empty Message Chain`);
+      return [];
+    }
+
     do {
       capabilityCallIndex++;
       const lastMessage = messages[messages.length - 1];
+      if (!lastMessage) {
+        logger.error(`${chainId} - Last Message is undefined, ${messages.length} messages in chain`);
+        logger.info(`${chainId} - `);
+        return messages;
+      }
       logger.info(
         `${chainId} - Capability Call ${capabilityCallIndex} started: ${lastMessage.content.slice(
           0,
