@@ -53,7 +53,7 @@ module.exports = (async () => {
    */
   async function processMessageChain(
     messages,
-    { username, channel, guild },
+    { username, channel, guild, related_message_id },
     retryCount = 0,
     capabilityCallCount = 0
   ) {
@@ -78,7 +78,7 @@ module.exports = (async () => {
 
       const processedMessages = await processMessageChainRecursively(
         messages,
-        { username, channel, guild },
+        { username, channel, guild, related_message_id },
         capabilityCallCount,
         chainId
       );
@@ -87,7 +87,7 @@ module.exports = (async () => {
     } catch (error) {
       return await handleMessageChainError(
         messages,
-        { username, channel, guild },
+        { username, channel, guild, related_message_id },
         retryCount,
         capabilityCallCount,
         error,
@@ -110,7 +110,7 @@ module.exports = (async () => {
    */
   async function processMessageChainRecursively(
     messages,
-    { username, channel, guild },
+    { username, channel, guild, related_message_id },
     capabilityCallCount,
     chainId
   ) {
@@ -120,6 +120,15 @@ module.exports = (async () => {
     do {
       capabilityCallIndex++;
       const lastMessage = messages[messages.length - 1];
+      if(!lastMessage) {
+        logger.warn("Last Message is undefined");
+        return messages;
+      }
+      if(!lastMessage.content) {
+        logger.warn("Last Message content is undefined");
+        return messages;
+      }
+
       logger.info(
         `${chainId} - Capability Call ${capabilityCallIndex} started: ${lastMessage.content.slice(
           0,
@@ -131,7 +140,7 @@ module.exports = (async () => {
         const updatedMessages = await processMessage(
           messages,
           lastMessage.content,
-          { username, channel, guild }
+          { username, channel, guild, related_message_id }
         );
         messages = updatedMessages;
 
@@ -198,7 +207,7 @@ module.exports = (async () => {
    */
   async function handleMessageChainError(
     messages,
-    { username, channel, guild },
+    { username, channel, guild, related_message_id },
     retryCount,
     capabilityCallCount,
     error,
@@ -213,7 +222,7 @@ module.exports = (async () => {
       );
       return processMessageChain(
         messages,
-        { username, channel, guild },
+        { username, channel, guild, related_message_id },
         retryCount + 1,
         capabilityCallCount
       );
@@ -371,6 +380,8 @@ module.exports = (async () => {
     return await Promise.all(capabilityPromises);
   }
 
+
+  // TODO: Remove this function to simplify
   async function processCapability(messages, lastMessage, options) {
     const capabilityMatch = lastMessage.match(capabilityRegex);
     if (!capabilityMatch) return messages;
@@ -401,7 +412,7 @@ module.exports = (async () => {
   async function processMessage(
     messages,
     lastMessage,
-    { username = "", channel = "", guild = "" }
+    { username = "", channel = "", guild = "", related_message_id = ""}
   ) {
     const { logInteraction } = await memoryFunctionsPromise;
 
@@ -411,6 +422,7 @@ module.exports = (async () => {
       username,
       channel,
       guild,
+      related_message_id,
     });
 
     if (messages[messages.length - 1].image) {
@@ -424,7 +436,7 @@ module.exports = (async () => {
       .find((m) => m.role === "user");
     const prompt = lastUserMessage.content;
 
-    storeUserMessage({ username, channel, guild }, prompt);
+    const storedMessageId = storeUserMessage({ username, channel, guild }, prompt);
 
     const { temperature, frequency_penalty } = generateAiCompletionParams();
 
@@ -443,7 +455,7 @@ module.exports = (async () => {
       content: aiResponse,
     });
 
-    logInteraction(prompt, aiResponse, { username, channel, guild }, messages);
+    logInteraction(prompt, aiResponse, { username, channel, guild, related_message_id: storedMessageId }, messages);
 
     return messages;
   }
@@ -481,11 +493,6 @@ module.exports = (async () => {
     return countMessageTokens(messages) > TOKEN_LIMIT;
   }
 
-  // module.exports = {
-  //   processMessageChain,
-  //   processMessage,
-  //   processCapability,
-  // };
   return {
     processMessageChain,
     processMessage,

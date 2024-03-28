@@ -147,7 +147,7 @@ class DiscordBot {
    * @param {string} prompt - The prompt to be processed.
    * @param {string} username - The username of the message author.
    */
-  async processMessageChain(prompt, { username, channel, guild }) {
+  async processMessageChain(prompt, { username, channel, guild, related_message_id }) {
     const { processMessageChain } = await require("./chain.js");
     return await processMessageChain(
       [
@@ -156,7 +156,7 @@ class DiscordBot {
           content: prompt,
         },
       ],
-      { username, channel, guild },
+      { username, channel, guild, related_message_id },
     );
   }
 
@@ -181,6 +181,7 @@ class DiscordBot {
     const username = message.author.username;
     // const channel = message.channel.name;
     const guild = message.guild.name;
+    const messageId = message.id;
 
     // we need the channel to be the actual discord channel object
     // so we can send messages to it
@@ -193,6 +194,7 @@ class DiscordBot {
       username,
       channel,
       guild,
+      related_message_id: messageId,
     });
 
     // Check if the last message contains an image- if so send it as a file

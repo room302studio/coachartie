@@ -644,14 +644,15 @@ async function createChatCompletion(
       return res.choices[0].message.content;
     } catch (error) {
       logger.error("Error creating chat completion:", error);
-      return `Error creating chat completion: ${error}`;
+      // return `Error creating chat completion: ${error}`;
+      throw new Error(`Error creating chat completion: ${error}`);
     }
   } else if (completionModel === "claude") {
     // const res = await createClaudeCompletion(messages, config.temperature, config.max_tokens);
     // use config object instead
     const res = await createClaudeCompletion(messages, {
       temperature: config.temperature,
-      max_tokens: +config.max_tokens,
+      max_tokens: +config.max_tokens,      
     });
 
     console.log(res);
