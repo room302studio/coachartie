@@ -18,12 +18,12 @@ const {
 } = require("./src/remember.js");
 const logger = require("./src/logger.js")("helpers");
 
-// const completionLogger = require("./src/logger.js")("completion");
-// make an empty completionLogger
-const completionLogger = {
-  info: () => {},
-  error: () => {},
-};
+const completionLogger = process.env.COMPLETION_LOGGING_DISABLED
+  ? {
+      info: () => {},
+      error: () => {},
+    }
+  : require("./src/logger.js")("completion");
 
 const { supabase } = require("./src/supabaseclient.js");
 const Anthropic = require("@anthropic-ai/sdk");
@@ -131,11 +131,7 @@ function countTokensInMessage(message) {
  * @returns {string} - The message with the mention removed.
  */
 function removeMentionFromMessage(message, mention) {
-  // we want to remove the entire
-  // <@number> section from
-  // <@1086489885269037128> what's up
-  // so we need to use a regex
-  const mentionRegex = new RegExp(mention, "g");
+  const mentionRegex = new RegExp(`<@${mention}>`, "g"); // Modify the regular expression to include the <@> section
   return message.replace(mentionRegex, "").trim();
 }
 
@@ -523,17 +519,8 @@ async function generateAiCompletion(prompt, username, messages, config) {
 
   logger.info(`🤖 Generating AI completion for <${username}> ${prompt}`);
   logger.info(`${messages.length} messages`);
-  // logger.info('username', username)
-  // logger.info('prompt', prompt)
 
   messages = await addPreambleToMessages(username, prompt, messages);
-
-  // logger.info(
-  //   `Sending final messages array for chat completion: ${util.inspect(
-  //     messages,
-  //     { depth: null, colors: true },
-  //   )}`,
-  // );
 
   let completion = null;
 
@@ -556,22 +543,6 @@ async function generateAiCompletion(prompt, username, messages, config) {
     logger.info(`Error creating chat completion ${err}`);
   }
 
-  // console.log('completion')
-  // console.log(completion)
-
-  // logger.info(`${JSON.stringify(completion, null, 2)}`);
-
-  // use responseHasContent to make sure the response is formatted correctly and throw a detailed error if it's not
-  // if (!responseHasContent(completion)) {
-  //   logger.error(
-  //     `Error: Response does not have content. Response: ${JSON.stringify(
-  //       completion,
-  //       null,
-  //       2
-  //     )}`
-  //   );
-  //     }
-
   const aiResponse = completion; //.choices[0].message.content;
 
   logger.info("🔧 AI Response: " + aiResponse);
@@ -579,27 +550,6 @@ async function generateAiCompletion(prompt, username, messages, config) {
   messages.push(aiResponse);
   return { messages, aiResponse };
 }
-
-// often we need to make sure our response is formatted correctly to extract data out of
-// function responseHasContent(response) {
-//   // make sure the response has a choices array
-//   if (!response.choices) {
-//     return false;
-//   }
-
-//   // make sure the choices array has at least one choice
-//   if (!response.choices[0]) {
-//     return false;
-//   }
-
-//   // make sure the first choice has a .content property
-//   if (!response.choices[0].message.content) {
-//     return false;
-//   }
-
-//   return true;
-// }
-
 /**
  * Creates a chat completion using the specified messages, temperature, and presence penalty.
  * @param {Array} messages - The array of messages in the chat.
@@ -609,25 +559,24 @@ async function generateAiCompletion(prompt, username, messages, config) {
  */
 async function createChatCompletion(
   messages,
-  config = {
-    temperature: 0,
-    presence_penalty: 0.01,
-    max_tokens: 2400,
-  }
+  config = {}
 ) {
+  const defaultConfig = {
+    temperature: 0.5,
+    presence_penalty: 0,
+    max_tokens: 800,
+  };
+
+  config = Object.assign({}, defaultConfig, config);
+
   const {
     CHAT_MODEL,
-    MAX_OUTPUT_TOKENS,
     CLAUDE_COMPLETION_MODEL,
     OPENAI_COMPLETION_MODEL,
   } = await getConfigFromSupabase();
   const completionModel = CHAT_MODEL || "openai";
 
-  logger.info(`Config: ${JSON.stringify(config, null, 2)}`);
-  // if the tokens requested is greater than the limit, set it to the limit
-  // if (config.max_tokens > MAX_OUTPUT_TOKENS) {
-  //   config.max_tokens = MAX_OUTPUT_TOKENS;
-  // }
+  logger.info(`createChatCompletion Config: ${JSON.stringify(config, null, 2)}`);
 
   if (completionModel === "openai") {
     logger.info("Using OpenAI for chat completion");
@@ -635,38 +584,30 @@ async function createChatCompletion(
     logger.info(` Model: gpt-4-turbo-preview
     Temperature: ${config.temperature}
     Presence Penalty: ${config.presence_penalty}
-    Max Tokens: ${MAX_OUTPUT_TOKENS}
+    Max Tokens: ${config.max_tokens}
     Message Count: ${messages.length}
     `);
 
     try {
       res = await openai.chat.completions.create({
-        // model: "gpt-4-turbo-preview",
         model: OPENAI_COMPLETION_MODEL,
         temperature: config.temperature,
         presence_penalty: config.presence_penalty,
         // max_tokens,
+        max_tokens: config.max_tokens,
         messages,
       });
       return res.choices[0].message.content;
     } catch (error) {
       logger.error("Error creating chat completion:", error);
-      return `Error creating chat completion: ${error}`;
+      // return `Error creating chat completion: ${error}`;
+      throw new Error(`Error creating chat completion: ${error}`);
     }
   } else if (completionModel === "claude") {
-    // const res = await createClaudeCompletion(messages, config.temperature, config.max_tokens);
-    // use config object instead
     const res = await createClaudeCompletion(messages, {
       temperature: config.temperature,
-      max_tokens: +config.max_tokens,
+      max_tokens: +config.max_tokens,      
     });
-
-    console.log(res);
-
-    // logger.info("---");
-    // logger.info(`res: ${JSON.stringify(res, null, 2)}`);
-    // logger.info("---");
-
     return res.content[0].text;
   }
 }
@@ -682,7 +623,6 @@ async function createClaudeCompletion(messages, config) {
     // model: "claude-3-sonnet-20240229",
     // model: "claude-3-haiku-20240307",
     model: CLAUDE_COMPLETION_MODEL,
-    // max_tokens: MAX_OUTPUT_TOKENS,
     max_tokens: config.max_tokens,
     messages: [{ role: "user", content: xmlMessages }],
   });

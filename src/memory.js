@@ -19,6 +19,7 @@ const preambleLogger = {
   info: (message) => {},
 };
 
+
 const { getPromptsFromSupabase, getConfigFromSupabase } = require("../helpers");
 
 module.exports = (async () => {
@@ -41,11 +42,17 @@ module.exports = (async () => {
   async function logInteraction(
     prompt,
     response,
-    { username = "", channel = "", guild = "" },
+    { username = "", channel = "", guild = "", related_message_id = ""},
     conversationHistory = [],
     isCapability = false,
     capabilityName = "",
   ) {
+
+    // make sure everything exists
+    if(!prompt) return "No prompt provided";
+    if(!response) return "No response provided";
+
+
     const userMemoryCount = chance.integer({ min: 4, max: 24 });
     const memoryMessages = [];
 
@@ -97,16 +104,6 @@ module.exports = (async () => {
         content: isCapability ? PROMPT_CAPABILITY_REMEMBER : PROMPT_REMEMBER,
       },
     ];
-    // make sure none of the completeMessages have an image
-    // completeMessages.forEach((message) => {
-    //   if (message.image) {
-    //     delete message.image;
-    //   }
-    // });
-
-    // preambleLogger.info(
-    //   `📜 Preamble messages ${JSON.stringify(completeMessages)}`,
-    // );
 
     // de-dupe memories
     memories = [...userMemories, ...generalMemories, ...relevantMemories];
@@ -135,24 +132,8 @@ module.exports = (async () => {
       vision.setImageBase64(base64Image);
       const imageDescription = await vision.fetchImageDescription();
       // then we need to add the description to the response
+      capabilityResponse.content = `${capabilityResponse.content}\n\nDescription of user-provided image: ${imageDescription}`;
     }
-
-    // if (conversationHistory.length > 0) {
-    //   // make sure none of the messages in conversation history have an image
-    //   conversationHistory.forEach((message) => {
-    //     if (message.image) {
-    //       delete message.image;
-    //     }
-    //   });
-    // }
-
-    // make sure none of the memory messages have an image
-    // memoryMessages.forEach((message) => {
-    //   if (message.image) {
-    //     delete message.image;
-    //   }
-    // });
-
     const rememberCompletion = await openai.chat.completions.create({
       model: REMEMBER_MODEL,
       // temperature: 1.1,
@@ -185,7 +166,6 @@ module.exports = (async () => {
       ],
     });
 
-    console.log("remember completion", rememberCompletion);
 
     const rememberText = rememberCompletion.choices[0].message.content;
 
@@ -193,7 +173,7 @@ module.exports = (async () => {
     if (rememberText === "✨") return rememberText;
     // if remember text length is 0 or less, we don't wanna store it
     if (rememberText.length <= 0) return rememberText;
-    await storeUserMemory({ username: "capability" }, rememberText);
+    storeUserMemory({ username: "capability", channel, conversation_id: channel, related_message_id  }, rememberText);
 
 
 
@@ -229,6 +209,8 @@ module.exports = (async () => {
 
     // look for createTodo commands
     const createTodoMatches = taskAnalysisText.match(createTodoRegex);
+    const deleteTodoMatches = taskAnalysisText.match(deleteTodoRegex);
+    const updateTodoMatches = taskAnalysisText.match(updateTodoRegex);
 
     const createTodosPromises = createTodoMatches ? createTodoMatches.map((match) => {
       const [name, description] = match.split(",");

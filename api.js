@@ -21,45 +21,6 @@ const BOT_NAME = process.env.BOT_NAME;
 
 app.use(express.json());
 
-
-app.post("/api/message", async (req, res) => {
-  const { processMessageChain } = await require("./src/chain");
-  const message = req.body.message;
-  const username = req.body.username || "API User";
-
-  const processedMessage = await processMessageChain(
-    [
-      {
-        role: "user",
-        content: message,
-      },
-    ],
-    username,
-  );
-
-  res.json({ response: processedMessage });
-});
-
-app.post("/api/message-image", async (req, res) => {
-  const { processMessageChain } = await require("./src/chain");
-  const message = req.body.message;
-  const image = req.body.image;
-  const username = req.body.username || "API User";
-
-  const processedMessage = await processMessageChain(
-    [
-      {
-        role: "user",
-        content: message,
-        image: image,
-      },
-    ],
-    { username },
-  );
-
-  res.json({ response: processedMessage });
-});
-
 const server = app.listen(port, "0.0.0.0", () => {
   logger.info(`Server is running on port ${port}`);
 });
@@ -71,31 +32,6 @@ server.on("error", (err) => {
     server.listen(port);
   }
 });
-
-/* These are endpoints to interact with Missive- we will have one endpoint that simply "receives" information, parses it and adds it to memory 
-
-Then we will also have a second endpoint that does all of the above, and then gets the message ID and uses POST to send the response to the location the webhook came from */
-
-// app.post("/api/missive-read", async (req, res) => {
-//   const username = req.body.username || "API User";
-
-//   const body = req.body;
-//   const webhookDescription = `${body?.rule?.description}`;
-
-//   await processMessageChain(
-//     [
-//       {
-//         role: "user",
-//         content: `New data received from webhook: ${webhookDescription} \n ${req.body.message}`,
-//       },
-//     ],
-//     username
-//   );
-
-//   // res.json({ response: processedMessage });
-//   // just give a 200 response
-//   res.status(200).end();
-// });
 
 async function listMessages(emailMessageId) {
   let url = `${apiFront}/conversations/${emailMessageId}/messages`;
@@ -113,14 +49,12 @@ async function listMessages(emailMessageId) {
   const response = await fetch(url, options);
   const data = await response.json();
 
-  logger.info(`Data: ${JSON.stringify(data)}`);
-  /* 
-  {"messages":[{"id":"72f9162e-22cd-4f11-ae91-0b2223f688b1","subject":"[FYI] HubSpot is launching a new pricing model","preview":"Please read to learn what this means for your account as an existing customer.","type":"email","delivered_at":1709661736,"updated_at":1709661751,"created_at":1709661751,"email_message_id":"<1709661726112.203e1867-4f38-4c3e-b30f-18a4cca232e1@bf1.hubspot.com>","in_reply_to":[],"references":[],"from_field":{"name":"The HubSpot Team","address":"pricing@hubspot.com"},"to_fields":[{"name":null,"address":"ejfox@room302.studio"}],"cc_fields":[],"bcc_fields":[],"reply_to_fields":[{"name":null,"address":"pricing@hubspot.com"}],"attachments":[],"author":null}]}
-  */
+  // logger.info(`Data: ${JSON.stringify(data)}`);
   return data.messages;
 }
+
 function processWebhookPayload(payload) {
-  const userMessage = payload.userMessage;
+  const userMessage = payload.comment.body
   const userName = payload.userName;
   const userEmail = payload.userEmail;
   const conversationId = payload.conversationId;
@@ -160,6 +94,7 @@ function processWebhookPayload(payload) {
 
   return simplifiedPayload;
 }
+
 async function processMissiveRequest(body) {
   // Require the processMessageChain function from the chain module
   const { processMessageChain } = await require("./src/chain");
@@ -198,9 +133,11 @@ async function processMissiveRequest(body) {
         // Fetch the attachment description using the vision API
         const attachmentDescription = await vision.fetchImageDescription();
 
+
+        // Use the Missive conversationId as the channel
         // Store the attachment description as a memory in the database
         await storeUserMemory(
-          { username, channel: conversationId, guild: "missive" },
+          { username, channel: conversationId, guild: "missive", related_message_id: body.comment.id },
           `Attachment ${body.comment.attachment.filename}: ${attachmentDescription}`,
           "attachment",
           resourceId
@@ -236,7 +173,7 @@ async function processMissiveRequest(body) {
     }
   } else {
     // Log if no attachment is found in the comment
-    logger.info(`No attachment found in body.comment`);
+    // logger.info(`No attachment found in body.comment`);
   }
 
   // Fetch the context messages for the conversation from the database
@@ -290,7 +227,7 @@ async function processMissiveRequest(body) {
     processedMessage = await processMessageChain(allMessages, {
       username,
       channel: conversationId,
-      guild: "missive",
+      guild: "missive"
     });
   } catch (error) {
     // Log any errors that occur during message chain processing
@@ -366,10 +303,15 @@ app.post("/api/missive-reply", async (req, res) => {
     });
 });
 
-app.post("/api/webhook-reply", async (req, res) => {
+app.post("/api/webhook-prompt", async (req, res) => {
+  const { getPromptsFromSupabase } = require("./helpers.js");
+  const { processMessageChain } = await require('./src/chain.js');
+
   // this is will be an authorized call from pgcron to send a request to the robot as if a user sent, but specifiying a prompt from the prompts table to use 
 
   const passphrase = process.env.WEBHOOK_PASSPHRASE; // Assuming PASSPHRASE is the environment variable name
+
+  logger.info(JSON.stringify(req.body));
 
   // use basicauth to make sure passphrase in body matches passphrase in env
   let payloadPassword = req.body.password;
@@ -389,8 +331,14 @@ app.post("/api/webhook-reply", async (req, res) => {
   // get the prompt from the prompt table
   const allPrompts = await getPromptsFromSupabase();
 
+  logger.info(`All prompts: ${JSON.stringify(allPrompts)}`);
+
   // look for the prompt slug in allPrompts
-  let prompt = allPrompts.find((p) => p.slug === promptSlug);
+  // let prompt = allPrompts.find((p) => p.slug === promptSlug);
+
+  let prompt = allPrompts[promptSlug];
+
+  logger.info(`Prompt: ${JSON.stringify(prompt)}`);
 
   // if prompt is null / undefined make it an empty string
   if (!prompt) {
@@ -402,10 +350,11 @@ app.post("/api/webhook-reply", async (req, res) => {
       {
         role: "user",
         // content: message,
-        content: `${prompt.prompt} \n ${message}`
+        content: `${prompt.prompt_text} \n ${message}`
       },
     ],
-    username,
+    {username},
+
   );
 
   logger.info(`Processed message: ${JSON.stringify(processedMessage)}`);
