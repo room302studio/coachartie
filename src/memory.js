@@ -179,7 +179,7 @@ module.exports = (async () => {
     // if remember text length is 0 or less, we don't wanna store it
     if (rememberText.length <= 0) return rememberText;
     storeUserMemory({ 
-      username: "capability", 
+      username,
       channel, 
       conversation_id: channel, 
       related_message_id  }, 
