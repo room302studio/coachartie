@@ -51,6 +51,11 @@ module.exports = (async () => {
     // make sure everything exists
     if(!prompt) return "No prompt provided";
     if(!response) return "No response provided";
+    if(!username) logger.info(`logInteraction: No username provided`);
+    if(!channel) logger.info(`logInteraction: No channel provided`);
+    if(!guild) logger.info(`logInteraction: No guild provided`);
+    if(!related_message_id) logger.info(`logInteraction: No related_message_id provided`);
+    
 
 
     const userMemoryCount = chance.integer({ min: 4, max: 24 });
@@ -173,7 +178,12 @@ module.exports = (async () => {
     if (rememberText === "✨") return rememberText;
     // if remember text length is 0 or less, we don't wanna store it
     if (rememberText.length <= 0) return rememberText;
-    storeUserMemory({ username: "capability", channel, conversation_id: channel, related_message_id  }, rememberText);
+    storeUserMemory({ 
+      username: "capability", 
+      channel, 
+      conversation_id: channel, 
+      related_message_id  }, 
+      rememberText);
 
 
 

@@ -440,10 +440,12 @@ module.exports = (async () => {
       .find((m) => m.role === "user");
     const prompt = lastUserMessage.content;
 
-    const storedMessageId = storeUserMessage(
+    const storedMessageId = await storeUserMessage(
       { username, channel, guild },
       prompt
     );
+
+    logger.info(`Stored Message ID: ${storedMessageId}`);
 
     const { temperature, frequency_penalty } = generateAiCompletionParams();
 

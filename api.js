@@ -137,7 +137,7 @@ async function processMissiveRequest(body) {
         // Use the Missive conversationId as the channel
         // Store the attachment description as a memory in the database
         await storeUserMemory(
-          { username, channel: conversationId, guild: "missive", related_message_id: body.comment.id },
+          { username, channel: conversationId, guild: "missive"  },
           `Attachment ${body.comment.attachment.filename}: ${attachmentDescription}`,
           "attachment",
           resourceId
