@@ -3,7 +3,7 @@ const cheerio = require("cheerio");
 const dotenv = require("dotenv");
 dotenv.config();
 const { webPageToText, webpageToHTML } = require("./web.js"); // Adjust the path as necessary
-const { destructureArgs, createChatCompletion } = require("../helpers");
+const { destructureArgs, createChatCompletion, getPromptsFromSupabase } = require("../helpers");
 const { storeUserMemory, hasMemoryOfResource, deleteMemoriesOfResource, getResourceMemories } = require("../src/remember");
 const logger = require("../src/logger.js")("ingest-capability");
 const { convert } = require("html-to-text");
@@ -36,6 +36,8 @@ async function handleCapabilityMethod(method, args) {
 async function deepDocumentIngest(url) {
   // For testing:
   // node capability-player.js --runCapability="ingest:deepDocumentIngest(https://docs.pdw.co/tachio-overview)"
+
+  const { PROMPT_DEEP_INGEST } = await getPromptsFromSupabase();
 
   // Generate a hash for the URL to use as a cache identifier
   const urlHash = crypto.createHash("md5").update(url).digest("hex");
@@ -90,7 +92,7 @@ async function deepDocumentIngest(url) {
         content: `Can you please write an extremely long and thorough reiteration of the following document: 
 ${JSON.stringify(document, null, 2)}
 
-When analyzing this document, your goal is to distill its content into concise, standalone facts, as many as you possibly can. Each fact should encapsulate a key piece of information, complete in itself, and easily understandable without needing further context. Pay special attention to precise details, especially if they involve code or search queries - accuracy in phrasing is crucial here. It's important to include relevant URLs, specific search queries, project IDs that are associated with these facts. Respond ONLY with the facts, do not greet me or confirm the request. Keep your response above 1000 words and below 5000 words, please.
+${PROMPT_DEEP_INGEST}
 
 Make separate sections of facts for each section of the document, using \`\`\`---\`\`\` between each section. Respond immediately, beginning with the first section, no introductions or confirmation.`,
       },
