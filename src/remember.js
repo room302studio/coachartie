@@ -13,6 +13,7 @@ dotenv.config();
 
 const { MEMORIES_TABLE_NAME, MESSAGES_TABLE_NAME } = require("../config");
 const { supabase } = require("./supabaseclient.js");
+const { getConfigFromSupabase } = require("../helpers.js");
 
 /**
  * Retrieves user memories from the database.
@@ -359,6 +360,29 @@ async function storeUserMessage({ username, channel, guild, conversation_id }, v
   return data[0].id
 }
 
+// now, a similar function to store robot response messages
+async function storeRobotMessage({ channel, guild, conversation_id }, value) {
+  const { supabase } = require("./supabaseclient.js");
+  const { NAME } = await getConfigFromSupabase();
+  const {data, error } = await supabase
+    // .from("messages")
+    .from(MESSAGES_TABLE_NAME)
+    .insert({
+      user_id: NAME,
+      channel_id: channel,
+      guild_id: guild,
+      conversation_id: conversation_id,
+      value,
+    })
+    .select()
+
+  if (error) {
+    logger.info(`Error storing robot message: ${error.message}`);
+  }
+
+  return data[0].id
+}
+
 /**
  * Retrieves the message history of a user.
  * @param {string} userId - The ID of the user.
@@ -610,5 +634,6 @@ module.exports = {
   hasRecentMemoryOfResource,
   getMemoriesBetweenDates,
   getMemoriesByString,
-  deleteMemoriesOfResource
+  deleteMemoriesOfResource,
+  storeRobotMessage
 };
