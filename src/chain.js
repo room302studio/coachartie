@@ -78,7 +78,7 @@ module.exports = (async () => {
 
       const processedMessages = await processMessageChainRecursively(
         messages,
-        { username, channel, guild },
+        { username, channel, guild, related_message_id },
         capabilityCallCount,
         chainId
       );
@@ -380,6 +380,8 @@ module.exports = (async () => {
     return await Promise.all(capabilityPromises);
   }
 
+
+  // TODO: Remove this function to simplify
   async function processCapability(messages, lastMessage, options) {
     const capabilityMatch = lastMessage.match(capabilityRegex);
     if (!capabilityMatch) return messages;
@@ -434,7 +436,7 @@ module.exports = (async () => {
       .find((m) => m.role === "user");
     const prompt = lastUserMessage.content;
 
-    storeUserMessage({ username, channel, guild }, prompt);
+    const storedMessageId = storeUserMessage({ username, channel, guild }, prompt);
 
     const { temperature, frequency_penalty } = generateAiCompletionParams();
 
@@ -453,7 +455,7 @@ module.exports = (async () => {
       content: aiResponse,
     });
 
-    logInteraction(prompt, aiResponse, { username, channel, guild, related_message_id }, messages);
+    logInteraction(prompt, aiResponse, { username, channel, guild, related_message_id: storedMessageId }, messages);
 
     return messages;
   }
