@@ -42,11 +42,17 @@ module.exports = (async () => {
   async function logInteraction(
     prompt,
     response,
-    { username = "", channel = "", guild = "" },
+    { username = "", channel = "", guild = "", related_message_id = ""},
     conversationHistory = [],
     isCapability = false,
     capabilityName = "",
   ) {
+
+    // make sure everything exists
+    if(!prompt) return "No prompt provided";
+    if(!response) return "No response provided";
+
+
     const userMemoryCount = chance.integer({ min: 4, max: 24 });
     const memoryMessages = [];
 
@@ -187,15 +193,13 @@ module.exports = (async () => {
     });
 
 
-    console.log('remember completion', rememberCompletion);
-
     const rememberText = rememberCompletion.choices[0].message.content;
 
     // if the remember text is ✨ AKA empty, we don't wanna store it
     if (rememberText === "✨") return rememberText;
     // if remember text length is 0 or less, we don't wanna store it
     if (rememberText.length <= 0) return rememberText;
-    await storeUserMemory({ username: "capability", conversation_id: channel }, rememberText);
+    await storeUserMemory({ username: "capability", conversation_id: channel, related_message_id  }, rememberText);
 
 
 

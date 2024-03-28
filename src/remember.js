@@ -113,7 +113,7 @@ async function getAllMemories(limit = 5) {
  * @returns {Promise<void>}
  */
 async function storeUserMemory(
-  { username, channel, guild },
+  { username, channel, guild, related_message_id },
   value,
   memoryType = "user",
   resourceId = null,
@@ -131,6 +131,22 @@ async function storeUserMemory(
   // if the value is not a string, we need to error out
   if (typeof value !== "string") {
     return logger.info("value provided to storeUserMemory is not a string");
+  }
+
+  if(!channel) {
+    return logger.info("No channel provided to storeUserMemory");
+  }
+
+  if(!guild) {
+    return logger.info("No guild provided to storeUserMemory");
+  }
+
+  if(!related_message_id) {
+    return logger.info("No related_message_id provided to storeUserMemory");
+  }
+
+  if(!memoryType) {
+    return logger.info("No memoryType provided to storeUserMemory");
   }
 
   // TODO: Check .env for any non-openAI embedding models
@@ -185,6 +201,7 @@ async function storeUserMemory(
       memory_type: memoryType,
       resource_id: resourceId,
       conversation_id: channel,
+      related_message_id: related_message_id || null,
     });
 
   logger.info(
@@ -493,7 +510,7 @@ async function getRelevantMemories(queryString, limit = 5) {
   cleanQueryString = cleanQueryString.replace(/\./, "").trim();
   cleanQueryString = cleanQueryString.replace(/,/, "").trim();
 
-  logger.info("Looking for memories relevant to" + cleanQueryString);
+  logger.info("Looking for memories relevant to " + cleanQueryString);
   // turn the cleanQueryString into an embedding
   if (!cleanQueryString) {
     return [];
