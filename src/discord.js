@@ -187,7 +187,7 @@ class DiscordBot {
     // so we can send messages to it
     const isDM = !message.guild;
     const channel = isDM
-      ? message.channel
+      ? message.channel.name
       : this.fetchChannelById(message.channel.id);
 
     let messages = await this.processMessageChain(processedPrompt, {
