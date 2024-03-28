@@ -102,8 +102,6 @@ async function getAllMemories(limit = 5) {
   return data;
 }
 
-// TODO: Create new get memories that uses timestamp for cutoff
-
 /**
  * Stores a memory in the database
  * @param {string} userId
@@ -113,24 +111,40 @@ async function getAllMemories(limit = 5) {
  * @returns {Promise<void>}
  */
 async function storeUserMemory(
-  { username, channel, guild },
+  { username, channel, guild, related_message_id },
   value,
   memoryType = "user",
   resourceId = null,
 ) {
   // first we do some checks to make sure we have the right types of data
   if (!username) {
-    return logger.info("No username provided to storeUserMemory");
+    logger.info("No username provided to storeUserMemory");
   }
 
   // if the user id is not a string, we need to error out
   if (typeof username !== "string") {
-    return logger.info("username provided to storeUserMemory is not a string");
+    logger.info("username provided to storeUserMemory is not a string");
   }
 
   // if the value is not a string, we need to error out
   if (typeof value !== "string") {
-    return logger.info("value provided to storeUserMemory is not a string");
+    logger.info("value provided to storeUserMemory is not a string");
+  }
+
+  if(!channel) {
+    logger.info("No channel provided to storeUserMemory");
+  }
+
+  if(!guild) {
+    logger.info("No guild provided to storeUserMemory");
+  }
+
+  if(!related_message_id) {
+    logger.info("No related_message_id provided to storeUserMemory");
+  }
+
+  if(!memoryType) {
+    logger.info("No memoryType provided to storeUserMemory");
   }
 
   // TODO: Check .env for any non-openAI embedding models
@@ -172,6 +186,11 @@ async function storeUserMemory(
     embedding = null; // Ensure embedding is null if there was an error
   }
 
+  let validatedRelatedMessageId = null;
+  if (related_message_id && !isNaN(parseInt(related_message_id))) {
+    validatedRelatedMessageId = parseInt(related_message_id);
+  }
+
   const { supabase } = require("./supabaseclient.js");
   const { data, error } = await supabase
     // .from("storage")
@@ -184,17 +203,22 @@ async function storeUserMemory(
       // embedding3: embedding3 || null,
       memory_type: memoryType,
       resource_id: resourceId,
+      conversation_id: channel,
+      related_message_id: validatedRelatedMessageId,
     });
 
-  logger.info(
-    `Stored memory for ${username}: ${value} in ${memoryType} memory -- ${resourceId}`,
-    data,
-  );
+  // logger.info(
+  //   `Stored memory for ${username}: ${value} in ${memoryType} memory -- ${resourceId}`,
+  //   data,
+  // );
+
+  logger.info(`Stored memory for ${username}: ${value} in ${memoryType} memory ${JSON.stringify(data)}`);
 
   if (error) {
     logger.info(`Error storing user memory: ${error.message}`);
   }
 }
+
 
 /**
  * Retrieve memories associated with a specific file ID
@@ -285,6 +309,27 @@ async function hasRecentMemoryOfResource(resourceId, recencyHours = 24) {
 }
 
 /**
+ * Deletes memories associated with a specific resource ID.
+ * @param {string} resourceId - The ID of the resource.
+ * @returns {Promise<string>} - A promise that resolves to a message indicating the number of memories deleted.
+ * @throws {Error} - If there is an error deleting the memories.
+ **/
+async function deleteMemoriesOfResource(resourceId) {
+  const { supabase } = require("./supabaseclient.js");
+  const { data, error } = await supabase
+    .from(MEMORIES_TABLE_NAME)
+    .delete()
+    .eq("resource_id", resourceId);
+
+  if (error) {
+    logger.info(`Error deleting memories of resource: ${error.message}`);
+    return `Error deleting memories of resource: ${error.message}`;
+  }
+
+  return `Deleted ${data.length} memories of resource ${resourceId}`;
+}
+
+/**
  * Stores a user message in the database.
  *
  * @param {string} username - The ID of the user who sent the message.
@@ -293,23 +338,25 @@ async function hasRecentMemoryOfResource(resourceId, recencyHours = 24) {
  * @param {string} guildId - The ID of the guild where the message was sent.
  * @returns {Promise<object>} - A promise that resolves to the stored message data.
  */
-async function storeUserMessage({ username, channel, guild }, value) {
+async function storeUserMessage({ username, channel, guild, conversation_id }, value) {
   const { supabase } = require("./supabaseclient.js");
-  const { data, error } = await supabase
+  const {data, error } = await supabase
     // .from("messages")
     .from(MESSAGES_TABLE_NAME)
     .insert({
       user_id: username,
       channel_id: channel,
       guild_id: guild,
+      conversation_id: conversation_id,
       value,
-    });
+    })
+    .select()
 
   if (error) {
     logger.info(`Error storing user message: ${error.message}`);
   }
 
-  return data;
+  return data[0].id
 }
 
 /**
@@ -492,7 +539,7 @@ async function getRelevantMemories(queryString, limit = 5) {
   cleanQueryString = cleanQueryString.replace(/\./, "").trim();
   cleanQueryString = cleanQueryString.replace(/,/, "").trim();
 
-  logger.info("Looking for memories relevant to" + cleanQueryString);
+  logger.info("Looking for memories relevant to " + cleanQueryString);
   // turn the cleanQueryString into an embedding
   if (!cleanQueryString) {
     return [];
@@ -563,4 +610,5 @@ module.exports = {
   hasRecentMemoryOfResource,
   getMemoriesBetweenDates,
   getMemoriesByString,
+  deleteMemoriesOfResource
 };
