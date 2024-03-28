@@ -195,7 +195,7 @@ module.exports = (async () => {
     if (rememberText === "✨") return rememberText;
     // if remember text length is 0 or less, we don't wanna store it
     if (rememberText.length <= 0) return rememberText;
-    await storeUserMemory({ username: "capability" }, rememberText);
+    await storeUserMemory({ username: "capability", conversation_id: channel }, rememberText);
 
 
 

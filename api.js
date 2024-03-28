@@ -198,6 +198,8 @@ async function processMissiveRequest(body) {
         // Fetch the attachment description using the vision API
         const attachmentDescription = await vision.fetchImageDescription();
 
+
+        // Use the Missive conversationId as the channel
         // Store the attachment description as a memory in the database
         await storeUserMemory(
           { username, channel: conversationId, guild: "missive" },

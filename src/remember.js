@@ -184,6 +184,7 @@ async function storeUserMemory(
       // embedding3: embedding3 || null,
       memory_type: memoryType,
       resource_id: resourceId,
+      conversation_id: channel,
     });
 
   logger.info(
