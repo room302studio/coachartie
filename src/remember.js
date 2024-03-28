@@ -102,8 +102,6 @@ async function getAllMemories(limit = 5) {
   return data;
 }
 
-// TODO: Create new get memories that uses timestamp for cutoff
-
 /**
  * Stores a memory in the database
  * @param {string} userId
@@ -221,6 +219,7 @@ async function storeUserMemory(
   }
 }
 
+
 /**
  * Retrieve memories associated with a specific file ID
  * @param {string} resourceId - The ID of the file
@@ -307,6 +306,27 @@ async function hasRecentMemoryOfResource(resourceId, recencyHours = 24) {
     60;
 
   return hoursSinceLastMemory <= recencyHours;
+}
+
+/**
+ * Deletes memories associated with a specific resource ID.
+ * @param {string} resourceId - The ID of the resource.
+ * @returns {Promise<string>} - A promise that resolves to a message indicating the number of memories deleted.
+ * @throws {Error} - If there is an error deleting the memories.
+ **/
+async function deleteMemoriesOfResource(resourceId) {
+  const { supabase } = require("./supabaseclient.js");
+  const { data, error } = await supabase
+    .from(MEMORIES_TABLE_NAME)
+    .delete()
+    .eq("resource_id", resourceId);
+
+  if (error) {
+    logger.info(`Error deleting memories of resource: ${error.message}`);
+    return `Error deleting memories of resource: ${error.message}`;
+  }
+
+  return `Deleted ${data.length} memories of resource ${resourceId}`;
 }
 
 /**
@@ -590,4 +610,5 @@ module.exports = {
   hasRecentMemoryOfResource,
   getMemoriesBetweenDates,
   getMemoriesByString,
+  deleteMemoriesOfResource
 };
