@@ -493,9 +493,11 @@ async function generateMetaSummary({
     },
   ]);
 
+
+
   // return metaSummaryCompletion;
   // extract the response text from the openai chat completion
-  const responseText = metaSummarycompletion.choices[0].message.content;
+  const responseText = metaSummaryCompletion.choices[0].message.content;
   return responseText;
 }
 
