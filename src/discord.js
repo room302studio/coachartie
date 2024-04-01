@@ -37,7 +37,6 @@ class DiscordBot {
       logger.info(`Supabase config: ${JSON.stringify(config)}`);
     });
 
-
     client = this.bot;
   }
 
@@ -147,7 +146,10 @@ class DiscordBot {
    * @param {string} prompt - The prompt to be processed.
    * @param {string} username - The username of the message author.
    */
-  async processMessageChain(prompt, { username, channel, guild, related_message_id }) {
+  async processMessageChain(
+    prompt,
+    { username, channel, guild, related_message_id }
+  ) {
     const { processMessageChain } = await require("./chain.js");
     return await processMessageChain(
       [
@@ -156,7 +158,7 @@ class DiscordBot {
           content: prompt,
         },
       ],
-      { username, channel, guild, related_message_id },
+      { username, channel, guild, related_message_id }
     );
   }
 
@@ -190,6 +192,14 @@ class DiscordBot {
       ? message.channel.name
       : this.fetchChannelById(message.channel.id).name;
 
+    const channelName = isDM
+      ? `DM-${message.author.id}`
+      : message.channel.id;
+
+    const channelObj = this.fetchChannelById(channelName);
+
+    // TODO: add channelName- make it easier to understand what the var is and how it is meant to be used- some places expect an object, like splitAndSendMessage, and other things expect a name string, like the memory saving
+
     let messages = await this.processMessageChain(processedPrompt, {
       username,
       channel,
@@ -215,11 +225,11 @@ class DiscordBot {
       //   }]
       // });
       // stop typing interval
-      await this.sendAttachment(lastMessage.image, channel);
+      await this.sendAttachment(lastMessage.image, channelObj);
     }
 
     if (lastMessage.content) {
-      this.sendMessage(lastMessage.content, channel);
+      this.sendMessage(lastMessage.content, channelObj);
     }
 
     clearInterval(typing);
