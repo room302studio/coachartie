@@ -14,6 +14,7 @@ const logger = require("../src/logger")('capability-supabasetodo')
  */
 async function createTodo(name, description = "") {
   const { supabase } = require("../src/supabaseclient");
+  if(!name) throw new Error("A name is required to create a todo");
   const { data, error } = await supabase.from("todos").insert([
     {
       name,
