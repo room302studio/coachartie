@@ -430,7 +430,7 @@ async function generateProjectSummary({
   });
 
   const completion = await createChatCompletion(messages);
-  const aiResponse = completion//.choices[0].message.content;
+  const aiResponse = completion; //.choices[0].message.content;
   return aiResponse;
 }
 
@@ -492,8 +492,6 @@ async function generateMetaSummary({
       content: `Can you please generate a meta-summary of this week? Be as detailed as possible.`,
     },
   ]);
-
-
 
   // return metaSummaryCompletion;
   // extract the response text from the openai chat completion
