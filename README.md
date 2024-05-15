@@ -20,6 +20,8 @@ Coach Artie is an advanced AI assistant that facilitates collaboration, helps an
 
 **Purpose:** Processes a message in the same way as if it were a message from Discord.
 
+
+
 **Request Body:**
 - `message` (String): The text of the message to be processed.
 - `username` (String, optional): Identifier for the user sending the message. Defaults to "API User" if not provided.

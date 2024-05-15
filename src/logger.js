@@ -2,6 +2,8 @@ const winston = require("winston");
 require('winston-syslog');
 const os = require('os');
 require("dotenv").config();
+const { supabase } = require('./supabaseclient'); // Importing the existing Supabase client
+
 
 module.exports = function (serviceName) {
   let loggers = [];
@@ -15,6 +17,17 @@ module.exports = function (serviceName) {
       return message.substring(0, MAX_MESSAGE_SIZE) + '... [Message truncated]';
     }
     return message;
+  };
+
+  // Function to send log to Supabase
+  const sendLogToSupabase = async (level, message) => {
+    const response = await supabase
+      .from('logs')
+      .insert([{ level, message, timestamp: new Date().toISOString(), service: serviceName }]);
+    
+    if (response.error) {
+      console.error('Error sending log to Supabase:', response.error);
+    }
   };
 
   loggers.push(new winston.transports.Console({
@@ -94,9 +107,18 @@ module.exports = function (serviceName) {
   }
 
   return {
-    log: (message) => winstonLogger.log('info', truncateMessage(message)),
+    log: (message) => {
+      const truncatedMessage = truncateMessage(message);
+      winstonLogger.log('info', truncatedMessage);
+      sendLogToSupabase('info', truncatedMessage);
+    },
     info: (message) => winstonLogger.info(truncateMessage(message)),
     warn: (message) => winstonLogger.warn(truncateMessage(message)),
-    error: (message) => winstonLogger.error("🚨 " + truncateMessage(message)),
+    // error: (message) => winstonLogger.error("🚨 " + truncateMessage(message)),
+    error: (message) => {
+      const truncatedMessage = truncateMessage(message);
+      winstonLogger.error("🚨 " + truncatedMessage);
+      sendLogToSupabase('error', truncatedMessage);
+    },
   };
 };
