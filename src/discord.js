@@ -148,7 +148,7 @@ class DiscordBot {
    */
   async processMessageChain(
     prompt,
-    { username, channel, guild, related_message_id }
+    { username, channel, guild, related_message_id },
   ) {
     const { processMessageChain } = await require("./chain.js");
     return await processMessageChain(
@@ -158,7 +158,7 @@ class DiscordBot {
           content: prompt,
         },
       ],
-      { username, channel, guild, related_message_id }
+      { username, channel, guild, related_message_id },
     );
   }
 
@@ -192,9 +192,7 @@ class DiscordBot {
       ? message.channel.name
       : this.fetchChannelById(message.channel.id).name;
 
-    const channelName = isDM
-      ? `DM-${message.author.id}`
-      : message.channel.id;
+    const channelName = isDM ? `DM-${message.author.id}` : message.channel.id;
 
     const channelObj = this.fetchChannelById(channelName);
 

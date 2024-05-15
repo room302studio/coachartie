@@ -38,8 +38,6 @@ async function createJob(schedule, command) {
   return `Job created: ${data}`;
 }
 
-
-
 // we also need a function that makes it REALLY easy to make a webhook
 /**
  * Creates a webhook and sends a POST request to the specified URL with the provided body and headers.
@@ -58,7 +56,7 @@ async function createWebhook(schedule, url, body, headers, name) {
       "Content-Type": "application/json",
     };
   }
-  
+
   // if there is no body we need to return an error about it
   if (!body) {
     return `Error: No body provided for the webhook`;
@@ -66,7 +64,7 @@ async function createWebhook(schedule, url, body, headers, name) {
 
   // load webhook-authentication key from environment
   const webhookAuthentication = process.env.OUTGOING_WEBHOOK_AUTHENTICATION;
-  if!webhookAuthentication) {
+  if (!webhookAuthentication) {
     headers["Authorization"] = `Bearer ${webhookAuthentication}`;
   }
 
@@ -86,24 +84,26 @@ async function createWebhook(schedule, url, body, headers, name) {
   }
 
   return `Webhook created: ${data}`;
+}
+
+// lets also make another function to list the current webhook jobs
+
+async function listWebhookJobs() {
+  const { data, error } = await supabase.from("job").select("*").limit(100);
+
+  if (error) {
+    console.error("Error listing webhook jobs with pg_cron:", error);
+    throw error;
   }
 
-  // lets also make another function to list the current webhook jobs
+  // no jobs without `net.http_post(`
+  const filteredJobs = data.filter((job) =>
+    job.command.includes("net.http_post("),
+  );
 
-  async function listWebhookJobs() {
-    const { data, error } = await supabase.from("job").select("*").limit(100);
-
-    if (error) {
-      console.error("Error listing webhook jobs with pg_cron:", error);
-      throw error;
-    }
-
-    // no jobs without `net.http_post(`
-    const filteredJobs = data.filter((job) => job.command.includes("net.http_post("));
-
-    logger.info("Webhook Jobs:", data);
-    return JSON.stringify(data, null, 2);
-  }
+  logger.info("Webhook Jobs:", data);
+  return JSON.stringify(data, null, 2);
+}
 
 /**
  * Lists the cron jobs currently scheduled with pg_cron in Supabase.
@@ -134,7 +134,9 @@ async function listJobs() {
  */
 async function deleteJob(name) {
   try {
-    const { data, error } = await supabase.rpc("cron.delete", { jobname: name });
+    const { data, error } = await supabase.rpc("cron.delete", {
+      jobname: name,
+    });
 
     if (error) {
       console.error("Error deleting job with pg_cron:", error.message);
@@ -220,7 +222,13 @@ module.exports = {
     } else if (method === "updateJob") {
       return await updateJob(arg1, arg2, arg3);
     } else if (method === "createWebhook") {
-      return await createWebhook(processedArgs[0], processedArgs[1], processedArgs[2], processedArgs[3], processedArgs[4]);
+      return await createWebhook(
+        processedArgs[0],
+        processedArgs[1],
+        processedArgs[2],
+        processedArgs[3],
+        processedArgs[4],
+      );
     } else if (method === "listWebhookJobs") {
       return await listWebhookJobs();
     }

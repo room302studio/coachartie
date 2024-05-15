@@ -54,7 +54,7 @@ async function listMessages(emailMessageId) {
 }
 
 function processWebhookPayload(payload) {
-  const userMessage = payload.comment.body
+  const userMessage = payload.comment.body;
   const userName = payload.userName;
   const userEmail = payload.userEmail;
   const conversationId = payload.conversationId;
@@ -73,7 +73,7 @@ function processWebhookPayload(payload) {
     hasEmailMessages,
     webhookTimestamp,
     ruleName,
-    ruleType
+    ruleType,
   };
 
   if (hasEmailMessages) {
@@ -133,14 +133,13 @@ async function processMissiveRequest(body) {
         // Fetch the attachment description using the vision API
         const attachmentDescription = await vision.fetchImageDescription();
 
-
         // Use the Missive conversationId as the channel
         // Store the attachment description as a memory in the database
         await storeUserMemory(
-          { username, channel: conversationId, guild: "missive"  },
+          { username, channel: conversationId, guild: "missive" },
           `Attachment ${body.comment.attachment.filename}: ${attachmentDescription}`,
           "attachment",
-          resourceId
+          resourceId,
         );
 
         // Add the attachment description to the formatted messages array
@@ -164,7 +163,7 @@ async function processMissiveRequest(body) {
               role: "user",
               content: m.value,
             };
-          })
+          }),
         );
       } catch (error) {
         // Log any errors that occur during fetching resource memories
@@ -187,7 +186,7 @@ async function processMissiveRequest(body) {
         content: `#### Contextual message in conversation:\n${m.content}`,
       };
       return obj;
-    })
+    }),
   );
 
   // Add the webhook description to the formatted messages array as a system message
@@ -200,7 +199,7 @@ async function processMissiveRequest(body) {
   formattedMessages.push({
     role: "user",
     content: `During this conversation, I might reference some of this information: ${jsonToMarkdownList(
-      body
+      body,
     )}`,
   });
 
@@ -227,7 +226,7 @@ async function processMissiveRequest(body) {
     processedMessage = await processMessageChain(allMessages, {
       username,
       channel: conversationId,
-      guild: "missive"
+      guild: "missive",
     });
   } catch (error) {
     // Log any errors that occur during message chain processing
@@ -305,9 +304,9 @@ app.post("/api/missive-reply", async (req, res) => {
 
 app.post("/api/webhook-prompt", async (req, res) => {
   const { getPromptsFromSupabase } = require("./helpers.js");
-  const { processMessageChain } = await require('./src/chain.js');
+  const { processMessageChain } = await require("./src/chain.js");
 
-  // this is will be an authorized call from pgcron to send a request to the robot as if a user sent, but specifiying a prompt from the prompts table to use 
+  // this is will be an authorized call from pgcron to send a request to the robot as if a user sent, but specifiying a prompt from the prompts table to use
 
   const passphrase = process.env.WEBHOOK_PASSPHRASE; // Assuming PASSPHRASE is the environment variable name
 
@@ -350,16 +349,14 @@ app.post("/api/webhook-prompt", async (req, res) => {
       {
         role: "user",
         // content: message,
-        content: `${prompt.prompt_text} \n ${message}`
+        content: `${prompt.prompt_text} \n ${message}`,
       },
     ],
-    {username},
-
+    { username },
   );
 
   logger.info(`Processed message: ${JSON.stringify(processedMessage)}`);
-})
-
+});
 
 function jsonToMarkdownList(jsonObj, indentLevel = 0) {
   let str = "";

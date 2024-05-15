@@ -19,7 +19,6 @@ const preambleLogger = {
   info: (message) => {},
 };
 
-
 const { getPromptsFromSupabase, getConfigFromSupabase } = require("../helpers");
 
 module.exports = (async () => {
@@ -42,21 +41,19 @@ module.exports = (async () => {
   async function logInteraction(
     prompt,
     response,
-    { username = "", channel = "", guild = "", related_message_id = ""},
+    { username = "", channel = "", guild = "", related_message_id = "" },
     conversationHistory = [],
     isCapability = false,
     capabilityName = "",
   ) {
-
     // make sure everything exists
-    if(!prompt) return "No prompt provided";
-    if(!response) return "No response provided";
-    if(!username) logger.info(`logInteraction: No username provided`);
-    if(!channel) logger.info(`logInteraction: No channel provided`);
-    if(!guild) logger.info(`logInteraction: No guild provided`);
-    if(!related_message_id) logger.info(`logInteraction: No related_message_id provided`);
-    
-
+    if (!prompt) return "No prompt provided";
+    if (!response) return "No response provided";
+    if (!username) logger.info(`logInteraction: No username provided`);
+    if (!channel) logger.info(`logInteraction: No channel provided`);
+    if (!guild) logger.info(`logInteraction: No guild provided`);
+    if (!related_message_id)
+      logger.info(`logInteraction: No related_message_id provided`);
 
     const userMemoryCount = chance.integer({ min: 4, max: 24 });
     const memoryMessages = [];
@@ -171,21 +168,21 @@ module.exports = (async () => {
       ],
     });
 
-
     const rememberText = rememberCompletion.choices[0].message.content;
 
     // if the remember text is ✨ AKA empty, we don't wanna store it
     if (rememberText === "✨") return rememberText;
     // if remember text length is 0 or less, we don't wanna store it
     if (rememberText.length <= 0) return rememberText;
-    storeUserMemory({ 
-      username,
-      channel, 
-      conversation_id: channel, 
-      related_message_id  }, 
-      rememberText);
-
-
+    storeUserMemory(
+      {
+        username,
+        channel,
+        conversation_id: channel,
+        related_message_id,
+      },
+      rememberText,
+    );
 
     // TODO: ANALYZE EXCHANGE FOR ANY TODOS/TASKS AND THEN MODIFY THE TODOS TABLE BASED ON WHAT IS NEEDED
 
@@ -199,8 +196,8 @@ module.exports = (async () => {
         - todo:createTodo(name, description)
         - todo:deleteTodo(todoId)
         - todo:updateTodo(todoId, updates)
-        `
-      }
+        `,
+      },
     ];
 
     const taskAnalysisCompletion = await openai.chat.completions.create({
@@ -222,22 +219,32 @@ module.exports = (async () => {
     const deleteTodoMatches = taskAnalysisText.match(deleteTodoRegex);
     const updateTodoMatches = taskAnalysisText.match(updateTodoRegex);
 
-    const createTodosPromises = createTodoMatches ? createTodoMatches.map((match) => {
-      const [name, description] = match.split(",");
-      return createTodo(name, description);
-    }) : [];
+    const createTodosPromises = createTodoMatches
+      ? createTodoMatches.map((match) => {
+          const [name, description] = match.split(",");
+          return createTodo(name, description);
+        })
+      : [];
 
-    const deleteTodosPromises = deleteTodoMatches ? deleteTodoMatches.map((match) => {
-      const [todoId] = match.split(",");
-      return deleteTodo(todoId);
-    }) : [];
+    const deleteTodosPromises = deleteTodoMatches
+      ? deleteTodoMatches.map((match) => {
+          const [todoId] = match.split(",");
+          return deleteTodo(todoId);
+        })
+      : [];
 
-    const updateTodosPromises = updateTodoMatches ? updateTodoMatches.map((match) => {
-      const [todoId, updates] = match.split(",");
-      return updateTodo(todoId, updates);
-    }) : [];
+    const updateTodosPromises = updateTodoMatches
+      ? updateTodoMatches.map((match) => {
+          const [todoId, updates] = match.split(",");
+          return updateTodo(todoId, updates);
+        })
+      : [];
 
-    const promises = await Promise.all([...createTodosPromises, ...deleteTodosPromises, ...updateTodosPromises]);
+    const promises = await Promise.all([
+      ...createTodosPromises,
+      ...deleteTodosPromises,
+      ...updateTodosPromises,
+    ]);
     return JSON.stringify(promises);
   }
 

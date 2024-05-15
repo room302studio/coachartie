@@ -131,19 +131,19 @@ async function storeUserMemory(
     logger.info("value provided to storeUserMemory is not a string");
   }
 
-  if(!channel) {
+  if (!channel) {
     logger.info("No channel provided to storeUserMemory");
   }
 
-  if(!guild) {
+  if (!guild) {
     logger.info("No guild provided to storeUserMemory");
   }
 
-  if(!related_message_id) {
+  if (!related_message_id) {
     logger.info("No related_message_id provided to storeUserMemory");
   }
 
-  if(!memoryType) {
+  if (!memoryType) {
     logger.info("No memoryType provided to storeUserMemory");
   }
 
@@ -212,13 +212,16 @@ async function storeUserMemory(
   //   data,
   // );
 
-  logger.info(`Stored memory for ${username}: ${value} in ${memoryType} memory ${JSON.stringify(data)}`);
+  logger.info(
+    `Stored memory for ${username}: ${value} in ${memoryType} memory ${JSON.stringify(
+      data,
+    )}`,
+  );
 
   if (error) {
     logger.info(`Error storing user memory: ${error.message}`);
   }
 }
-
 
 /**
  * Retrieve memories associated with a specific file ID
@@ -338,9 +341,12 @@ async function deleteMemoriesOfResource(resourceId) {
  * @param {string} guildId - The ID of the guild where the message was sent.
  * @returns {Promise<object>} - A promise that resolves to the stored message data.
  */
-async function storeUserMessage({ username, channel, guild, conversation_id }, value) {
+async function storeUserMessage(
+  { username, channel, guild, conversation_id },
+  value,
+) {
   const { supabase } = require("./supabaseclient.js");
-  const {data, error } = await supabase
+  const { data, error } = await supabase
     // .from("messages")
     .from(MESSAGES_TABLE_NAME)
     .insert({
@@ -350,13 +356,13 @@ async function storeUserMessage({ username, channel, guild, conversation_id }, v
       conversation_id: conversation_id,
       value,
     })
-    .select()
+    .select();
 
   if (error) {
     logger.info(`Error storing user message: ${error.message}`);
   }
 
-  return data[0].id
+  return data[0].id;
 }
 
 /**
@@ -610,5 +616,5 @@ module.exports = {
   hasRecentMemoryOfResource,
   getMemoriesBetweenDates,
   getMemoriesByString,
-  deleteMemoriesOfResource
+  deleteMemoriesOfResource,
 };
