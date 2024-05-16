@@ -180,7 +180,7 @@ async function storeUserMemory(
 
     const [{ embedding: fetchedEmbedding }] = openAiEmbeddingResponse.data;
     embedding = fetchedEmbedding; // Assign the fetched embedding to the outer scope variable
-    logger.info(`Embedding length: ${embedding.length}`);
+    // logger.info(`Embedding length: ${embedding.length}`);
   } catch (error) {
     logger.info(`Error fetching embedding: ${error.message}`);
     embedding = null; // Ensure embedding is null if there was an error

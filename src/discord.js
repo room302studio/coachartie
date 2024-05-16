@@ -148,7 +148,7 @@ class DiscordBot {
    */
   async processMessageChain(
     prompt,
-    { username, channel, guild, related_message_id },
+    { username, channel, guild, related_message_id }
   ) {
     const { processMessageChain } = await require("./chain.js");
     return await processMessageChain(
@@ -158,7 +158,7 @@ class DiscordBot {
           content: prompt,
         },
       ],
-      { username, channel, guild, related_message_id },
+      { username, channel, guild, related_message_id }
     );
   }
 
@@ -248,10 +248,10 @@ class DiscordBot {
 
 function onClientReady(c) {
   logger.info(`⭐️ Ready! Logged in as ${c.user.username}`);
-  logger.info("\n🌐 Connected servers and channels:");
-  client.guilds.cache.forEach((guild) => {
-    logger.info(` - ${guild.name}`);
-  });
+  // logger.info("\n🌐 Connected servers and channels:");
+  // client.guilds.cache.forEach((guild) => {
+  //   logger.info(` - ${guild.name}`);
+  // });
 }
 
 function detectBotMentionOrChannel(message) {

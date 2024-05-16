@@ -46,7 +46,7 @@ async function getPromptsFromSupabase() {
   const promptValues = promptArray.map((prompt) => prompt.prompt_text);
   // return an object with all the keys and values
   const prompts = Object.fromEntries(
-    promptKeys.map((_, i) => [promptKeys[i], promptValues[i]]),
+    promptKeys.map((_, i) => [promptKeys[i], promptValues[i]])
   );
   // logger.info(`Prompts: ${JSON.stringify(prompts, null, 2)}`);
   return prompts;
@@ -66,7 +66,7 @@ async function getConfigFromSupabase() {
   const configValues = configArray.map((config) => config.config_value);
   // return an object with all the keys and values
   const config = Object.fromEntries(
-    configKeys.map((_, i) => [configKeys[i], configValues[i]]),
+    configKeys.map((_, i) => [configKeys[i], configValues[i]])
   );
   return config;
 }
@@ -522,15 +522,15 @@ async function generateAiCompletion(prompt, username, messages, config) {
 
   try {
     // Do a verbose log of the chat completion parameters and messages
-    completionLogger.info("🔧 Chat completion created");
-    completionLogger.info("🔧 Temperature: " + temperature);
-    completionLogger.info("🔧 Presence Penalty: " + presence_penalty);
+    completionLogger.info(
+      `🔧 Chat completion created\n🔧 Temperature: ${temperature}\n🔧 Presence Penalty: ${presence_penalty}`
+    );
     // completionLogger.info("🔧 Messages: " + JSON.stringify(messages));
 
     completion = await createChatCompletion(
       messages,
       temperature,
-      presence_penalty,
+      presence_penalty
     );
   } catch (err) {
     logger.info(`Error creating chat completion ${err}`);
@@ -538,8 +538,8 @@ async function generateAiCompletion(prompt, username, messages, config) {
 
   const aiResponse = completion; //.choices[0].message.content;
 
-  logger.info("🔧 AI Response: " + aiResponse);
-  completionLogger.info("🔧 AI Response: " + aiResponse);
+  // logger.info("🔧 AI Response: " + aiResponse);
+  // completionLogger.info("🔧 AI Response: " + aiResponse);
   messages.push(aiResponse);
   return { messages, aiResponse };
 }
@@ -563,12 +563,12 @@ async function createChatCompletion(messages, config = {}) {
     await getConfigFromSupabase();
   const completionModel = CHAT_MODEL || "openai";
 
-  logger.info(
-    `createChatCompletion Config: ${JSON.stringify(config, null, 2)}`,
-  );
+  // logger.info(
+  //   `createChatCompletion Config: ${JSON.stringify(config, null, 2)}`,
+  // );
 
   if (completionModel === "openai") {
-    logger.info("Using OpenAI for chat completion");
+    // logger.info("Using OpenAI for chat completion");
 
     logger.info(` Model: gpt-4-turbo-preview
     Temperature: ${config.temperature}
@@ -769,7 +769,7 @@ async function addCapabilityManifestMessage(messages) {
         role: "user",
         // content: `Capability manifest: ${JSON.stringify(manifest)}`,
         content: `## CAPABILITY MANIFEST\n\n${formatCapabilityManifest(
-          manifest,
+          manifest
         )}`,
       });
     }
@@ -839,13 +839,13 @@ function convertCapabilityManifestToXML(manifest) {
           ? `    <parameters>\n${capability.parameters
               .map(
                 (parameter) =>
-                  `      <parameter>\n        <name>${parameter.name}</name>\n        <description>${parameter.description}</description>\n      </parameter>\n`,
+                  `      <parameter>\n        <name>${parameter.name}</name>\n        <description>${parameter.description}</description>\n      </parameter>\n`
               )
               .join("")}    </parameters>\n`
           : "";
 
         return `  <capability>\n${nameXml}${descriptionXml}${parametersXml}  </capability>\n`;
-      }),
+      })
     )
     .join("");
 
@@ -860,12 +860,12 @@ function convertCapabilityManifestToXML(manifest) {
 async function addUserMessages(username, messages) {
   const userMessageCount = chance.integer({ min: 10, max: 32 });
   logger.info(
-    `🔧 Retrieving ${userMessageCount} previous messages for ${username}`,
+    `🔧 Retrieving ${userMessageCount} previous messages for ${username}`
   );
   try {
     const userMessages = await getUserMessageHistory(
       username,
-      userMessageCount,
+      userMessageCount
     );
     if (!userMessages) {
       logger.info(`No previous messages found for ${username}`);
@@ -927,16 +927,16 @@ async function addRelevantMemories(username, messages) {
 
   const queryString = lastUserMessage.content;
   logger.info(
-    `🔧 Querying for relevant memories for ${username}: ${queryString}`,
+    `🔧 Querying for relevant memories for ${username}: ${queryString}`
   );
 
   try {
     const relevantMemories = await getRelevantMemories(
       queryString,
-      relevantMemoryCount,
+      relevantMemoryCount
     );
     logger.info(
-      `🔧 Retrieving ${relevantMemoryCount} relevant memories for ${queryString}`,
+      `🔧 Retrieving ${relevantMemoryCount} relevant memories for ${queryString}`
     );
 
     if (relevantMemories.length === 0) {

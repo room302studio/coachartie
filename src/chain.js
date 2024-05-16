@@ -20,19 +20,14 @@ const { storeUserMessage } = require("./remember");
 const logger = require("../src/logger.js")("chain");
 
 module.exports = (async () => {
-  const RESPONSE_LIMIT = 2048;
-
   const {
     countMessageTokens,
     doesMessageContainCapability,
     generateAiCompletionParams,
     generateAiCompletion,
-    // trimResponseIfNeeded,
-    // isExceedingTokenLimit,
     countTokens,
     getUniqueEmoji,
     getConfigFromSupabase,
-    supabase,
     createTokenLimitWarning,
   } = require("../helpers");
 
@@ -277,14 +272,14 @@ module.exports = (async () => {
       return "Unexpected error: " + e.message;
     }
 
-    if (capabilityResponse.image) {
-      logger.info("Capability Response is an Image");
-      return capabilityResponse;
-    }
+    // if (capabilityResponse.image) {
+    //   logger.info("Capability Response is an Image");
+    //   return capabilityResponse;
+    // }
 
-    logger.info(`Capability Response: ${JSON.stringify(capabilityResponse)}`);
+    // logger.info(`Capability Response: ${JSON.stringify(capabilityResponse)}`);
 
-    return trimResponseIfNeeded(capabilityResponse);
+    // return trimResponseIfNeeded(capabilityResponse);
   }
 
   /**

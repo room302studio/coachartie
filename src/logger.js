@@ -20,16 +20,14 @@ module.exports = function (serviceName) {
 
   // Function to send log to Supabase
   const sendLogToSupabase = async (level, message) => {
-    const response = await supabase
-      .from("logs")
-      .insert([
-        {
-          level,
-          message,
-          timestamp: new Date().toISOString(),
-          service: serviceName,
-        },
-      ]);
+    const response = await supabase.from("logs").insert([
+      {
+        level,
+        message,
+        timestamp: new Date().toISOString(),
+        service: serviceName,
+      },
+    ]);
 
     if (response.error) {
       console.error("Error sending log to Supabase:", response.error);
@@ -123,8 +121,18 @@ module.exports = function (serviceName) {
       winstonLogger.log("info", truncatedMessage);
       sendLogToSupabase("info", truncatedMessage);
     },
-    info: (message) => winstonLogger.info(truncateMessage(message)),
-    warn: (message) => winstonLogger.warn(truncateMessage(message)),
+    // info: (message) => winstonLogger.info(truncateMessage(message)),
+    info: (message) => {
+      const truncatedMessage = truncateMessage(message);
+      winstonLogger.info(truncateMessage(message));
+      sendLogToSupabase("info", truncatedMessage);
+    },
+    // warn: (message) => winstonLogger.warn(truncateMessage(message)),
+    warn: (message) => {
+      const truncatedMessage = truncateMessage(message);
+      winstonLogger.warn(truncateMessage(message));
+      sendLogToSupabase("warn", truncatedMessage);
+    },
     // error: (message) => winstonLogger.error("🚨 " + truncateMessage(message)),
     error: (message) => {
       const truncatedMessage = truncateMessage(message);
