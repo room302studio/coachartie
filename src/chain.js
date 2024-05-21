@@ -2,6 +2,7 @@ const memoryFunctionsPromise = require("./memory");
 const { capabilityRegex, callCapabilityMethod } = require("./capabilities");
 const { storeUserMessage } = require("./remember");
 const logger = require("../src/logger.js")("chain");
+const { countTokensInMessageArray } = require("../helpers");
 
 module.exports = (async () => {
   const {
@@ -62,6 +63,10 @@ module.exports = (async () => {
         chainId
       );
 
+      logger.info(
+        `[${chainId}] Message Chain Returning Processed Messages: ${processedMessages.length} messages, ${capabilityCallCount} capability calls.`
+      );
+
       return processedMessages;
     } catch (error) {
       return await handleMessageChainError(
@@ -94,30 +99,28 @@ module.exports = (async () => {
     chainId
   ) {
     let capabilityCallIndex = 0;
-    let chainReport = "";
 
     if (!messages.length) {
-      logger.warn(`${chainId} - Empty Message Chain`);
+      logger.error(`[${chainId}] Empty message chain.`);
       return [];
     }
+
+    logger.info(
+      `[${chainId}] Processing message chain with ${messages.length} messages.`
+    );
 
     do {
       capabilityCallIndex++;
       const lastMessage = messages[messages.length - 1];
-      if (!lastMessage) {
-        logger.warn("Last Message is undefined");
-        return messages;
-      }
-      if (!lastMessage.content) {
-        logger.warn("Last Message content is undefined");
+      if (!lastMessage || !lastMessage.content) {
+        logger.error(
+          `[${chainId}] Last message or content is undefined. Aborting.`
+        );
         return messages;
       }
 
       logger.info(
-        `${chainId} - Capability Call ${capabilityCallIndex} started: ${lastMessage.content.slice(
-          0,
-          2400
-        )}...`
+        `[${chainId}] Capability call ${capabilityCallIndex} started. Last message content: ${lastMessage.content}...`
       );
 
       try {
@@ -129,26 +132,25 @@ module.exports = (async () => {
         messages = updatedMessages;
 
         if (doesMessageContainCapability(lastMessage.content)) {
+          const messageCapability = getCapabilityFromMessage(
+            lastMessage.content
+          );
           capabilityCallCount++;
           logger.info(
-            `${chainId} - Capability detected in message: Incrementing capability call count to ${capabilityCallCount}`
+            `[${chainId}] Capability detected: ${messageCapability}. Capability call count: ${capabilityCallCount}`
           );
         }
 
-        chainReport += `${chainId} - Capability Call ${capabilityCallIndex}: ${lastMessage.content.slice(
-          0,
-          80
-        )}...\n`;
         logger.info(
-          `${chainId} - Capability Call ${capabilityCallIndex} completed`
+          `[${chainId}] Capability call ${capabilityCallIndex} completed. Assistant response: ${messages[
+            messages.length - 1
+          ].content.slice(0, 100)}...`
         );
       } catch (error) {
-        logger.info(
-          `${chainId} - Process message chain: error processing message: ${error}`
-        );
+        logger.error(`[${chainId}] Error processing message: ${error}`);
         messages.push({
           role: "assistant",
-          content: "Error processing message: " + error,
+          content: `#Error\n Error processing message: ${error}\n `,
         });
         return messages;
       }
@@ -161,9 +163,16 @@ module.exports = (async () => {
         const withinCapabilityLimit =
           capabilityCallCount <= MAX_CAPABILITY_CALLS;
 
-        logger.info(
-          `${chainId} - Checking while conditions: Contains Capability: ${containsCapability}, Exceeds Token Limit: ${exceedsTokenLimit}, Within Capability Limit: ${withinCapabilityLimit}`
-        );
+        logger.info(`[${chainId}] Checking while conditions:
+  - Contains Capability: ${containsCapability} (${
+          containsCapability
+            ? getCapabilityFromMessage(messages[messages.length - 1].content)
+            : "None"
+        })
+  - Exceeds Token Limit: ${exceedsTokenLimit} (Current: ${countTokensInMessageArray(
+          messages
+        )}
+  - Within Capability Limit: ${withinCapabilityLimit} (Current: ${capabilityCallCount}, Max: ${MAX_CAPABILITY_CALLS})`);
 
         return (
           containsCapability && !exceedsTokenLimit && withinCapabilityLimit
@@ -171,7 +180,10 @@ module.exports = (async () => {
       })()
     );
 
-    logger.info(`${chainId} - Chain Report:\n${chainReport}`);
+    logger.info(
+      `[${chainId}] Message chain processing completed. Final message chain length: ${messages.length}`
+    );
+
     return messages;
   }
 
@@ -201,8 +213,7 @@ module.exports = (async () => {
       logger.warn(
         `Error processing message chain, retrying (${
           retryCount + 1
-        }/${MAX_RETRY_COUNT})`,
-        error
+        }/${MAX_RETRY_COUNT}) \n ${error} \n ${error.stack} `
       );
       return processMessageChain(
         messages,
@@ -404,16 +415,19 @@ module.exports = (async () => {
   ) {
     const { logInteraction } = await memoryFunctionsPromise;
 
-    logger.info(`Processing Message in chain.js`);
+    // logger.info(`Processing Message in chain.js`);
 
     const isCapability = doesMessageContainCapability(lastMessage);
+    logger.info(`Is Capability: ${isCapability} - ${lastMessage}`);
 
-    messages = await processCapability(messages, lastMessage, {
-      username,
-      channel,
-      guild,
-      related_message_id,
-    });
+    if (isCapability) {
+      messages = await processCapability(messages, lastMessage, {
+        username,
+        channel,
+        guild,
+        related_message_id,
+      });
+    }
 
     if (messages[messages.length - 1].image) {
       logger.info("Last Message is an Image");

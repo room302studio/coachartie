@@ -226,7 +226,7 @@ function getHexNameMap() {
  * @returns {boolean} - True if the message contains a capability, false otherwise.
  */
 function doesMessageContainCapability(message) {
-  return message.match(capabilityRegex);
+  return !!message.match(capabilityRegex);
 }
 
 /**
@@ -531,15 +531,19 @@ async function generateAiCompletion(prompt, username, messages, config) {
 
   try {
     // Do a verbose log of the chat completion parameters and messages
-    completionLogger.info(
-      `🔧 Chat completion created\n🔧 Temperature: ${temperature}\n🔧 Presence Penalty: ${presence_penalty}`
-    );
+
     // completionLogger.info("🔧 Messages: " + JSON.stringify(messages));
 
     completion = await createChatCompletion(
       messages,
       temperature,
       presence_penalty
+    );
+
+    completionLogger.info(
+      `🔧 Chat completion created – 🔧 Temperature: ${temperature} – 🔧 Presence Penalty: ${presence_penalty} \n ${Object.keys(
+        completion
+      )}`
     );
   } catch (err) {
     logger.info(`Error creating chat completion ${err}`);
@@ -704,7 +708,6 @@ function addCurrentDateTime(messages) {
  */
 async function addHexagramPrompt(messages) {
   if (chance.bool({ likelihood: 50 })) {
-    logger.info("🔧 Adding hexagram prompt to messages");
     const hexagram = generateHexagram();
     logger.info(`🔧 Adding hexagram prompt to message ${hexagram}`);
     const hexagramPrompt = `Let this hexagram from the I Ching guide this interaction: ${hexagram}`;
@@ -1436,34 +1439,33 @@ async function processChunks(chunks, processFunction, limit = 2, options = {}) {
 }
 
 module.exports = {
-  destructureArgs,
-  getHexagram,
-  countTokens,
-  countMessageTokens,
-  removeMentionFromMessage,
-  doesMessageContainCapability,
-  isBreakingMessageChain,
-  // trimResponseIfNeeded,
-  generateAiCompletionParams,
-  addSystemPrompt,
   addCurrentDateTime,
-  displayTypingIndicator,
-  generateAiCompletion,
+  addSystemPrompt,
   assembleMessagePreamble,
-  splitMessageIntoChunks,
-  splitAndSendMessage,
-  createTokenLimitWarning,
-  isExceedingTokenLimit,
-  lastUserMessage,
-  getUniqueEmoji,
-  getPromptsFromSupabase,
-  getConfigFromSupabase,
-  capabilityRegex,
-  createChatCompletion,
-  parseJSONArg,
+  cleanUrlForPuppeteer,
   convertCapabilityManifestToXML,
   convertMessagesToXML,
-  cleanUrlForPuppeteer,
+  countMessageTokens,
+  countTokens,
+  createChatCompletion,
+  countTokensInMessageArray,
+  createTokenLimitWarning,
+  destructureArgs,
+  displayTypingIndicator,
+  doesMessageContainCapability,
+  generateAiCompletion,
+  generateAiCompletionParams,
+  getConfigFromSupabase,
+  getHexagram,
+  getPromptsFromSupabase,
+  getUniqueEmoji,
+  isBreakingMessageChain,
+  isExceedingTokenLimit,
+  lastUserMessage,
+  parseJSONArg,
   processChunks,
+  removeMentionFromMessage,
   sleep,
+  splitAndSendMessage,
+  splitMessageIntoChunks,
 };
