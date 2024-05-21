@@ -80,6 +80,12 @@ module.exports = (async () => {
     }
   }
 
+  function getCapabilityFromMessage(message) {
+    const capabilityMatch = message.match(capabilityRegex);
+    if (!capabilityMatch) return null;
+    return capabilityMatch[1];
+  }
+
   /**
    * Recursively processes a message chain.
    *
@@ -285,6 +291,7 @@ module.exports = (async () => {
    * @returns {Promise<Array>} - The updated array of messages.
    */
   async function processAndLogCapabilityResponse(messages, capabilityMatch) {
+    logger.info(`processAndLogCapabilityResponse: ${capabilityMatch}`);
     const [_, capSlug, capMethod, capArgs] = capabilityMatch;
     const currentTokenCount = countMessageTokens(messages);
 
@@ -366,27 +373,23 @@ module.exports = (async () => {
    * @param {Object} options - The options object containing additional context.
    * @returns {Promise<Array>} A promise that resolves to an array of processed capability results.
    */
-  async function processAllCapabilitiesInMessage(messageContent, options) {
-    const capabilityMatches = findAllCapabilities(messageContent);
-    const capabilityPromises = capabilityMatches.map((capabilityMatch) =>
-      processSingleCapability(capabilityMatch, options)
-    );
+  // async function processAllCapabilitiesInMessage(messageContent, options) {
+  //   const capabilityMatches = findAllCapabilities(messageContent);
+  //   const capabilityPromises = capabilityMatches.map((capabilityMatch) =>
+  //     processSingleCapability(capabilityMatch, options)
+  //   );
 
-    return await Promise.all(capabilityPromises);
-  }
+  //   return await Promise.all(capabilityPromises);
+  // }
 
   // TODO: Remove this function to simplify
   async function processCapability(messages, lastMessage, options) {
     const capabilityMatch = lastMessage.match(capabilityRegex);
     if (!capabilityMatch) return messages;
+    logger.info(`${lastMessage} is a capability: ${capabilityMatch[0]}`);
 
     try {
-      return await processAndLogCapabilityResponse(
-        messages,
-        capabilityMatch,
-        true,
-        capabilityMatch[1]
-      );
+      return await processAndLogCapabilityResponse(messages, capabilityMatch);
     } catch (error) {
       logger.info(`Error processing capability: ${error}`);
       messages.push({

@@ -1443,6 +1443,7 @@ module.exports = {
   addSystemPrompt,
   assembleMessagePreamble,
   cleanUrlForPuppeteer,
+  capabilityRegex,
   convertCapabilityManifestToXML,
   convertMessagesToXML,
   countMessageTokens,
