@@ -170,6 +170,7 @@ class DiscordBot {
     const botMentionOrChannel = detectBotMentionOrChannel(message);
     const messageAuthorIsBot = message.author.bot;
     const authorIsMe = message.author.username === "coachartie";
+    if (authorIsMe) return;
 
     logger.info(`📩 Message received: ${message.content}`);
 
