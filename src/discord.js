@@ -173,8 +173,6 @@ class DiscordBot {
 
     logger.info(`📩 Message received: ${message.content}`);
 
-    if (!botMentionOrChannel || authorIsMe || messageAuthorIsBot) return;
-
     const typing = displayTypingIndicator(message);
 
     let prompt = await this.processPrompt(message);
@@ -204,6 +202,8 @@ class DiscordBot {
       guild,
       related_message_id: messageId,
     });
+
+    if (!botMentionOrChannel || authorIsMe || messageAuthorIsBot) return;
 
     // Check if the last message contains an image- if so send it as a file
     const lastMessage = messages[messages.length - 1];
