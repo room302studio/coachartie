@@ -165,7 +165,7 @@ module.exports = (async () => {
       ...conversationHistory,
       {
         role: "system",
-        content: `Analyze the previous messages for any content that could be a task or todo. If found, please add or modify the todo list using a few simple capabilities: 
+        content: `Analyze the previous messages for any content that could be a task or todo. If found, please add or modify the todo list using a few simple capabilities- you can respond with as many different changes as you like. Here are the capabilities you can use: 
   
         - todo:createTodo(name, description)
         - todo:deleteTodo(todoId)
@@ -194,18 +194,28 @@ module.exports = (async () => {
     const createTodosPromises =
       createTodoMatches?.map((match) => {
         const [_, name, description] = match.split(",");
+        // do some basic checking of the name and description
+        if (!name || !description) {
+          return;
+        }
         return createTodo(name.trim(), description.trim());
       }) || [];
 
     const deleteTodosPromises =
       deleteTodoMatches?.map((match) => {
         const [_, todoId] = match.split(",");
+        if (!todoId) {
+          return;
+        }
         return deleteTodo(todoId.trim());
       }) || [];
 
     const updateTodosPromises =
       updateTodoMatches?.map((match) => {
         const [_, todoId, updates] = match.split(",");
+        if (!todoId || !updates) {
+          return;
+        }
         return updateTodo(todoId.trim(), updates.trim());
       }) || [];
 

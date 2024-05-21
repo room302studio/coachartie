@@ -58,7 +58,7 @@ async function getMemoriesBetweenDates(startDate, endDate) {
 
   logger.info(`Looking for memories between ${startDate} and ${endDate}`);
   logger.info(
-    `Looking for memories between ${startDate.toISOString()} and ${endDate.toISOString()}`,
+    `Looking for memories between ${startDate.toISOString()} and ${endDate.toISOString()}`
   );
 
   const { supabase } = require("./supabaseclient.js");
@@ -114,37 +114,37 @@ async function storeUserMemory(
   { username, channel, guild, related_message_id },
   value,
   memoryType = "user",
-  resourceId = null,
+  resourceId = null
 ) {
   // first we do some checks to make sure we have the right types of data
   if (!username) {
-    logger.info("No username provided to storeUserMemory");
+    logger.warn("No username provided to storeUserMemory");
   }
 
   // if the user id is not a string, we need to error out
   if (typeof username !== "string") {
-    logger.info("username provided to storeUserMemory is not a string");
+    logger.warn("username provided to storeUserMemory is not a string");
   }
 
   // if the value is not a string, we need to error out
   if (typeof value !== "string") {
-    logger.info("value provided to storeUserMemory is not a string");
+    logger.warn("value provided to storeUserMemory is not a string");
   }
 
   if (!channel) {
-    logger.info("No channel provided to storeUserMemory");
+    logger.warn("No channel provided to storeUserMemory");
   }
 
   if (!guild) {
-    logger.info("No guild provided to storeUserMemory");
+    logger.warn("No guild provided to storeUserMemory");
   }
 
   if (!related_message_id) {
-    logger.info("No related_message_id provided to storeUserMemory");
+    logger.warn("No related_message_id provided to storeUserMemory");
   }
 
   if (!memoryType) {
-    logger.info("No memoryType provided to storeUserMemory");
+    logger.warn("No memoryType provided to storeUserMemory");
   }
 
   // TODO: Check .env for any non-openAI embedding models
@@ -165,10 +165,6 @@ async function storeUserMemory(
   // } catch (e) {
   //   logger.info(`Error making embeddings: ${e.message}`);
   // }
-
-  logger.info(
-    `Storing memory for ${username}: ${value} in ${memoryType} memory`,
-  );
 
   // const { embedding1: embedding, embedding2, embedding3, embedding4 } = embeddings;
   let embedding;
@@ -214,8 +210,8 @@ async function storeUserMemory(
 
   logger.info(
     `Stored memory for ${username}: ${value} in ${memoryType} memory ${JSON.stringify(
-      data,
-    )}`,
+      data
+    )}`
   );
 
   if (error) {
@@ -343,7 +339,7 @@ async function deleteMemoriesOfResource(resourceId) {
  */
 async function storeUserMessage(
   { username, channel, guild, conversation_id },
-  value,
+  value
 ) {
   const { supabase } = require("./supabaseclient.js");
   const { data, error } = await supabase
@@ -429,7 +425,7 @@ async function voyageEmbedding(string, model = "voyage-large-2") {
         "Content-Type": "application/json",
         Authorization: `Bearer ${process.env.VOYAGE_API_KEY}`,
       },
-    },
+    }
   );
   return response.data;
 }

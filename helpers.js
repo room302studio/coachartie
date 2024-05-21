@@ -503,7 +503,16 @@ function setTypingInterval(message) {
  * @returns {Object} - An object containing the updated messages array and the AI response.
  */
 async function generateAiCompletion(prompt, username, messages, config) {
-  const { temperature, presence_penalty } = config;
+  let { temperature, presence_penalty } = config;
+
+  // set default values for temperature and presence_penalty
+  // if they are not provided
+  if (!temperature) {
+    temperature = 1;
+  }
+  if (!presence_penalty) {
+    presence_penalty = 0;
+  }
 
   // if the last message has .image, delete it that property off it
   if (messages[messages.length - 1].image) {

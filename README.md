@@ -62,6 +62,14 @@ The codebase is primarily divided into three main files: `discord.js`, `capabili
   ]
 ```
 
+### Capability Player
+Capabilities can be developed and tested locally using the capability player with the --runCapability flag. The capability player will load the capability and run the specified method with the provided parameters.
+```bash
+node capability-player.js --runCapability="calculator:add(4,23)"
+```
+
+Running the capability player with the --runCapability flag will present you with a list of available capabilities and a lightweight interactive shell to enter the capability you want to run.
+
 
 ## Database Overview
 
