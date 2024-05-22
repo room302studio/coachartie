@@ -541,9 +541,7 @@ async function generateAiCompletion(prompt, username, messages, config) {
     );
 
     completionLogger.info(
-      `🔧 Chat completion created – 🔧 Temperature: ${temperature} – 🔧 Presence Penalty: ${presence_penalty} \n ${Object.keys(
-        completion
-      )}`
+      `🔧 Chat completion created – 🔧 Temperature: ${temperature} – 🔧 Presence Penalty: ${presence_penalty}\n ${completion}`
     );
   } catch (err) {
     logger.info(`Error creating chat completion ${err}`);
@@ -583,7 +581,7 @@ async function createChatCompletion(messages, config = {}) {
   if (completionModel === "openai") {
     // logger.info("Using OpenAI for chat completion");
 
-    logger.info(` Model: gpt-4-turbo-preview
+    logger.info(` Model: ${OPENAI_COMPLETION_MODEL}
     Temperature: ${config.temperature}
     Presence Penalty: ${config.presence_penalty}
     Max Tokens: ${config.max_tokens}
