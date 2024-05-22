@@ -319,7 +319,12 @@ async function processChunks(chunks, data, limit = 2, userPrompt = "") {
           presence_penalty: -0.05,
           // frequency_penalty: 0.1,
           messages: [
-            { role: "user", content: userPrompt ? `# User goal: ${userPrompt}` : "Can you help me understand this chunk of a webpage please?" },
+            {
+              role: "user",
+              content: userPrompt
+                ? `# User goal: ${userPrompt}`
+                : "Can you help me understand this chunk of a webpage please?",
+            },
             {
               role: "user",
               content: `${WEBPAGE_CHUNK_UNDERSTANDER_PROMPT}
@@ -344,7 +349,6 @@ async function processChunks(chunks, data, limit = 2, userPrompt = "") {
  * @returns {Promise<string>} - The generated summary.
  */
 async function fetchAndSummarizeUrl(url, userPrompt = "") {
-  console.log('🫡 sup dawg')
   const cleanedUrl = cleanUrlForPuppeteer(url);
   const hashedUrl = crypto.createHash("md5").update(cleanedUrl).digest("hex");
   const cachePath = path.join(__dirname, "cache", `${hashedUrl}.json`);
@@ -411,15 +415,15 @@ async function fetchAndSummarizeUrl(url, userPrompt = "") {
       chunkResponses = JSON.parse(
         fs.readFileSync(
           path.join(__dirname, `../cache/${cacheKey}.json`),
-          "utf8",
-        ),
+          "utf8"
+        )
       );
     } else {
       chunkResponses = await processChunks(chunks, cleanText);
       // Cache the chunks
       fs.writeFileSync(
         path.join(__dirname, `../cache/${cacheKey}.json`),
-        JSON.stringify(chunkResponses),
+        JSON.stringify(chunkResponses)
       );
     }
 
@@ -457,8 +461,8 @@ ${factList}`,
     ],
   });
 
-  console.log('summaryCompletion')
-  console.log(summaryCompletion)
+  // console.log('summaryCompletion')
+  // console.log(summaryCompletion)
   const summary = summaryCompletion.choices[0].message.content;
 
   logger.info(`📝  Generated summary for URL: ${cleanedUrl}`, summary);
@@ -485,7 +489,7 @@ function randomUserAgent() {
 }
 
 async function handleCapabilityMethod(method, args, messages) {
-  console.log('is this thing on?')
+  console.log("is this thing on?");
   // first we need to figure out what the method is
   // then grab the URL from the args
   // then we need to call the method with the URL
