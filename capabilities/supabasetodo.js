@@ -1,16 +1,17 @@
 const { destructureArgs } = require("../helpers");
 const logger = require("../src/logger")("capability-supabasetodo");
 /**
- * Creates a new todo item in the database. This capability allows for the creation of a new todo item within a specified project. It supports optional details such as description, status, priority, due date, external URLs, and attachments, making it flexible for various use cases. The function defaults to setting the todo's status to "To Do" if not specified, ensuring a new todo is actionable immediately upon creation.
- * When to Use: Use this capability when a new task arises that needs tracking within a project's context. It's suitable for user-driven todo creation based on input or automated task generation from project activities or milestones.
+ * Creates a new todo item in your todo list.
+ * When to Use: Use this capability when a new task arises that needs tracking within a project's context.
  * How to Use:
- * Prepare Todo Details: Construct an object containing the details of the todo to be created, including the mandatory projectId and name fields, along with any other optional information.
- * Call the Function: Invoke the createTodo function with the prepared object. Handle the promise returned by the function to deal with the newly created todo or to catch any errors.
+ * Prepare Todo Details: Gather the details of the todo to be created, including the mandatory projectId and name fields, along with any other optional information.
+ * Call the Function: Invoke the createTodo function with the prepared object. Handle the promise returned by the function to deal with the newly created todo or to catch any errors, for example: supabaseTodo:createTodo(Add labeling system for todos, Figure out 5 top-level labels and add a field in the todo table to store them).
  * Process Response: On successful creation, use the returned todo item for display, further processing, or confirmation to the user.
  *
  * @param {string} name - The name of the todo item.
  * @param {string} description - The description of the todo item.
  * @returns {Promise<string>} A promise that resolves to a success message.
+ * @example supabasetodo:createTodo(Add labeling system for todos, Figure out 5 top-level labels and add a field in the todo table to store them).
  */
 async function createTodo(name, description = "") {
   const { supabase } = require("../src/supabaseclient");
@@ -29,15 +30,16 @@ async function createTodo(name, description = "") {
 
 /**
  * Deletes a todo item from the database.
- * This capability allows for the deletion of a specified todo item from the database. It is a straightforward function that requires only the ID of the todo item to be deleted. This capability is essential for maintaining the relevance and accuracy of the todo list by removing completed, cancelled, or outdated tasks.
+ * This capability allows for the deletion of a specified todo item from the database. All you need is the ID of the todo you would like to delete. This capability is essential for maintaining the relevance and accuracy of the todo list by removing completed, cancelled, or outdated tasks.
  * When to Use: Utilize this capability when a todo item is no longer needed or relevant. This could be after the completion of a task, cancellation of a project, or any situation where a todo does not need to be tracked anymore.
  * How to Use:
  * Determine Todo ID: Identify the ID of the todo item that needs to be deleted.
- * Call the Function: Execute the deleteTodo function with the identified todo ID. Manage the promise to address any errors and confirm deletion.
+ * Call the Function: Execute the deleteTodo function with the identified todo ID. Manage the promise to address any errors and confirm deletion: supabaseTodo:deleteTodo(123).
  * Verify Deletion: The function returns a boolean value indicating the success of the deletion operation. Use this to provide feedback to the user or to update the application state accordingly.
  *
  * @param {number} todoId - ID of the todo to be deleted.
  * @returns {Promise<boolean>} A promise that resolves to true if the deletion was successful, false otherwise.
+ * @example supabasetodo:deleteTodo(123).
  */
 async function deleteTodo(todoId) {
   const { supabase } = require("../src/supabaseclient");
@@ -57,7 +59,7 @@ async function deleteTodo(todoId) {
 */
 
 /**
- * Updates an existing todo item in the database.
+ * Unlike other todo methods, this one accepts a javascript object as the second argument. This object can contain any of the fields that need to be updated: name, description, and data (JSON)
  *
  * @param {number} todoId - ID of the todo to be updated.
  * @param {Object} updates - Object containing the fields to update.
@@ -71,21 +73,9 @@ async function updateTodo(todoId, updates) {
     .match({ id: todoId });
 
   if (error) throw new Error(error.message);
+  if (!data) return "No todo found with that ID.";
   return data[0];
 }
-/*
-This capability enables updating specific fields of an existing todo item, such as its status, priority, or due date. It allows partial updates, making it flexible for reflecting changes in todo items over time without needing to specify the entire todo details.
-
-When to Use: Use this capability when there's a need to modify an existing todo item, such as marking it as completed, updating its due date, or changing its priority based on new information or project changes.
-
-How to Use:
-
-Identify Todo and Changes: Determine the ID of the todo you wish to update and prepare an object with the fields that need updating.
-Call the Function: Invoke the updateTodo function with the todo ID and the updates object. Handle the promise to catch any potential errors.
-Process Response: Use the updated todo item returned by the function to verify the updates and inform the user or further application logic.
-*/
-
-/* list todo function */
 
 /**
  * Lists all todo items in the database.
