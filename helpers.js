@@ -533,6 +533,7 @@ async function generateAiCompletion(prompt, username, messages, config) {
     // Do a verbose log of the chat completion parameters and messages
 
     // completionLogger.info("🔧 Messages: " + JSON.stringify(messages));
+    logger.info(`Creating chat completion with ${messages.length} messages`);
 
     completion = await createChatCompletion(
       messages,
@@ -544,7 +545,7 @@ async function generateAiCompletion(prompt, username, messages, config) {
       `🔧 Chat completion created – 🔧 Temperature: ${temperature} – 🔧 Presence Penalty: ${presence_penalty}\n ${completion}`
     );
   } catch (err) {
-    logger.info(`Error creating chat completion ${err}`);
+    logger.error(`Error creating chat completion ${err}`);
   }
 
   const aiResponse = completion; //.choices[0].message.content;
@@ -589,6 +590,9 @@ async function createChatCompletion(messages, config = {}) {
     `);
 
     try {
+      logger.info(
+        `🔧 Creating chat completion with ${messages.length} messages`
+      );
       res = await openai.chat.completions.create({
         model: OPENAI_COMPLETION_MODEL,
         temperature: config.temperature,
