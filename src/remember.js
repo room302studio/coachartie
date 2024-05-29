@@ -457,7 +457,7 @@ async function stringToEmbedding(string) {
       logger.info(`Embedding 2 length: ${embedding2.length}`);
     }
   } catch (error) {
-    console.error("Error generating embedding2:", error);
+    logger.error("Error generating embedding2:", error);
   }
 
   let embedding3 = null;
@@ -468,7 +468,7 @@ async function stringToEmbedding(string) {
       logger.info(`Embedding 3 length: ${embedding3.length}`);
     }
   } catch (error) {
-    console.error("Error generating embedding3:", error);
+    logger.error("Error generating embedding3:", error);
     return {
       embedding1: embedding1 || null,
       embedding2: embedding2 || null,

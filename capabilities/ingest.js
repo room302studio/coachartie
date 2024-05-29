@@ -58,7 +58,7 @@ async function deepDocumentIngest(url) {
     fs.existsSync(cacheFilePath) &&
     Date.now() - fs.statSync(cacheFilePath).mtimeMs < 3600000
   ) {
-    console.log("Using cached data");
+    logger.info("Using cached data");
     cachedData = JSON.parse(fs.readFileSync(cacheFilePath, "utf8"));
   }
 
@@ -87,7 +87,7 @@ async function deepDocumentIngest(url) {
         { username: "capability-deepdocumentingest", guild: "" },
         updateMessage,
         "capability-deepdocumentingest",
-        url,
+        url
       );
     }
 
@@ -116,7 +116,7 @@ Make separate sections of facts for each section of the document, using \`\`\`--
         { username: "capability-deepdocumentingest", guild: "" },
         factAsMemory,
         "capability",
-        url,
+        url
       );
     });
 
@@ -132,21 +132,21 @@ Make separate sections of facts for each section of the document, using \`\`\`--
       metaSummaryMessages,
       {
         max_tokens: 2000,
-      },
+      }
     );
 
     await storeUserMemory(
       { username: "capability-deepdocumentingest", guild: "" },
       metaSummaryCompletion,
       "capability-deepdocumentingest",
-      url,
+      url
     );
 
     // Cache the current document for future reference
     fs.writeFileSync(
       cacheFilePath,
       JSON.stringify({ document, facts, metaSummary: metaSummaryCompletion }),
-      "utf8",
+      "utf8"
     );
 
     return `Document ingested successfully. ${facts.length} groups of facts were extracted from the ${url}.`;

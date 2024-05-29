@@ -435,8 +435,11 @@ async function fetchAndSummarizeUrl(url, userPrompt = "") {
     return error;
   }
 
-  logger.info(`📝  Generated ${factList.split("\n").length} fact summary.`);
-  logger.info(`📝  Generating summary of: ${factList}`);
+  logger.info(
+    `📝  Generated ${
+      factList.split("\n").length
+    } fact summary. Generating summary of: ${factList}`
+  );
 
   // use gpt-3.5-turbo-16k for the final summary
   const summaryCompletion = await openai.chat.completions.create({
@@ -461,10 +464,7 @@ ${factList}`,
     ],
   });
 
-  // console.log('summaryCompletion')
-  // console.log(summaryCompletion)
   const summary = summaryCompletion.choices[0].message.content;
-
   logger.info(`📝  Generated summary for URL: ${cleanedUrl}`, summary);
 
   // Save the summary to the cache
@@ -489,7 +489,6 @@ function randomUserAgent() {
 }
 
 async function handleCapabilityMethod(method, args, messages) {
-  console.log("is this thing on?");
   // first we need to figure out what the method is
   // then grab the URL from the args
   // then we need to call the method with the URL

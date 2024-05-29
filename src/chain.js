@@ -2,7 +2,7 @@ const memoryFunctionsPromise = require("./memory");
 const { capabilityRegex, callCapabilityMethod } = require("./capabilities");
 const { storeUserMessage } = require("./remember");
 const logger = require("../src/logger.js")("chain");
-const { countTokensInMessageArray } = require("../helpers");
+// const { countTokensInMessageArray } = require("../helpers");
 
 module.exports = (async () => {
   const {
@@ -37,25 +37,27 @@ module.exports = (async () => {
     retryCount = 0,
     capabilityCallCount = 0
   ) {
+    // Create a unique chain ID so we can track this specific one in the logs
+    // This is helpful if multiple chains are being processed concurrently
     const chainId = getUniqueEmoji();
+    const lastMessage = messages[messages.length - 1];
 
     try {
+      // We need messages to process, at least
       if (!messages.length) {
-        logger.warn("Empty Message Chain");
+        logger.error(
+          `[${chainId}] Cannot process empty message chain, aborting.`
+        );
         return [];
       }
 
-      const lastMessage = messages[messages.length - 1];
-      if (!lastMessage) {
-        logger.warn("Last Message is undefined");
-        return messages;
-      }
-
+      // TODO: If the last message contains an image, then it's probably a capability response and we should return early
       if (lastMessage.image) {
         logger.info("Last Message is an Image");
         return messages;
       }
 
+      // Otherwise, let's process the message chain over and over (up to MAX_CAPABILITY_CALLS)
       const processedMessages = await processMessageChainRecursively(
         messages,
         { username, channel, guild, related_message_id },
@@ -85,7 +87,6 @@ module.exports = (async () => {
     if (!capabilityMatch) return null;
     return capabilityMatch[1];
   }
-
   /**
    * Recursively processes a message chain.
    *
@@ -115,76 +116,50 @@ module.exports = (async () => {
       `[${chainId}] Processing message chain with ${messages.length} messages.`
     );
 
-    do {
-      capabilityCallIndex++;
-      const lastMessage = messages[messages.length - 1];
-      if (!lastMessage || !lastMessage.content) {
-        logger.error(
-          `[${chainId}] Last message or content is undefined. Aborting.`
+    try {
+      for (const message of messages) {
+        capabilityCallIndex++;
+        if (!message || !message.content) {
+          logger.error(
+            `[${chainId}] Message or content is undefined. Aborting.`
+          );
+          return messages;
+        }
+
+        logger.info(
+          `[${chainId}] Capability call ${capabilityCallIndex} started. Last message content: ${message.content}...`
         );
-        return messages;
-      }
 
-      logger.info(
-        `[${chainId}] Capability call ${capabilityCallIndex} started. Last message content: ${lastMessage.content}...`
-      );
-
-      try {
         const updatedMessages = await processMessage(
           messages,
-          lastMessage.content,
+          message.content,
           { username, channel, guild, related_message_id }
         );
         messages = updatedMessages;
 
-        if (doesMessageContainCapability(lastMessage.content)) {
-          const messageCapability = getCapabilityFromMessage(
-            lastMessage.content
-          );
+        if (doesMessageContainCapability(message.content)) {
+          const messageCapability = getCapabilityFromMessage(message.content);
           capabilityCallCount++;
           logger.info(
             `[${chainId}] Capability detected: ${messageCapability}. Capability call count: ${capabilityCallCount}`
           );
         }
 
-        logger.info(
-          `[${chainId}] Capability call ${capabilityCallIndex} completed. Assistant response: ${messages[
-            messages.length - 1
-          ].content.slice(0, 100)}...`
-        );
-      } catch (error) {
-        logger.error(`[${chainId}] Error processing message: ${error}`);
-        messages.push({
-          role: "assistant",
-          content: `#Error\n Error processing message: ${error}\n `,
-        });
+        // logger.info(
+        //   `[${chainId}] Capability call ${capabilityCallIndex} completed. Assistant response: ${messages[
+        //     messages.length - 1
+        //   ].content.slice(0, 100)}...`
+        // );
         return messages;
       }
-    } while (
-      (() => {
-        const containsCapability = doesMessageContainCapability(
-          messages[messages.length - 1].content
-        );
-        const exceedsTokenLimit = isExceedingTokenLimit(messages);
-        const withinCapabilityLimit =
-          capabilityCallCount <= MAX_CAPABILITY_CALLS;
-
-        logger.info(`[${chainId}] Checking while conditions:
-  - Contains Capability: ${containsCapability} (${
-          containsCapability
-            ? getCapabilityFromMessage(messages[messages.length - 1].content)
-            : "None"
-        })
-  - Exceeds Token Limit: ${exceedsTokenLimit} (Current: ${countTokensInMessageArray(
-          messages
-        )}
-  - Within Capability Limit: ${withinCapabilityLimit} (Current: ${capabilityCallCount}, Max: ${MAX_CAPABILITY_CALLS})`);
-
-        return (
-          containsCapability && !exceedsTokenLimit && withinCapabilityLimit
-        );
-      })()
-    );
+    } catch (error) {
+      logger.error(`[${chainId}] Error processing message: ${error}`);
+      messages.push({
+        role: "assistant",
+        content: `#Error\n Error processing message: ${error}\n `,
+      });
+      return messages;
+    }
 
     logger.info(
       `[${chainId}] Message chain processing completed. Final message chain length: ${messages.length}`
@@ -335,10 +310,10 @@ module.exports = (async () => {
    * @param {string} messageContent - The content of the message to scan for capabilities.
    * @returns {Array} An array of all capability matches found within the message.
    */
-  function findAllCapabilities(messageContent) {
-    const capabilityRegex = /your-capability-pattern/g; // Define your capability pattern
-    return [...messageContent.matchAll(capabilityRegex)];
-  }
+  // function findAllCapabilities(messageContent) {
+  //   const capabilityRegex = /your-capability-pattern/g; // Define your capability pattern
+  //   return [...messageContent.matchAll(capabilityRegex)];
+  // }
 
   /**
    * Processes a single capability.
@@ -346,26 +321,26 @@ module.exports = (async () => {
    * @param {Object} options - The options object containing additional context.
    * @returns {Promise<Object>} A promise that resolves to the result of the capability processing.
    */
-  async function processSingleCapability(capabilityMatch, options) {
-    const [_, capSlug, capMethod, capArgs] = capabilityMatch;
-    const currentTokenCount = countMessageTokens(messages);
+  // async function processSingleCapability(capabilityMatch, options) {
+  //   const [_, capSlug, capMethod, capArgs] = capabilityMatch;
+  //   const currentTokenCount = countMessageTokens(messages);
 
-    if (currentTokenCount >= TOKEN_LIMIT - WARNING_BUFFER) {
-      logger.warn("Token Limit Warning: Current Tokens - " + currentTokenCount);
-      messages.push(createTokenLimitWarning());
-    }
+  //   if (currentTokenCount >= TOKEN_LIMIT - WARNING_BUFFER) {
+  //     logger.warn("Token Limit Warning: Current Tokens - " + currentTokenCount);
+  //     messages.push(createTokenLimitWarning());
+  //   }
 
-    logger.info("Processing Capability: " + capSlug + ":" + capMethod);
+  //   logger.info("Processing Capability: " + capSlug + ":" + capMethod);
 
-    const capabilityResponse = await getCapabilityResponse(
-      capSlug,
-      capMethod,
-      capArgs,
-      messages
-    );
+  //   const capabilityResponse = await getCapabilityResponse(
+  //     capSlug,
+  //     capMethod,
+  //     capArgs,
+  //     messages
+  //   );
 
-    return capabilityResponse;
-  }
+  //   return capabilityResponse;
+  // }
 
   /**
    * Processes all capabilities found in a single message concurrently.
@@ -384,6 +359,17 @@ module.exports = (async () => {
 
   // TODO: Remove this function to simplify
   async function processCapability(messages, lastMessage, options) {
+    // check for all the arguments
+    if (!lastMessage) {
+      logger.error("No last message found - cannot process capability");
+      return messages;
+    }
+
+    if (!messages) {
+      logger.error("No messages found - cannot process capability");
+      return messages;
+    }
+
     const capabilityMatch = lastMessage.match(capabilityRegex);
     if (!capabilityMatch) return messages;
     logger.info(`${lastMessage} is a capability: ${capabilityMatch[0]}`);
@@ -418,12 +404,13 @@ module.exports = (async () => {
   ) {
     const { logInteraction } = await memoryFunctionsPromise;
 
-    // logger.info(`Processing Message in chain.js`);
+    logger.info(`Processing Message in chain.js: ${lastMessage}`);
 
     const isCapability = doesMessageContainCapability(lastMessage);
     logger.info(`Is Capability: ${isCapability} - ${lastMessage}`);
 
     if (isCapability) {
+      logger.info(`Capability Detected: ${lastMessage}`);
       messages = await processCapability(messages, lastMessage, {
         username,
         channel,
@@ -442,6 +429,7 @@ module.exports = (async () => {
       .reverse()
       .find((m) => m.role === "user");
     const prompt = lastUserMessage.content;
+    logger.info(`Prompt: ${prompt}`);
 
     const storedMessageId = await storeUserMessage(
       { username, channel, guild },
@@ -461,6 +449,8 @@ module.exports = (async () => {
         frequency_penalty,
       }
     );
+
+    logger.info(`AI Response: ${aiResponse}`);
 
     messages.push({
       role: "assistant",

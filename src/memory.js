@@ -46,17 +46,23 @@ module.exports = (async () => {
     isCapability = false,
     capabilityName = ""
   ) {
+    logger.info(`Logging interaction for ${username} in ${channel}`);
     // Validate input
-    if (
-      !prompt ||
-      !response ||
-      !username ||
-      !channel ||
-      !guild ||
-      !related_message_id
-    ) {
-      logger.error("logInteraction error: Missing required parameters");
-      return "Error: Missing required parameters";
+    const requiredParams = [
+      "prompt",
+      "response",
+      "username",
+      "channel",
+      "guild",
+      "related_message_id",
+    ];
+    const missingParams = requiredParams.filter((param) => !eval(param));
+    if (missingParams.length > 0) {
+      const errorMessage = `logInteraction error: Missing required parameters: ${missingParams.join(
+        ", "
+      )}`;
+      logger.error(errorMessage);
+      return errorMessage;
     }
 
     const userMemoryCount = chance.integer({ min: 4, max: 24 });
@@ -74,8 +80,11 @@ module.exports = (async () => {
       content: `${memory.created_at}: ${memory.value}`,
     }));
 
+    logger.info(`Memories gathered, ${memories.length} total`);
+
     // Process response
     const processedResponse = await processResponse(response);
+    logger.info(`Response processed, ${processedResponse} characters`);
 
     // Generate remember completion
     const rememberCompletion = await generateRememberCompletion(
@@ -91,6 +100,7 @@ module.exports = (async () => {
 
     // Store user memory if valid
     if (rememberText && rememberText !== "✨" && rememberText.length > 0) {
+      logger.info(`Storing user memory for ${username}`);
       await storeUserMemory(
         { username, channel, conversation_id: channel, related_message_id },
         rememberText
@@ -174,6 +184,8 @@ module.exports = (async () => {
       },
     ];
 
+    logger.info(`Analyzing tasks with ${taskAnalysisMessages.length} messages`);
+
     const taskAnalysisCompletion = await openai.chat.completions.create({
       model: REMEMBER_MODEL,
       presence_penalty: -0.1,
@@ -182,6 +194,8 @@ module.exports = (async () => {
     });
 
     const taskAnalysisText = taskAnalysisCompletion.choices[0].message.content;
+
+    logger.info(`Task analysis text: ${taskAnalysisText}`);
 
     const createTodoRegex = /todo:createTodo\((.*?),(.*?)\)/g;
     const deleteTodoRegex = /todo:deleteTodo\((.*?)\)/g;
@@ -224,6 +238,8 @@ module.exports = (async () => {
       ...deleteTodosPromises,
       ...updateTodosPromises,
     ]);
+
+    logger.info(`Tasks analyzed and executed: ${promises.length} total`);
 
     return JSON.stringify(promises);
   }

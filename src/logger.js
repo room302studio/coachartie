@@ -3,6 +3,9 @@ require("winston-syslog");
 const os = require("os");
 require("dotenv").config();
 const { supabase } = require("./supabaseclient"); // Importing the existing Supabase client
+// import format from date-fns so we can get nice looking timestamps
+const { format } = require("date-fns");
+const chalk = require("chalk");
 
 module.exports = function (serviceName) {
   let loggers = [];
@@ -39,11 +42,17 @@ module.exports = function (serviceName) {
       format: winston.format.combine(
         winston.format.timestamp(),
         winston.format.printf((info) => {
-          const lineNumber = info.stack ? info.stack.split("\n")[2].trim() : "";
           const { level, message, timestamp } = info;
-          // Truncate message if necessary
           const truncatedMessage = truncateMessage(message);
-          return `${timestamp} ${serviceName} ${lineNumber} : ${truncatedMessage}`;
+          const prettyTimestamp = format(new Date(timestamp), "HH:mm:ss");
+
+          let logString = `${prettyTimestamp} ${serviceName}: ${truncatedMessage}`;
+
+          if (level === "error") {
+            logString = chalk.red(logString);
+          }
+
+          return logString;
         })
       ),
     })

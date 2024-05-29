@@ -42,19 +42,11 @@ const capabilityRegex = /(\w+):(\w+)\(([^]*?)\)/; // captures newlines in the  t
 async function generateAiCompletion(prompt, username, messages, config) {
   let { temperature, presence_penalty } = config;
 
-  // set default values for temperature and presence_penalty
-  // if they are not provided
-  if (!temperature) {
-    temperature = 1;
-  }
-  if (!presence_penalty) {
-    presence_penalty = 0;
-  }
+  if (!temperature) temperature = 1;
+  if (!presence_penalty) presence_penalty = 0;
 
-  // if the last message has .image, delete it that property off it
-  if (messages[messages.length - 1].image) {
+  if (messages[messages.length - 1].image)
     delete messages[messages.length - 1].image;
-  }
 
   logger.info(`🤖 Generating AI completion for <${username}> ${prompt}`);
   logger.info(`${messages.length} messages`);
@@ -63,13 +55,20 @@ async function generateAiCompletion(prompt, username, messages, config) {
 
   let completion = null;
 
-  // remove any messages that do not have values
   messages = messages.filter((message) => message.content);
 
   try {
-    // Do a verbose log of the chat completion parameters and messages
+    logger.info(`🔧 Chat completion parameters:
+    - Temperature: ${temperature}
+    - Presence Penalty: ${presence_penalty}`);
+    logger.info("🔧 Messages:");
 
-    // completionLogger.info("🔧 Messages: " + JSON.stringify(messages));
+    // Log all message contents
+    // extremely verbose
+    // messages.forEach((message, index) =>
+    //   logger.info(`- Message ${index + 1}: ${JSON.stringify(message)}`)
+    // );
+
     logger.info(`Creating chat completion with ${messages.length} messages`);
 
     completion = await createChatCompletion(
@@ -78,17 +77,13 @@ async function generateAiCompletion(prompt, username, messages, config) {
       presence_penalty
     );
 
-    completionLogger.info(
-      `🔧 Chat completion created – 🔧 Temperature: ${temperature} – 🔧 Presence Penalty: ${presence_penalty}\n ${completion}`
-    );
+    logger.info(`🔧 Chat completion created:\n- Completion: ${completion}`);
   } catch (err) {
     logger.error(`Error creating chat completion ${err}`);
   }
 
-  const aiResponse = completion; //.choices[0].message.content;
+  const aiResponse = completion;
 
-  // logger.info("🔧 AI Response: " + aiResponse);
-  // completionLogger.info("🔧 AI Response: " + aiResponse);
   messages.push(aiResponse);
   return { messages, aiResponse };
 }
@@ -574,7 +569,7 @@ async function createChatCompletion(messages, config = {}) {
   // and console.error if they don't
   messages.forEach((message) => {
     if (!message.content) {
-      logger.error(`Message is missing content: ${message}`);
+      console.error(`Message is missing content: ${JSON.stringify(message)}`);
     }
   });
 
@@ -585,12 +580,14 @@ async function createChatCompletion(messages, config = {}) {
   const completionModel = CHAT_MODEL || "openai";
 
   if (completionModel === "openai") {
-    logger.info(
+    console.info(
       `Using OpenAI for chat completion\nModel: ${OPENAI_COMPLETION_MODEL}\nTemperature: ${config.temperature}\nPresence Penalty: ${config.presence_penalty}\nMax Tokens: ${config.max_tokens}\nMessage Count: ${messages.length}`
     );
 
     try {
-      logger.info(`Creating chat completion with ${messages.length} messages`);
+      console.info(
+        `Creating OpenAI chat completion with ${messages.length} messages`
+      );
       const res = await openai.chat.completions.create({
         model: OPENAI_COMPLETION_MODEL,
         temperature: config.temperature,
@@ -599,20 +596,37 @@ async function createChatCompletion(messages, config = {}) {
         messages,
       });
 
+      // OpenAI responses contain the tokens used in the response, we should log that
+      console.log(JSON.stringify(res));
+      const promptTokens = res.usage.prompt_tokens;
+      const completionTokens = res.usage.completion_tokens;
+      const totalTokens = res.usage.total_tokens;
+      logger.info(
+        `Completion used ${totalTokens} tokens (${promptTokens} prompt tokens, ${completionTokens} completion tokens)`
+      );
+
       if (res.choices && res.choices.length > 0) {
         const completion = res.choices[0].message.content;
         if (completion) {
+          // If everything has gone properly, log the completion and return it
+          console.info(`Chat completion response: ${completion}`);
           return completion;
         } else {
-          logger.info(`Chat completion response is missing content: ${res}`);
+          console.info(
+            `Chat completion response is missing content: ${JSON.stringify(
+              res
+            )}`
+          );
           return null;
         }
       } else {
-        logger.info(`Chat completion response is missing choices: ${res}`);
+        console.info(
+          `Chat completion response is missing choices: ${JSON.stringify(res)}`
+        );
         return null;
       }
     } catch (error) {
-      logger.error("Error creating chat completion:", error.message);
+      console.error("Error creating chat completion:", error.message);
       throw new Error(`Error creating chat completion: ${error.message}`);
     }
   } else if (completionModel === "claude") {

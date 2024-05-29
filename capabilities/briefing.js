@@ -42,12 +42,12 @@ async function makeWeeklyBriefing() {
     const weekStartDate = dateFns.startOfWeek(new Date());
     const weekEndDate = dateFns.endOfWeek(new Date());
     logger.info(
-      `Looking for memories between ${weekStartDate} and ${weekEndDate}`,
+      `Looking for memories between ${weekStartDate} and ${weekEndDate}`
     );
 
     const weekMemories = await getMemoriesBetweenDates(
       weekStartDate,
-      weekEndDate,
+      weekEndDate
     );
     // console.log(weekMemories)
 
@@ -64,10 +64,10 @@ async function makeWeeklyBriefing() {
 
     logger.info(
       `${countTokens(
-        cleanMemoryString,
+        cleanMemoryString
       )} tokens for all memories this week from ${weekStartDate} to ${weekEndDate} and ${
         weekMemories.length
-      } memories`,
+      } memories`
     );
 
     // Look for any projects / project IDs / project slugs
@@ -147,7 +147,7 @@ async function makeDailyBriefing() {
     return "Daily briefing done!";
   } catch (error) {
     throw new Error(
-      `Error occurred while trying to make daily briefing: ${error}`,
+      `Error occurred while trying to make daily briefing: ${error}`
     );
   }
 }
@@ -163,8 +163,9 @@ async function makeProjectBriefing(projectName) {
     const memoriesMentioningProject = await getMemoriesByString(projectName);
     const todoChanges = await listTodoChanges();
     const calendarEntries = await readCalendar();
-    const projectMemoryMap =
-      await identifyProjectsInMemories(processedMemories);
+    const projectMemoryMap = await identifyProjectsInMemories(
+      processedMemories
+    );
 
     const projectSummary = await generateProjectSummary({
       project,
@@ -176,7 +177,7 @@ async function makeProjectBriefing(projectName) {
     return projectSummary;
   } catch (error) {
     throw new Error(
-      `Error occurred while trying to make project briefing: ${error}`,
+      `Error occurred while trying to make project briefing: ${error}`
     );
   }
 }
@@ -196,7 +197,7 @@ async function retrieveFeedback() {
     .eq("tags", "feedback");
 
   if (error) {
-    console.error("Error retrieving feedback", error);
+    logger.error("Error retrieving feedback", error);
     return [];
   }
 
@@ -297,16 +298,16 @@ In the previous message I just sent, please identify any GitHub Repos, Issues, M
     `Parsed ID extraction from memories: ${JSON.stringify(
       parsedResponse,
       null,
-      2,
-    )}`,
+      2
+    )}`
   );
 
   // make sure the parsedResponse has a length, if it doesn't, error out
   if (parsedResponse.length === 0) {
     logger.error(
       `No project slugs or IDs found in the memories ${JSON.stringify(
-        response,
-      )}`,
+        response
+      )}`
     );
     return [];
   }
@@ -349,7 +350,7 @@ async function readCalendar() {
     const events = await listEventsBetweenDates(
       calendarId,
       dateFns.subWeeks(new Date(), 1),
-      dateFns.addWeeks(new Date(), 1),
+      dateFns.addWeeks(new Date(), 1)
     );
 
     return events;
@@ -447,7 +448,7 @@ async function generateMetaSummary({
 }) {
   const { createChatCompletion } = require("../helpers");
   logger.info(
-    `Generating meta-summary for weekMemories: ${weekMemories.length}`,
+    `Generating meta-summary for weekMemories: ${weekMemories.length}`
   );
   // make sure all the things exist
 

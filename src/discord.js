@@ -236,7 +236,7 @@ class DiscordBot {
       related_message_id: messageId,
     });
 
-    console.info(`📤 Messages: ${JSON.stringify(messages)}`);
+    logger.info(`📤 Messages: ${JSON.stringify(messages)}`);
 
     if (!shouldRespond) return;
 
