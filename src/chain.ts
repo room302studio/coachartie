@@ -1,49 +1,56 @@
-const memoryFunctionsPromise = require("./memory");
-const { capabilityRegex, callCapabilityMethod } = require("./capabilities");
-const { storeUserMessage } = require("./remember");
-const logger = require("../src/logger.js")("chain");
-// const { countTokensInMessageArray } = require("../helpers");
+import memoryFunctionsPromise from "./memory";
+import { capabilityRegex, callCapabilityMethod } from "./capabilities";
+import { storeUserMessage } from "./remember";
+import createLogger from "../src/logger";
+import {
+  countMessageTokens,
+  doesMessageContainCapability,
+  generateAiCompletionParams,
+  generateAiCompletion,
+  countTokens,
+  getUniqueEmoji,
+  getConfigFromSupabase,
+  createTokenLimitWarning,
+} from "../helpers";
 
-module.exports = (async () => {
-  const {
-    countMessageTokens,
-    doesMessageContainCapability,
-    generateAiCompletionParams,
-    generateAiCompletion,
-    countTokens,
-    getUniqueEmoji,
-    getConfigFromSupabase,
-    createTokenLimitWarning,
-  } = require("../helpers");
+const logger = createLogger("chain");
 
+interface Message {
+  role: string;
+  content: string;
+  image?: string;
+}
+
+interface Options {
+  username: string;
+  channel: string;
+  guild: string;
+  related_message_id?: string;
+}
+
+export default (async () => {
   const { TOKEN_LIMIT, WARNING_BUFFER, MAX_CAPABILITY_CALLS, MAX_RETRY_COUNT } =
     await getConfigFromSupabase();
 
   /**
    * Processes a message chain.
    *
-   * @param {Array} messages - The array of messages to process.
-   * @param {Object} options - The options object containing username, channel, and guild.
-   * @param {string} options.username - The username.
-   * @param {string} options.channel - The channel.
-   * @param {string} options.guild - The guild.
+   * @param {Message[]} messages - The array of messages to process.
+   * @param {Options} options - The options object containing username, channel, and guild.
    * @param {number} [retryCount=0] - The number of retry attempts.
    * @param {number} [capabilityCallCount=0] - The number of capability calls.
-   * @returns {Promise<Array>} - The processed message chain.
+   * @returns {Promise<Message[]>} - The processed message chain.
    */
   async function processMessageChain(
-    messages,
-    { username, channel, guild, related_message_id },
+    messages: Message[],
+    { username, channel, guild, related_message_id }: Options,
     retryCount = 0,
     capabilityCallCount = 0
-  ) {
-    // Create a unique chain ID so we can track this specific one in the logs
-    // This is helpful if multiple chains are being processed concurrently
+  ): Promise<Message[]> {
     const chainId = getUniqueEmoji();
     const lastMessage = messages[messages.length - 1];
 
     try {
-      // We need messages to process, at least
       if (!messages.length) {
         logger.error(
           `[${chainId}] Cannot process empty message chain, aborting.`
@@ -51,13 +58,11 @@ module.exports = (async () => {
         return [];
       }
 
-      // TODO: If the last message contains an image, then it's probably a capability response and we should return early
       if (lastMessage.image) {
         logger.info("Last Message is an Image");
         return messages;
       }
 
-      // Otherwise, let's process the message chain over and over (up to MAX_CAPABILITY_CALLS)
       const processedMessages = await processMessageChainRecursively(
         messages,
         { username, channel, guild, related_message_id },
@@ -82,29 +87,27 @@ module.exports = (async () => {
     }
   }
 
-  function getCapabilityFromMessage(message) {
+  function getCapabilityFromMessage(message: string): string | null {
     const capabilityMatch = message.match(capabilityRegex);
     if (!capabilityMatch) return null;
     return capabilityMatch[1];
   }
+
   /**
    * Recursively processes a message chain.
    *
-   * @param {Array} messages - The array of messages to process.
-   * @param {Object} options - The options object containing username, channel, and guild.
-   * @param {string} options.username - The username.
-   * @param {string} options.channel - The channel.
-   * @param {string} options.guild - The guild.
+   * @param {Message[]} messages - The array of messages to process.
+   * @param {Options} options - The options object containing username, channel, and guild.
    * @param {number} capabilityCallCount - The number of capability calls.
    * @param {string} chainId - The unique identifier for the chain.
-   * @returns {Promise<Array>} - The processed message chain.
+   * @returns {Promise<Message[]>} - The processed message chain.
    */
   async function processMessageChainRecursively(
-    messages,
-    { username, channel, guild, related_message_id },
-    capabilityCallCount,
-    chainId
-  ) {
+    messages: Message[],
+    { username, channel, guild, related_message_id }: Options,
+    capabilityCallCount: number,
+    chainId: string
+  ): Promise<Message[]> {
     let capabilityCallIndex = 0;
 
     if (!messages.length) {
@@ -145,11 +148,6 @@ module.exports = (async () => {
           );
         }
 
-        // logger.info(
-        //   `[${chainId}] Capability call ${capabilityCallIndex} completed. Assistant response: ${messages[
-        //     messages.length - 1
-        //   ].content.slice(0, 100)}...`
-        // );
         return messages;
       }
     } catch (error) {
@@ -171,25 +169,22 @@ module.exports = (async () => {
   /**
    * Handles errors in the message chain processing.
    *
-   * @param {Array} messages - The array of messages.
-   * @param {Object} options - The options object containing username, channel, and guild.
-   * @param {string} options.username - The username.
-   * @param {string} options.channel - The channel.
-   * @param {string} options.guild - The guild.
+   * @param {Message[]} messages - The array of messages.
+   * @param {Options} options - The options object containing username, channel, and guild.
    * @param {number} retryCount - The number of retry attempts.
    * @param {number} capabilityCallCount - The number of capability calls.
    * @param {Error} error - The error object.
    * @param {string} chainId - The unique identifier for the chain.
-   * @returns {Promise<Array>} - The processed message chain.
+   * @returns {Promise<Message[]>} - The processed message chain.
    */
   async function handleMessageChainError(
-    messages,
-    { username, channel, guild, related_message_id },
-    retryCount,
-    capabilityCallCount,
-    error,
-    chainId
-  ) {
+    messages: Message[],
+    { username, channel, guild, related_message_id }: Options,
+    retryCount: number,
+    capabilityCallCount: number,
+    error: Error,
+    chainId: string
+  ): Promise<Message[]> {
     if (retryCount < MAX_RETRY_COUNT) {
       logger.warn(
         `Error processing message chain, retrying (${
@@ -217,10 +212,15 @@ module.exports = (async () => {
    * @param {string} capSlug - The slug of the capability.
    * @param {string} capMethod - The method of the capability to call.
    * @param {any[]} capArgs - The arguments to pass to the capability method.
-   * @param {Array} messages - The array of messages.
+   * @param {Message[]} messages - The array of messages.
    * @returns {Promise<any>} - The capability response.
    */
-  async function getCapabilityResponse(capSlug, capMethod, capArgs, messages) {
+  async function getCapabilityResponse(
+    capSlug: string,
+    capMethod: string,
+    capArgs: any[],
+    messages: Message[]
+  ): Promise<any> {
     try {
       logger.info("Calling Capability: " + capSlug + ":" + capMethod);
       const response = await callCapabilityMethod(
@@ -230,7 +230,6 @@ module.exports = (async () => {
         messages
       );
 
-      // Check if the capability call was successful
       if (response.success) {
         if (response.data.image) {
           logger.info("Capability Response is an Image");
@@ -238,34 +237,26 @@ module.exports = (async () => {
         }
         return trimResponseIfNeeded(response.data);
       } else {
-        // Handle error case
         logger.info("Capability Failed: " + response.error);
-        return response.error; // Consider how you want to handle errors
+        return response.error;
       }
     } catch (e) {
-      // This catch block might be redundant now, consider removing or logging unexpected errors
       logger.error("Unexpected error in getCapabilityResponse: " + e);
       return "Unexpected error: " + e.message;
     }
-
-    // if (capabilityResponse.image) {
-    //   logger.info("Capability Response is an Image");
-    //   return capabilityResponse;
-    // }
-
-    // logger.info(`Capability Response: ${JSON.stringify(capabilityResponse)}`);
-
-    // return trimResponseIfNeeded(capabilityResponse);
   }
 
   /**
    * Processes the capability response and logs relevant information.
    *
-   * @param {Array} messages - The array of messages.
-   * @param {Array} capabilityMatch - The capability match array.
-   * @returns {Promise<Array>} - The updated array of messages.
+   * @param {Message[]} messages - The array of messages.
+   * @param {RegExpMatchArray} capabilityMatch - The capability match array.
+   * @returns {Promise<Message[]>} - The updated array of messages.
    */
-  async function processAndLogCapabilityResponse(messages, capabilityMatch) {
+  async function processAndLogCapabilityResponse(
+    messages: Message[],
+    capabilityMatch: RegExpMatchArray
+  ): Promise<Message[]> {
     logger.info(`processAndLogCapabilityResponse: ${capabilityMatch}`);
     const [_, capSlug, capMethod, capArgs] = capabilityMatch;
     const currentTokenCount = countMessageTokens(messages);
@@ -284,7 +275,7 @@ module.exports = (async () => {
       messages
     );
 
-    const message = {
+    const message: Message = {
       role: "system",
       content:
         "Capability " +
@@ -305,61 +296,12 @@ module.exports = (async () => {
     return messages;
   }
 
-  /**
-   * Finds all capabilities within a message content.
-   * @param {string} messageContent - The content of the message to scan for capabilities.
-   * @returns {Array} An array of all capability matches found within the message.
-   */
-  // function findAllCapabilities(messageContent) {
-  //   const capabilityRegex = /your-capability-pattern/g; // Define your capability pattern
-  //   return [...messageContent.matchAll(capabilityRegex)];
-  // }
-
-  /**
-   * Processes a single capability.
-   * @param {Object} capabilityMatch - The capability match object.
-   * @param {Object} options - The options object containing additional context.
-   * @returns {Promise<Object>} A promise that resolves to the result of the capability processing.
-   */
-  // async function processSingleCapability(capabilityMatch, options) {
-  //   const [_, capSlug, capMethod, capArgs] = capabilityMatch;
-  //   const currentTokenCount = countMessageTokens(messages);
-
-  //   if (currentTokenCount >= TOKEN_LIMIT - WARNING_BUFFER) {
-  //     logger.warn("Token Limit Warning: Current Tokens - " + currentTokenCount);
-  //     messages.push(createTokenLimitWarning());
-  //   }
-
-  //   logger.info("Processing Capability: " + capSlug + ":" + capMethod);
-
-  //   const capabilityResponse = await getCapabilityResponse(
-  //     capSlug,
-  //     capMethod,
-  //     capArgs,
-  //     messages
-  //   );
-
-  //   return capabilityResponse;
-  // }
-
-  /**
-   * Processes all capabilities found in a single message concurrently.
-   * @param {string} messageContent - The content of the message to process.
-   * @param {Object} options - The options object containing additional context.
-   * @returns {Promise<Array>} A promise that resolves to an array of processed capability results.
-   */
-  // async function processAllCapabilitiesInMessage(messageContent, options) {
-  //   const capabilityMatches = findAllCapabilities(messageContent);
-  //   const capabilityPromises = capabilityMatches.map((capabilityMatch) =>
-  //     processSingleCapability(capabilityMatch, options)
-  //   );
-
-  //   return await Promise.all(capabilityPromises);
-  // }
-
   // TODO: Remove this function to simplify
-  async function processCapability(messages, lastMessage, options) {
-    // check for all the arguments
+  async function processCapability(
+    messages: Message[],
+    lastMessage: string,
+    options: Options
+  ): Promise<Message[]> {
     if (!lastMessage) {
       logger.error("No last message found - cannot process capability");
       return messages;
@@ -389,19 +331,21 @@ module.exports = (async () => {
   /**
    * Processes a message and generates a response.
    *
-   * @param {Array} messages - The array of messages.
+   * @param {Message[]} messages - The array of messages.
    * @param {string} lastMessage - The last message in the array.
-   * @param {Object} options - The options object.
-   * @param {string} options.username - The username.
-   * @param {string} options.channel - The channel.
-   * @param {string} options.guild - The guild.
-   * @returns {Promise<Array>} - The updated array of messages.
+   * @param {Options} options - The options object.
+   * @returns {Promise<Message[]>} - The updated array of messages.
    */
   async function processMessage(
-    messages,
-    lastMessage,
-    { username = "", channel = "", guild = "", related_message_id = "" }
-  ) {
+    messages: Message[],
+    lastMessage: string,
+    {
+      username = "",
+      channel = "",
+      guild = "",
+      related_message_id = "",
+    }: Options
+  ): Promise<Message[]> {
     const { logInteraction } = await memoryFunctionsPromise;
 
     logger.info(`Processing Message in chain.js: ${lastMessage}`);
@@ -428,6 +372,10 @@ module.exports = (async () => {
       .slice()
       .reverse()
       .find((m) => m.role === "user");
+    if (!lastUserMessage) {
+      logger.error("No user message found - cannot process message");
+      return messages;
+    }
     const prompt = lastUserMessage.content;
     logger.info(`Prompt: ${prompt}`);
 
@@ -463,7 +411,7 @@ module.exports = (async () => {
       { username, channel, guild, related_message_id: storedMessageId },
       messages,
       isCapability,
-      isCapability ? lastMessage.match(capabilityRegex)[1] : ""
+      isCapability ? lastMessage.match(capabilityRegex)?.[1] : ""
     );
 
     return messages;
@@ -474,7 +422,7 @@ module.exports = (async () => {
    * @param {string} capabilityResponse - The response to trim.
    * @returns {string} - The trimmed response.
    */
-  function trimResponseIfNeeded(capabilityResponse) {
+  function trimResponseIfNeeded(capabilityResponse: string): string {
     while (isResponseExceedingLimit(capabilityResponse)) {
       capabilityResponse = trimResponseByLineCount(
         capabilityResponse,
@@ -489,16 +437,16 @@ module.exports = (async () => {
    * @param {string} response - The response to check.
    * @returns {boolean} - True if the response exceeds the limit, false otherwise.
    */
-  function isResponseExceedingLimit(response) {
+  function isResponseExceedingLimit(response: string): boolean {
     return countTokens(response) > TOKEN_LIMIT;
   }
 
   /**
    * Checks if the total number of tokens in the given messages exceeds the token limit.
-   * @param {Array<string>} messages - The array of messages to count tokens from.
+   * @param {Message[]} messages - The array of messages to count tokens from.
    * @returns {boolean} - True if the total number of tokens exceeds the token limit, false otherwise.
    */
-  function isExceedingTokenLimit(messages) {
+  function isExceedingTokenLimit(messages: Message[]): boolean {
     return countMessageTokens(messages) > TOKEN_LIMIT;
   }
 
