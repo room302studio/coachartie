@@ -33,11 +33,19 @@ function loadCapabilityManifest() {
 /**
  * Assembles the message preamble for a given username.
  * @param {string} username - The username for which the message preamble is being assembled.
+ * @param {Object} options - The options for assembling the message preamble.
+ * @param {boolean} options.shuffle - Whether to shuffle the messages or not.
  * @returns {Promise<Array<string>>} - A promise that resolves to an array of messages representing the preamble.
  */
-async function assembleMessagePreamble(username) {
+async function assembleMessagePreamble(
+  username,
+  prompt,
+  options = { shuffle: false }
+) {
   logger.info(`🔧 Assembling message preamble for <${username}> message`);
-  const messages = [];
+  // log the options
+  logger.info(`🔧 Options: ${JSON.stringify(options)}`);
+  let messages = [];
   addCurrentDateTime(messages);
   await addHexagramPrompt(messages);
   await addTodosToMessages(messages);
@@ -46,8 +54,20 @@ async function assembleMessagePreamble(username) {
   await addCapabilityPromptIntro(messages);
   await addCapabilityManifestMessage(messages);
   await addGeneralMemories(messages);
+
+  // BE WARNED
+  // Shuffling does some weird shit
+  // Some other functions depend on `messages` being the *correctly-ordered* array
+  // Because it assumes things like, the *last* message with the user role is the actual last user message, things like that break
+  // BUT, it's useful for testing, especially with very small context windows
+  if (options.shuffle) {
+    logger.info("🔧 Shuffling messages");
+    messages = chance.shuffle(messages);
+  }
+
   await addUserMessages(username, messages);
   await addSystemPrompt(messages);
+
   return messages;
 }
 
