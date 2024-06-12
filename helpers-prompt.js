@@ -41,12 +41,12 @@ async function assembleMessagePreamble(username) {
   addCurrentDateTime(messages);
   await addHexagramPrompt(messages);
   await addTodosToMessages(messages);
-  await addUserMessages(username, messages);
   await addUserMemories(username, messages);
   await addRelevantMemories(username, messages);
   await addCapabilityPromptIntro(messages);
   await addCapabilityManifestMessage(messages);
   await addGeneralMemories(messages);
+  await addUserMessages(username, messages);
   await addSystemPrompt(messages);
   return messages;
 }
