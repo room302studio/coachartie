@@ -348,7 +348,7 @@ export default (async () => {
   ): Promise<Message[]> {
     const { logInteraction } = await memoryFunctionsPromise;
 
-    logger.info(`Processing Message in chain.js: ${lastMessage}`);
+    logger.info(`Processing Message in chain.ts: ${lastMessage}`);
 
     const isCapability = doesMessageContainCapability(lastMessage);
     logger.info(`Is Capability: ${isCapability} - ${lastMessage}`);

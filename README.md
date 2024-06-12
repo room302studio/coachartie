@@ -31,13 +31,13 @@ Coach Artie is an advanced AI assistant that facilitates collaboration, helps an
 
 ## Discord Bot Code Overview
 
-The codebase is primarily divided into three main files: `discord.js`, `capabilities.js`, and `chain.js`.
+The codebase is primarily divided into three main files: `discord.js`, `capabilities.js`, and `chain.ts`.
 
 `discord.js` is responsible for setting up the Discord bot client, handling message creation events, and sending messages or embed messages to the Discord server. It also includes functions to detect if the bot was mentioned or if the channel name includes a bot.
 
 `capabilities.js` contains the definitions of the bot's capabilities. It includes a regex for identifying capability calls, a function for calling capability methods, and a prompt for informing the bot about its capabilities.
 
-`chain.js` is responsible for processing message chains. It includes functions for processing messages, processing capabilities, and getting capability responses. It also handles token limits and generates AI responses based on the result of the capability processing.
+`chain.ts` is responsible for processing message chains. It includes functions for processing messages, processing capabilities, and getting capability responses. It also handles token limits and generates AI responses based on the result of the capability processing.
 
 `capabilities/_generate-manifest.js` generates the `capabilities/_manifest.json` file, which contains the list of capabilities that the bot can perform. For each capability file, it uses the inline JSDoc comments to understand the methods and parameters avilable.
 
