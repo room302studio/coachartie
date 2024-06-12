@@ -172,6 +172,42 @@ VALUES
     ('MEMORIES_TABLE_NAME', 'memories');
 ```
 
+### Chat Models Configuration
+
+The `CHAT_MODELS` configuration is stored as a JSON string in the `config_value` column of the `config` table. This allows for dynamic configuration of the available chat models without the need for a separate table or changes to the database schema.
+
+The JSON string should be an array of objects, each representing a chat model with the following properties:
+
+- `name`: The unique identifier for the chat model.
+- `model`: The specific model to use for this chat model.
+- `handler`: The name of the function that handles the completion for this chat model.
+
+Example:
+
+```json
+[
+  {
+    "name": "openai",
+    "model": "gpt-3.5-turbo",
+    "handler": "createOpenAICompletion"
+  },
+  {
+    "name": "claude",
+    "model": "claude-v1",
+    "handler": "createClaudeCompletion"
+  },
+  {
+    "name": "localhost",
+    "model": "localhost-v1",
+    "handler": "createLocalhostCompletion"
+  }
+]
+```
+
+To add or update the CHAT_MODELS configuration, insert a new row or update the existing row in the config table with the config_key set to 'CHAT_MODELS' and the config_value set to the JSON string representing the chat models configuration.
+
+The createChatCompletion function in helpers-llm.js fetches the CHAT_MODELS configuration from the config table and parses it as JSON. If the CHAT_MODELS configuration doesn't exist, it falls back to a default array of chat models.
+
 ### Matching Query
   
 ```sql
