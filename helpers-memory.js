@@ -1,18 +1,22 @@
 const logger = require("./src/logger")("helpers-memory");
+const { getRelevantMemories } = require("./src/remember");
 const { supabase } = require("./src/supabaseclient");
 const { Chance } = require("chance");
+
 const chance = new Chance();
 
 async function getUserMemory(username, limit = 10) {
   const { data, error } = await supabase
-    .from("memory")
+    .from("memories")
     .select("*")
-    .eq("username", username)
+    .eq("user_id", username)
     .order("created_at", { ascending: false })
     .limit(limit);
 
   if (error) {
-    logger.error(`Error retrieving user memory for ${username}:`, error);
+    logger.error(
+      `Error retrieving user memory for ${username}: ${JSON.stringify(error)}`
+    );
     return [];
   }
 
@@ -21,14 +25,18 @@ async function getUserMemory(username, limit = 10) {
 
 async function getUserMessageHistory(username, limit = 10) {
   const { data, error } = await supabase
-    .from("message_history")
+    .from("messages")
     .select("*")
-    .eq("username", username)
+    .eq("user_id", username)
     .order("created_at", { ascending: false })
     .limit(limit);
 
   if (error) {
-    logger.error(`Error retrieving message history for ${username}:`, error);
+    logger.error(
+      `Error retrieving message history for ${username}: ${JSON.stringify(
+        error
+      )}`
+    );
     return [];
   }
 
@@ -37,32 +45,13 @@ async function getUserMessageHistory(username, limit = 10) {
 
 async function getAllMemories(limit = 10) {
   const { data, error } = await supabase
-    .from("memory")
+    .from("memories")
     .select("*")
     .order("created_at", { ascending: false })
     .limit(limit);
 
   if (error) {
-    logger.error("Error retrieving general memories:", error);
-    return [];
-  }
-
-  return data;
-}
-
-async function getRelevantMemories(query, limit = 10) {
-  const { data, error } = await supabase
-    .from("memory")
-    .select("*")
-    .textSearch("value", `'${query}'`)
-    .order("created_at", { ascending: false })
-    .limit(limit);
-
-  if (error) {
-    logger.error(
-      `Error retrieving relevant memories for query "${query}":`,
-      error
-    );
+    logger.error(`Error retrieving general memories: ${JSON.stringify(error)}`);
     return [];
   }
 
@@ -102,7 +91,7 @@ async function addUserMessages(username, messages, options = {}) {
       });
     });
   } catch (error) {
-    logger.info("Error getting previous user messages:", error);
+    logger.error("Error getting previous user messages:", error);
   }
 }
 
@@ -128,7 +117,7 @@ async function addUserMemories(username, messages, options = {}) {
       });
     });
   } catch (err) {
-    logger.info(err);
+    logger.error(err);
   }
 }
 
@@ -182,7 +171,7 @@ async function addRelevantMemories(username, messages, options = {}) {
       });
     }
   } catch (err) {
-    logger.info(err);
+    logger.error(err);
   }
 }
 
@@ -207,7 +196,7 @@ async function addGeneralMemories(messages, options = {}) {
       });
     });
   } catch (err) {
-    logger.info(err);
+    logger.error(err);
   }
 }
 

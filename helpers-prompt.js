@@ -10,6 +10,7 @@ const { supabase } = require("./src/supabaseclient");
 const { listTodos } = require("./capabilities/supabasetodo.js");
 const { Chance } = require("chance");
 const chance = new Chance();
+const fs = require("fs");
 
 /**
  * Loads the capability manifest from the specified file path.
@@ -20,9 +21,11 @@ function loadCapabilityManifest() {
   try {
     const manifestData = fs.readFileSync(manifestPath, "utf8");
     const manifest = JSON.parse(manifestData);
+    // log the number of capabilities and methods
+    console.log(`Loaded ${Object.keys(manifest).length} capabilities`);
     return manifest;
   } catch (error) {
-    logger.info("Error loading capability manifest:", error);
+    logger.error(`Error loading capability manifest: ${JSON.stringify(error)}`);
     return null;
   }
 }
@@ -206,6 +209,44 @@ async function addCapabilityPromptIntro(messages) {
 }
 
 /**
+ * Formats the capability manifest into a structured and readable format.
+ * @param {Object} manifest - The capability manifest object.
+ * @returns {string} - The capability manifest in a structured and readable format.
+ */
+function formatCapabilityManifest(manifest) {
+  let formattedManifest = "";
+
+  for (const category in manifest) {
+    formattedManifest += `## ${category.toUpperCase()} CAPABILITIES\n\n`;
+
+    for (const capability of manifest[category]) {
+      formattedManifest += `### ${capability.name}\n`;
+      formattedManifest += `${capability.description}\n\n`;
+
+      if (capability.parameters) {
+        formattedManifest += "**Parameters:**\n\n";
+        for (const parameter of capability.parameters) {
+          formattedManifest += `- **${parameter.name}**: ${parameter.description}\n`;
+        }
+        formattedManifest += "\n";
+      }
+
+      if (capability.examples) {
+        formattedManifest += "**Examples:**\n\n";
+        for (const example of capability.examples) {
+          formattedManifest += `${example}\n\n`;
+        }
+        formattedManifest += "\n";
+      }
+    }
+
+    formattedManifest += "---\n\n"; // Separator between categories
+  }
+
+  return formattedManifest;
+}
+
+/**
  * Adds a capability manifest message to the given array of messages.
  * @param {Array} messages - The array of messages to add the capability manifest message to.
  * @returns {Array} - The updated array of messages.
@@ -213,6 +254,12 @@ async function addCapabilityPromptIntro(messages) {
 async function addCapabilityManifestMessage(messages) {
   const { CHAT_MODEL } = await getConfigFromSupabase();
   const manifest = loadCapabilityManifest();
+
+  // if there is no manifest, big error time
+  if (!manifest) {
+    logger.error("No capability manifest found");
+    return messages;
+  }
 
   if (CHAT_MODEL === "claude") {
     const xmlManifest = convertCapabilityManifestToXML(manifest);
