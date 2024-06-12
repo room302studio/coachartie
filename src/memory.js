@@ -10,7 +10,8 @@ const {
   deleteTodo,
   updateTodo,
 } = require("../capabilities/supabasetodo.js");
-const chance = require("chance").Chance();
+const { Chance } = require("chance");
+const chance = new Chance();
 const vision = require("./vision.js");
 const logger = require("../src/logger.js")("memory");
 // const preambleLogger = require("../src/logger.js")("preamble");
