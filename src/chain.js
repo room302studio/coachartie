@@ -1,5 +1,6 @@
 const memoryFunctionsPromise = require("./memory");
-const { capabilityRegex, callCapabilityMethod } = require("./capabilities");
+const { callCapabilityMethod } = require("./capabilities");
+const { capabilityRegex } = require("../helpers-utility.js");
 const { storeUserMessage } = require("./remember");
 const logger = require("../src/logger.js")("chain");
 // const { countTokensInMessageArray } = require("../helpers");
@@ -83,6 +84,8 @@ module.exports = (async () => {
   }
 
   function getCapabilityFromMessage(message) {
+    if (!capabilityRegex) logger.error(`Capability regex not found`);
+    if (!capabilityRegex.test(message)) return null;
     const capabilityMatch = message.match(capabilityRegex);
     if (!capabilityMatch) return null;
     return capabilityMatch[1];
@@ -270,6 +273,16 @@ module.exports = (async () => {
     const [_, capSlug, capMethod, capArgs] = capabilityMatch;
     const currentTokenCount = countMessageTokens(messages);
 
+    if (!capabilityMatch) {
+      logger.error("No capability match found");
+      return messages;
+    }
+
+    // log the capabilityMatch and the stuff we extract from it
+    logger.info(
+      `Capability match: ${capabilityMatch}\nProcessing Capability: ${capSlug}:${capMethod} with args: ${capArgs}`
+    );
+
     if (currentTokenCount >= TOKEN_LIMIT - WARNING_BUFFER) {
       logger.warn("Token Limit Warning: Current Tokens - " + currentTokenCount);
       messages.push(createTokenLimitWarning());
@@ -358,7 +371,7 @@ module.exports = (async () => {
   // }
 
   // TODO: Remove this function to simplify
-  async function processCapability(messages, lastMessage, options) {
+  async function processCapability(messages, lastMessage) {
     // check for all the arguments
     if (!lastMessage) {
       logger.error("No last message found - cannot process capability");
@@ -370,14 +383,19 @@ module.exports = (async () => {
       return messages;
     }
 
+    if (!capabilityRegex) logger.error(`Capability regex not found`);
+
     const capabilityMatch = lastMessage.match(capabilityRegex);
-    if (!capabilityMatch) return messages;
-    logger.info(`${lastMessage} is a capability: ${capabilityMatch[0]}`);
+    if (!capabilityMatch) {
+      logger.info("No capability match found");
+      return messages;
+    }
+    logger.info(`${lastMessage} is a capability: ${capabilityMatch}`);
 
     try {
       return await processAndLogCapabilityResponse(messages, capabilityMatch);
     } catch (error) {
-      logger.info(`Error processing capability: ${error}`);
+      logger.error(`Error processing capability: ${error}`);
       messages.push({
         role: "system",
         content: "Error processing capability: " + error,

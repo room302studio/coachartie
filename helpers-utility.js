@@ -363,7 +363,34 @@ function getUniqueEmoji() {
  * @returns {boolean} - True if the message contains a capability, false otherwise.
  */
 function doesMessageContainCapability(message) {
+  if (!capabilityRegex) logger.error(`Capability regex not found`);
   return !!message.match(capabilityRegex);
+}
+
+/**
+ * Counts the number of tokens in an array of messages.
+ * @param {Array} messageArray - The array of messages to count tokens from.
+ * @returns {number} - The total number of tokens.
+ */
+function countMessageTokens(messageArray = []) {
+  let totalTokens = 0;
+  // logger.info("Message Array: ", messageArray);
+  if (!messageArray) {
+    return totalTokens;
+  }
+  if (messageArray.length === 0) {
+    return totalTokens;
+  }
+
+  // for loop
+  for (let i = 0; i < messageArray.length; i++) {
+    const message = messageArray[i];
+    // encode message.content
+    const encodedMessage = encode(JSON.stringify(message));
+    totalTokens += encodedMessage.length;
+  }
+
+  return totalTokens;
 }
 
 module.exports = {
@@ -381,4 +408,6 @@ module.exports = {
   displayTypingIndicator,
   getUniqueEmoji,
   doesMessageContainCapability,
+  countMessageTokens,
+  capabilityRegex,
 };

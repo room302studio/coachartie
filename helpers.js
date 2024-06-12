@@ -46,6 +46,7 @@ const {
   splitAndSendMessage,
   splitMessageIntoChunks,
   getConfigFromSupabase,
+  capabilityRegex,
 } = require("./helpers-utility.js");
 
 module.exports = {
@@ -83,4 +84,5 @@ module.exports = {
   addRelevantMemories,
   addGeneralMemories,
   createClaudeCompletion,
+  capabilityRegex,
 };
