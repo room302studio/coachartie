@@ -531,23 +531,6 @@ async function getRelevantMemories(queryString, limit = 5) {
   if (typeof queryString !== "string") {
     return logger.info("No query string provided to getRelevantMemories");
   }
-  // queryStrings look like: <@1086489885269037128> What you do remember about to-do lists?
-  // we need to clean the query string so that it's not too long
-  let cleanQueryString = queryString.replace(/<@.*>/, "").trim();
-  cleanQueryString = cleanQueryString.replace(/<.*>/, "").trim();
-  cleanQueryString = cleanQueryString.replace(/\?/, "").trim();
-  cleanQueryString = cleanQueryString.replace(/!/, "").trim();
-  cleanQueryString = cleanQueryString.replace(/:/, "").trim();
-  cleanQueryString = cleanQueryString.replace(/\./, "").trim();
-  cleanQueryString = cleanQueryString.replace(/,/, "").trim();
-
-  logger.info("Looking for memories relevant to " + cleanQueryString);
-  // turn the cleanQueryString into an embedding
-  if (!cleanQueryString) {
-    return [];
-  }
-
-  // const { embedding1: embedding } = await stringToEmbedding(queryString);
 
   const openAiEmbeddingResponse = await openai.embeddings.create({
     model: "text-embedding-ada-002",
@@ -573,6 +556,10 @@ async function getRelevantMemories(queryString, limit = 5) {
   if (Object.keys(data).length === 0) {
     return [];
   }
+
+  logger.info(
+    `Found ${data.length}/${limit} relevant memories with threshold at ${0.85}`
+  );
 
   return data;
 }

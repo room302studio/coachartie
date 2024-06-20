@@ -2,8 +2,7 @@ const memoryFunctionsPromise = require("./memory");
 const { callCapabilityMethod } = require("./capabilities");
 const { storeUserMessage } = require("./remember");
 const logger = require("../src/logger.js")("chain");
-
-const capabilityRegex = /(\w+):(\w+)\(([^]*?)\)/g;
+const { capabilityRegex } = require("../helpers-utility");
 
 module.exports = (async () => {
   const {
@@ -218,21 +217,27 @@ module.exports = (async () => {
    * @returns {Promise<Array>} - The updated array of messages.
    */
   async function processCapability(messages, lastMessage, options) {
+    logger.info("Processing capability for message:", lastMessage);
+
     // Another case of getting lastMessage from args
     // when we also have the messages array - doesn't make much sense
     // also we don't handle multiple capabilities in a single message
     // or maybe we handle it before this function is called
     // slug:method(args)
-    const capabilityMatch = lastMessage.match(capabilityRegex);
+    // const capabilityMatch = lastMessage.match(capabilityRegex);
+    const capabilityMatch = Array.from(
+      lastMessage.matchAll(capabilityRegex)
+    )[0];
 
     if (!capabilityMatch) {
       return messages;
     }
+    logger.info("Capability match:", capabilityMatch);
 
     // extract the capability slug, method, and arguments
     // from the regex match
     const [_, capSlug, capMethod, capArgs] = capabilityMatch;
-
+    logger.info(`Extracted capability: ${capSlug}:${capMethod}(${capArgs})`);
     // figure out how many tokens are in the current message chain
     const currentTokenCount = countMessageTokens(messages);
 
@@ -249,24 +254,31 @@ module.exports = (async () => {
       messages
     );
 
-    // Build a message with the capability response
-    const message = {
-      role: "system",
-      content: `# Capability ${capSlug}:${capMethod} was run
+    logger.info(`Capability response: ${JSON.stringify(capabilityResponse)}`);
+
+    if (capabilityResponse.success) {
+      const message = {
+        role: "system",
+        content: `# Capability ${capSlug}:${capMethod} was run
 ## Args:
 ${capArgs}
 
 ## Response:
-${JSON.stringify(capabilityResponse, null, 2)}`,
-    };
+${JSON.stringify(capabilityResponse.data, null, 2)}`,
+      };
 
-    // add the image to the message if it exists
-    if (capabilityResponse.image) {
-      message.image = capabilityResponse.image;
+      // add the image to the message if it exists
+      if (capabilityResponse.data.image) {
+        message.image = capabilityResponse.data.image;
+      }
+
+      messages.push(message);
+    } else {
+      messages.push({
+        role: "system",
+        content: `Error running capability ${capSlug}:${capMethod}: ${capabilityResponse.error}`,
+      });
     }
-
-    // add the message to the messages array
-    messages.push(message);
     return messages;
   }
 

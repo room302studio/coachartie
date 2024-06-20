@@ -2,7 +2,12 @@ const { encode } = require("@nem035/gpt-3-encoder");
 const logger = require("./src/logger.js")("helpers-utility");
 const { supabase } = require("./src/supabaseclient");
 
-const capabilityRegex = /(\w+):(\w+)\(([^]*?)\)/; // captures newlines in the  third argument
+const testString = "calculator:add(12,24)";
+const capabilityRegex = /(\w+):(\w+)\(([^)]*?)\)/g;
+// this regex works poorly and
+const match = testString.match(capabilityRegex) || [];
+
+logger.info(`Regex test on ${testString}: ${match}`);
 
 /**
  * Counts the number of tokens in a string.

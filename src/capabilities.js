@@ -9,11 +9,14 @@ const logger = require("../src/logger.js")("capabilities");
 const callSomething = "callSomething:callSomething()";
 
 const capabilityFile = fs.readFileSync(
-  path.join(__dirname, "../capabilities/_manifest.json"),
+  path.join(__dirname, "../capabilities/_manifest.json")
 );
 
 // parse the json
 const capabilities = JSON.parse(capabilityFile);
+// count the number of capabilities
+const capabilityCount = Object.keys(capabilities).length;
+logger.info(`Loaded ${capabilityCount} capabilities`);
 
 (async () => {
   const { CAPABILITY_PROMPT_INTRO } = await getPromptsFromSupabase();
@@ -61,20 +64,20 @@ async function callCapabilityMethod(
   capabilitySlug,
   methodName,
   args,
-  messages,
+  messages
 ) {
   try {
     const capability = require(`../capabilities/${capabilitySlug}`);
     const capabilityResponse = await capability.handleCapabilityMethod(
       methodName,
       args,
-      messages,
+      messages
     );
 
     // Ensure there's a response
     if (!capabilityResponse) {
       throw new Error(
-        `Capability ${capabilitySlug} did not return a response.`,
+        `Capability ${capabilitySlug} did not return a response.`
       );
     }
 
