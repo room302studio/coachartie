@@ -89,6 +89,12 @@ function splitAndSendMessage(messageText, channel) {
     return;
   }
 
+  // make sure channel exists
+  if (!channel) {
+    logger.error("splitAndSendMessage: channel does not exist");
+    return;
+  }
+
   logger.info(`splitAndSendMessage: message length: ${messageText.length}`);
 
   if (messageText.length < 2000) {

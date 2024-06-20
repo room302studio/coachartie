@@ -3,6 +3,7 @@ const { callCapabilityMethod } = require("./capabilities");
 const { storeUserMessage } = require("./remember");
 const logger = require("../src/logger.js")("chain");
 const { capabilityRegex } = require("../helpers-utility");
+const { createTokenLimitWarning } = require("../helpers");
 
 module.exports = (async () => {
   const {
