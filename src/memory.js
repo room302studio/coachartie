@@ -16,11 +16,15 @@ const vision = require("./vision.js");
 const logger = require("../src/logger.js")("memory");
 // const preambleLogger = require("../src/logger.js")("preamble");
 
+const DISABLE_MEMORIES = true;
+
 const preambleLogger = {
   info: (message) => {},
 };
 
 const { getPromptsFromSupabase, getConfigFromSupabase } = require("../helpers");
+
+const DISABLE_REMEMBER_COMPLETIONS = true;
 
 module.exports = (async () => {
   const { PROMPT_REMEMBER, PROMPT_CAPABILITY_REMEMBER, PROMPT_REMEMBER_INTRO } =
@@ -87,21 +91,39 @@ module.exports = (async () => {
     const processedResponse = await processResponse(response);
     logger.info(`Response processed, ${processedResponse} characters`);
 
-    // Generate remember completion
-    const rememberCompletion = await generateRememberCompletion(
-      isCapability,
-      memoryMessages,
-      conversationHistory,
-      prompt,
-      processedResponse,
-      capabilityName
-    );
+    let rememberText = "";
+    try {
+      if (DISABLE_REMEMBER_COMPLETIONS) {
+        logger.error("Remember completions are disabled");
+        return rememberText;
+      }
+      // Generate remember completion
+      const rememberCompletion = await generateRememberCompletion(
+        isCapability,
+        memoryMessages,
+        conversationHistory,
+        prompt,
+        processedResponse,
+        capabilityName
+      );
 
-    const rememberText = rememberCompletion.choices[0].message.content;
+      rememberText = rememberCompletion.choices[0].message.content;
+    } catch (error) {
+      logger.error(`Error generating remember completion: ${error}`);
+      return error;
+    }
 
     // Store user memory if valid
     if (rememberText && rememberText !== "✨" && rememberText.length > 0) {
       logger.info(`Storing user memory for ${username}`);
+
+      // check if we are disabling memories
+      if (DISABLE_MEMORIES) {
+        logger.error(
+          `Memories are disabled, not storing memory for ${username}`
+        );
+        return rememberText;
+      }
       await storeUserMemory(
         { username, channel, conversation_id: channel, related_message_id },
         rememberText
@@ -170,7 +192,14 @@ module.exports = (async () => {
     });
   }
 
+  const DISABLE_TASK_ANALYSIS = true;
+
   async function analyzeAndExecuteTasks(memoryMessages, conversationHistory) {
+    if (DISABLE_TASK_ANALYSIS) {
+      logger.error("Task analysis is disabled");
+      return;
+    }
+
     const taskAnalysisMessages = [
       ...memoryMessages,
       ...conversationHistory,

@@ -135,15 +135,6 @@ function splitMessageIntoChunks(messageText) {
 }
 
 /**
- * Destructures a string of arguments into an array of trimmed arguments.
- * @param {string} argsString - The string of arguments to destructure.
- * @returns {Array<string>} - An array of trimmed arguments.
- */
-function destructureArgs(argsString) {
-  return argsString.split(",").map((arg) => arg.trim());
-}
-
-/**
  * Parses a JSON string into a JavaScript object.
  * @param {string} jsonString - The JSON string to be parsed.
  * @returns {Object} - The JavaScript object parsed from the input JSON string.
@@ -364,6 +355,8 @@ function getUniqueEmoji() {
  */
 function doesMessageContainCapability(message) {
   if (!capabilityRegex) logger.error(`Capability regex not found`);
+  if (!message)
+    logger.error(`Message not found when trying to check for capability`);
   return !!message.match(capabilityRegex);
 }
 
@@ -391,6 +384,15 @@ function countMessageTokens(messageArray = []) {
   }
 
   return totalTokens;
+}
+
+/**
+ * Destructures a string of arguments into an array of trimmed arguments.
+ * @param {string} argsString - The string of arguments to destructure.
+ * @returns {Array<string>} - An array of trimmed arguments.
+ */
+function destructureArgs(argsString) {
+  return argsString.split(",").map((arg) => arg.trim());
 }
 
 module.exports = {

@@ -106,7 +106,7 @@ function generateAiCompletionParams() {
  * @returns {number} - The generated temperature value.
  */
 function generateTemperature() {
-  return chance.floating({ min: 0.88, max: 1.2 });
+  return chance.floating({ min: 0, max: 1.2 });
 }
 
 /**
@@ -252,7 +252,7 @@ function convertMessagesToXML(messages) {
  */
 async function addPreambleToMessages(username, prompt, messages) {
   // logger.info(`🔧 Adding preamble to messages for <${username}> ${prompt}`);
-  const preamble = await assembleMessagePreamble(username, prompt);
+  const preamble = await assembleMessagePreamble(username, prompt, messages);
   return [...preamble, ...messages.flat()];
 }
 
@@ -265,8 +265,9 @@ async function generateAiCompletion(prompt, username, messages, config) {
   if (messages[messages.length - 1].image)
     delete messages[messages.length - 1].image;
 
-  logger.info(`🤖 Generating AI completion for <${username}> ${prompt}`);
-  logger.info(`${messages.length} messages`);
+  logger.info(
+    `🤖 Generating AI completion for <${username}> from ${messages.length} messages: ${prompt}`
+  );
 
   messages = await addPreambleToMessages(username, prompt, messages);
 
@@ -276,9 +277,9 @@ async function generateAiCompletion(prompt, username, messages, config) {
 
   try {
     logger.info(`🔧 Chat completion parameters:
-    - Temperature: ${temperature}
-    - Presence Penalty: ${presence_penalty}`);
-    logger.info("🔧 Messages:");
+- Temperature: ${temperature}
+- Presence Penalty: ${presence_penalty}
+- Message Count: ${messages.length}`);
 
     // Log all message contents
     // extremely verbose
@@ -286,15 +287,13 @@ async function generateAiCompletion(prompt, username, messages, config) {
     //   logger.info(`- Message ${index + 1}: ${JSON.stringify(message)}`)
     // );
 
-    logger.info(`Creating chat completion with ${messages.length} messages`);
-
     completion = await createChatCompletion(
       messages,
       temperature,
       presence_penalty
     );
 
-    logger.info(`🔧 Chat completion created:\n- Completion: ${completion}`);
+    logger.info(`🔧 Chat completion created:\n-${completion}`);
   } catch (err) {
     logger.error(`Error creating chat completion ${err}`);
   }
