@@ -370,25 +370,42 @@ function getUniqueEmoji() {
  * @param {string} message - The message to check.
  * @returns {boolean} - True if the message contains a capability, false otherwise.
  */
-function doesMessageContainCapability(message, capability) {
-  if (!message || !capability) {
-    console.warn(
-      "doesMessageContainCapability received undefined message or capability"
+function doesMessageContainCapability(rawMessage) {
+  // if (!message || !capability) {
+  //   console.warn(
+  //     "doesMessageContainCapability received undefined message or capability"
+  //   );
+  //   return false;
+  // }
+
+  // message might be a string, or an object with .content
+  // lets handle both
+  let content = "";
+  if (typeof rawMessage === "string") {
+    logger.info("Message is a string");
+    content = rawMessage;
+  } else if (typeof rawMessage === "object" && rawMessage.content) {
+    logger.info("Message is an object with content");
+    content = rawMessage.content;
+  } else {
+    logger.warn(
+      `Message is not a string or object with content: ${JSON.stringify(
+        rawMessage
+      )}`
     );
     return false;
   }
 
-  let content = "";
-  if (typeof message === "string") {
-    content = message;
-  } else if (typeof message === "object" && message.content) {
-    content = message.content;
-  } else {
-    console.warn("Unexpected message format in doesMessageContainCapability");
+  // use regex to check if the message contains the capability
+  const regexMatches = content.match(capabilityRegex);
+
+  // if there are no matches, return false
+  if (!regexMatches) {
     return false;
   }
 
-  return content.toLowerCase().includes(capability.toLowerCase());
+  // otherwise, return true
+  return true;
 }
 
 /**

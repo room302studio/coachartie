@@ -1,23 +1,15 @@
 const { memoryFunctions } = require("./memory");
-const { callCapabilityMethod } = require("./capabilities");
+const { callCapabilityMethod, capabilityRegex } = require("./capabilities");
 const { storeUserMessage } = require("./remember");
 const { logInteraction } = require("./memory");
 const logger = require("../src/logger.js")("chain");
-const {
-  capabilityRegex,
-  doesMessageContainCapability,
-} = require("../helpers-utility");
 const llmHelper = require("../helpers-llm");
-const { getConfigFromSupabase, splitAndSendMessage } = require("../helpers");
 
 module.exports = (async () => {
   const {
     countMessageTokens,
     doesMessageContainCapability,
-    generateAiCompletionParams,
-    generateAiCompletion,
     getConfigFromSupabase,
-    splitAndSendMessage,
   } = require("../helpers");
 
   const { TOKEN_LIMIT, WARNING_BUFFER, MAX_RETRY_COUNT } =
@@ -187,10 +179,11 @@ module.exports = (async () => {
       content: aiResponse,
     });
 
+    console.log(`aiResponse: ${JSON.stringify(aiResponse)}`);
+
     // Check if the last message contained a capability call
-    const lastMessageContainsCapability = doesMessageContainCapability(
-      aiResponse.content
-    );
+    const lastMessageContainsCapability =
+      doesMessageContainCapability(aiResponse);
 
     // Log this interaction for posterity
     // This helps us learn and improve over time
