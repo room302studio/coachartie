@@ -7,7 +7,7 @@ const capabilityRegex = /(\w+):(\w+)\(([^)]*?)\)/g;
 // this regex works poorly and
 const match = testString.match(capabilityRegex) || [];
 
-logger.info(`Regex test on ${testString}: ${match}`);
+logger.info(`Regex test on ${testString}: ${match.join("  ")}`);
 
 /**
  * Counts the number of tokens in a string.
@@ -364,11 +364,25 @@ function getUniqueEmoji() {
  * @param {string} message - The message to check.
  * @returns {boolean} - True if the message contains a capability, false otherwise.
  */
-function doesMessageContainCapability(message) {
-  if (!capabilityRegex) logger.error(`Capability regex not found`);
-  if (!message)
-    logger.error(`Message not found when trying to check for capability`);
-  return !!message.match(capabilityRegex);
+function doesMessageContainCapability(message, capability) {
+  if (!message || !capability) {
+    console.warn(
+      "doesMessageContainCapability received undefined message or capability"
+    );
+    return false;
+  }
+
+  let content = "";
+  if (typeof message === "string") {
+    content = message;
+  } else if (typeof message === "object" && message.content) {
+    content = message.content;
+  } else {
+    console.warn("Unexpected message format in doesMessageContainCapability");
+    return false;
+  }
+
+  return content.toLowerCase().includes(capability.toLowerCase());
 }
 
 /**

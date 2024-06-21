@@ -67,12 +67,13 @@ class DiscordBot {
    * @param {string} message - The message to be sent.
    * @param {object} channel - The Discord channel object where the message will be sent.
    */
-  async sendMessage(message, channel) {
+  async sendMessage(messageObject, channel) {
+    const message = messageObject.content;
     logger.info(`Sending message: ${message}`);
     try {
       splitAndSendMessage(message, channel);
     } catch (error) {
-      logger.info(error);
+      logger.error(`${error} on ${JSON.stringify(message)}`);
     }
   }
 
@@ -210,6 +211,10 @@ class DiscordBot {
         shouldRespond ? "Responding" : "Not Responding"
       }`
     );
+
+    // check if the message has an embed or not
+    const msgEmbed = message.embeds.length > 0 ? message.embeds[0] : null;
+    logger.info(`Message embed: ${JSON.stringify(msgEmbed)}`);
 
     // TODO: add channelName- make it easier to understand what the var is and how it is meant to be used- some places expect an object, like splitAndSendMessage, and other things expect a name string, like the memory saving
 

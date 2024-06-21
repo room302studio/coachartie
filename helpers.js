@@ -1,14 +1,6 @@
 // helpers.js
 
-const {
-  createChatCompletion,
-  createClaudeCompletion,
-  generateAiCompletion,
-  generateAiCompletionParams,
-  isBreakingMessageChain,
-  isExceedingTokenLimit,
-  lastUserMessage,
-} = require("./helpers-llm.js");
+const llmHelper = require("./helpers-llm.js");
 
 const {
   addUserMessages,
@@ -33,7 +25,6 @@ const {
   countMessageTokens,
   countTokens,
   countTokensInMessageArray,
-  createTokenLimitWarning,
   destructureArgs,
   displayTypingIndicator,
   doesMessageContainCapability,
@@ -50,6 +41,7 @@ const {
 } = require("./helpers-utility.js");
 
 module.exports = {
+  ...llmHelper,
   addCurrentDateTime,
   addSystemPrompt,
   assembleMessagePreamble,
@@ -58,21 +50,14 @@ module.exports = {
   convertMessagesToXML,
   countMessageTokens,
   countTokens,
-  createChatCompletion,
   countTokensInMessageArray,
-  createTokenLimitWarning,
   destructureArgs,
   displayTypingIndicator,
   doesMessageContainCapability,
-  generateAiCompletion,
-  generateAiCompletionParams,
   getConfigFromSupabase,
   getHexagram,
   getPromptsFromSupabase,
   getUniqueEmoji,
-  isBreakingMessageChain,
-  isExceedingTokenLimit,
-  lastUserMessage,
   parseJSONArg,
   processChunks,
   removeMentionFromMessage,
@@ -83,6 +68,5 @@ module.exports = {
   addUserMemories,
   addRelevantMemories,
   addGeneralMemories,
-  createClaudeCompletion,
   capabilityRegex,
 };

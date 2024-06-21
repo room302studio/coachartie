@@ -102,7 +102,7 @@ ${PROMPT_DEEP_INGEST}
 Make separate sections of facts for each section of the document, using \`\`\`---\`\`\` between each section. Respond immediately, beginning with the first section, no introductions or confirmation.`,
       },
     ];
-    const completion = await createChatCompletion(messages, {
+    const completion = await llmHelper.createChatCompletion(messages, {
       max_tokens: 4000,
     });
 
@@ -128,7 +128,7 @@ Make separate sections of facts for each section of the document, using \`\`\`--
       },
     ];
 
-    const metaSummaryCompletion = await createChatCompletion(
+    const metaSummaryCompletion = await llmHelper.createChatCompletion(
       metaSummaryMessages,
       {
         max_tokens: 2000,

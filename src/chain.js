@@ -1,9 +1,14 @@
-const memoryFunctionsPromise = require("./memory");
+const { memoryFunctions } = require("./memory");
 const { callCapabilityMethod } = require("./capabilities");
 const { storeUserMessage } = require("./remember");
+const { logInteraction } = require("./memory");
 const logger = require("../src/logger.js")("chain");
-const { capabilityRegex } = require("../helpers-utility");
-const { createTokenLimitWarning } = require("../helpers");
+const {
+  capabilityRegex,
+  doesMessageContainCapability,
+} = require("../helpers-utility");
+const llmHelper = require("../helpers-llm");
+const { getConfigFromSupabase, splitAndSendMessage } = require("../helpers");
 
 module.exports = (async () => {
   const {
@@ -12,7 +17,6 @@ module.exports = (async () => {
     generateAiCompletionParams,
     generateAiCompletion,
     getConfigFromSupabase,
-    createTokenLimitWarning,
     splitAndSendMessage,
   } = require("../helpers");
 
@@ -28,42 +32,40 @@ module.exports = (async () => {
   async function processMessageChain(messages, options, retryCount = 0) {
     const { username, channel, guild, related_message_id } = options;
 
-    // If ther aren't messages, username, or channel
-    // we can't process the message chain
+    // Sanity check: Ensure we have the bare minimum to process a message
     if (!messages || !username || !channel) {
       logger.error("Invalid arguments - cannot process message chain");
       return [];
     }
 
-    // Let's try to process the message chain recursively
     try {
-      // this will run as many times as necessay
-      // and continue adding messages to the `messages` array
-      // until it returns
+      // The main event: Process all messages recursively
+      // This handles nested capability calls and AI responses
       const processedMessages = await processMessageChainRecursively(
         messages,
         options
       );
       return processedMessages;
     } catch (error) {
+      // Uh oh, something went wrong. Let's handle it gracefully
       logger.error(`Error processing message chain: ${error}`);
-      // But if there is an error- we will try to re-process it
-      // up to MAX_RETRY_COUNT times
+
+      // We're not giving up that easily! Let's try again (up to a point)
       if (retryCount < MAX_RETRY_COUNT) {
         logger.warn(
           `Error processing message chain, retrying (${
             retryCount + 1
           }/${MAX_RETRY_COUNT})`
         );
+        // Recursive call with increased retry count
         return processMessageChain(messages, options, retryCount + 1);
       } else {
-        // after MAX_RETRY_COUNT times, we will log the error
-        // and give up
+        // We've tried our best, time to admit defeat
         logger.error(
           "Error processing message chain, maximum retries exceeded",
           error
         );
-        throw error;
+        throw error; // Bubble up the error for higher-level handling
       }
     }
   }
@@ -75,27 +77,24 @@ module.exports = (async () => {
    * @returns {Promise<Array>} - The processed message chain.
    */
   async function processMessageChainRecursively(messages, options) {
-    if (!messages.length) {
-      return [];
-    }
+    if (!messages.length) return [];
 
-    // grab the last message out of the messages array
     const lastMessage = messages[messages.length - 1];
 
-    // if there is none, what are we even doing?
-    if (!lastMessage || !lastMessage.content) {
+    // Ensure we have a valid message to process
+    if (!lastMessage?.content) {
       logger.error(`Last message is empty: ${JSON.stringify(lastMessage)}`);
       return messages;
     }
 
-    // let's process the last message (which adds an AI completion)
-    messages = await processMessage(messages, lastMessage.content, options);
+    // Process the current message and get AI response
+    messages = await processMessage(messages, options);
 
-    // Now the last message is the AI completion
-    let robotCompletion = messages[messages.length - 1];
+    const robotCompletion = messages[messages.length - 1];
+    console.log(`robotCompletion: ${JSON.stringify(robotCompletion)}`);
 
-    // once again, if there is no last message, what are we even doing?
-    if (!robotCompletion || !robotCompletion.content) {
+    // Check if AI response is valid
+    if (!robotCompletion?.content) {
       logger.error(
         `Last message is empty after processing: ${JSON.stringify(
           robotCompletion
@@ -104,80 +103,70 @@ module.exports = (async () => {
       return messages;
     }
 
-    // Find all the capability calls in the last message
+    // double content? why? idk
+    const completionContent = robotCompletion.content.content;
+
+    logger.info(`completionContent: ${JSON.stringify(completionContent)}`);
+
+    // Extract all capability calls from the AI response
     const capabilityCalls = Array.from(
-      robotCompletion.content.matchAll(capabilityRegex)
+      completionContent.matchAll(capabilityRegex)
     );
 
-    // now we loop through all the capability calls and process them
+    // Process each capability call sequentially
     for (const [_, capSlug, capMethod, capArgs] of capabilityCalls) {
       await splitAndSendMessage(
         options.channel,
         `Processing capability: ${capSlug}:${capMethod}`
       );
-      messages = await processCapability(
-        messages,
-        lastMessage.content,
-        options
-      );
+      messages = await processCapability(messages, options);
     }
 
-    // and then, ALSO, process it recursively???
-    // kinda sus
-    if (capabilityCalls.length > 0) {
-      return processMessageChainRecursively(messages, options);
-    }
-
-    // return messages full of the responses
-    // from the AI and the capabilities
-    return messages;
+    // If we processed any capabilities, recurse to handle any new capability calls
+    // Otherwise, return the final message array
+    return capabilityCalls.length > 0
+      ? processMessageChainRecursively(messages, options)
+      : messages;
   }
 
   /**
    * Processes a message and generates a response.
    * @param {Array} messages - The array of messages.
-   * @param {string} lastMessage - The last message in the array.
    * @param {Object} options - The options object.
    * @returns {Promise<Array>} - The updated array of messages.
    */
-  async function processMessage(messages, lastMessage, options) {
-    const { logInteraction } = await memoryFunctionsPromise;
+  async function processMessage(messages, options) {
     const { username, channel, guild, related_message_id } = options;
 
-    // Check if the last message contains a capability
-    // which is weird because we get the messages array
-    // so we can just check the last message in the array
-    // instead of passing it in as an argument (which is confusing)
-    if (doesMessageContainCapability(lastMessage)) {
-      messages = await processCapability(messages, lastMessage, options);
-    }
-
-    // if the last message is an image, we don't want to process anymore
-    // we just return messages so the image is sent to the channel
-
-    if (messages[messages.length - 1].image) {
+    const lastMessage = messages[messages.length - 1];
+    // If the last message is an image, we're done here
+    // No need to process images, just return and let it be sent
+    if (lastMessage.image) {
       return messages;
     }
 
-    // find the last user message by looking at the messages array
-    // and the "role" property of each message
+    // Find the last message from the user
+    // We're looking for the most recent 'user' role message
     const lastUserMessage = messages
       .slice()
       .reverse()
       .find((m) => m.role === "user");
 
-    // get the raw text out of the message
+    // Extract the raw text from the user's message
     const prompt = lastUserMessage.content;
 
-    // store the user message in the database
+    // Store the user's message in our memory banks
+    // This helps us maintain context over time
     const storedMessageId = await storeUserMessage(
       { username, channel, guild },
       prompt
     );
 
-    // generate an AI completion
-    const { temperature, frequency_penalty } = generateAiCompletionParams();
-    const { aiResponse } = await generateAiCompletion(
+    // Time to cook up an AI response!
+    // We're using some randomness to keep things interesting
+    const { temperature, frequency_penalty } =
+      llmHelper.generateAiCompletionParams();
+    const { aiResponse } = await llmHelper.generateAiCompletion(
       prompt,
       username,
       messages,
@@ -187,47 +176,50 @@ module.exports = (async () => {
       }
     );
 
-    // add the response to the messages array
+    // Add the AI's response to our conversation
     messages.push({
       role: "assistant",
       content: aiResponse,
     });
 
-    const lastMessageContainsCapability =
-      doesMessageContainCapability(lastMessage);
+    // Check if the last message contained a capability call
+    const lastMessageContainsCapability = doesMessageContainCapability(
+      aiResponse.content
+    );
 
-    // log the interaction (which generates a memory)
-    logInteraction(
+    // Log this interaction for posterity
+    // This helps us learn and improve over time
+    await logInteraction(
       prompt,
       aiResponse,
       { username, channel, guild, related_message_id: storedMessageId },
       messages,
       lastMessageContainsCapability,
-      // I don't understand why we're doing this
-      lastMessageContainsCapability ? lastMessage.match(capabilityRegex)[1] : ""
+      lastMessageContainsCapability
+        ? aiResponse.content.match(capabilityRegex)[1]
+        : ""
     );
 
+    // Return the updated message array with the new AI response
     return messages;
   }
-
   /**
    * Processes a capability.
    * @param {Array} messages - The array of messages.
-   * @param {string} lastMessage - The last message in the array.
    * @param {Object} options - The options object.
    * @returns {Promise<Array>} - The updated array of messages.
    */
-  async function processCapability(messages, lastMessage, options) {
-    logger.info("Processing capability for message:", lastMessage);
-
+  async function processCapability(messages, options) {
     // Another case of getting lastMessage from args
     // when we also have the messages array - doesn't make much sense
     // also we don't handle multiple capabilities in a single message
     // or maybe we handle it before this function is called
     // slug:method(args)
     // const capabilityMatch = lastMessage.match(capabilityRegex);
+    const lastMessage = messages[messages.length - 1];
+    logger.info("Processing capability for message:", lastMessage);
     const capabilityMatch = Array.from(
-      lastMessage.matchAll(capabilityRegex)
+      lastMessage.content.matchAll(capabilityRegex)
     )[0];
 
     if (!capabilityMatch) {
@@ -244,7 +236,7 @@ module.exports = (async () => {
 
     // if we are close to the token limit, we want to warn the AI
     if (currentTokenCount >= TOKEN_LIMIT - WARNING_BUFFER) {
-      messages.push(createTokenLimitWarning());
+      logger.warn(`Token limit warning: ${currentTokenCount}`);
     }
 
     // call the capability method

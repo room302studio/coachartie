@@ -2,6 +2,7 @@ const dotenv = require("dotenv");
 const dateFns = require("date-fns");
 dotenv.config();
 const axios = require("axios");
+// const llmHelper = require("../helpers-llm");
 const {
   getRelevantMemories,
   getMemoriesBetweenDates,
@@ -210,7 +211,7 @@ async function retrieveFeedback() {
  * @returns {Promise<Array>} A promise that resolves to an array of project identifiers.
  */
 async function identifyProjectsInMemories(processedMemories) {
-  const { createChatCompletion } = require("../helpers");
+  const { llmHelper } = require("../helpers");
   // Placeholder for project identification logic
   // We are going to get a bunch of memory objects
   // First let's extract all the content
@@ -274,7 +275,7 @@ In the previous message I just sent, please identify any GitHub Repos, Issues, M
   // we can send the big string to an LLM and ask it to look for the "needles" of various IDs for conversations, repos, and projects
   // And just ask it to return it in a standard JSON format
   // that we can pass down to the next function
-  const response = await createChatCompletion(messages, [
+  const response = await llmHelper.createChatCompletion(messages, [
     "missive",
     "repo",
     "project",
@@ -376,7 +377,7 @@ async function generateProjectSummary({
   calendarEntries,
   memoriesMentioningProject,
 }) {
-  const { createChatCompletion } = require("../helpers");
+  const { llmHelper } = require("../helpers");
   // Placeholder for project summary generation logic
   let messages = [];
 
@@ -430,8 +431,8 @@ async function generateProjectSummary({
     content: `Can you please generate a summary for project ${project.label}? Be as detailed as possible.`,
   });
 
-  const completion = await createChatCompletion(messages);
-  const aiResponse = completion; //.choices[0].message.content;
+  const completion = await llmHelper.createChatCompletion(messages);
+  const aiResponse = completion;
   return aiResponse;
 }
 
@@ -446,7 +447,7 @@ async function generateMetaSummary({
   todoChanges,
   calendarEntries,
 }) {
-  const { createChatCompletion } = require("../helpers");
+  const { llmHelper } = require("../helpers");
   logger.info(
     `Generating meta-summary for weekMemories: ${weekMemories.length}`
   );
@@ -467,7 +468,7 @@ async function generateMetaSummary({
   //   throw new Error("No calendar entries found, can't generate a meta-summary");
   // }
 
-  const metaSummaryCompletion = await createChatCompletion([
+  const metaSummaryCompletion = await llmHelper.createChatCompletion([
     // {
     //   role: "user",
     //   content: `I want to generate a meta-summary based on the project summaries: ${projectSummaries.join("\n")}`,
@@ -496,7 +497,7 @@ async function generateMetaSummary({
 
   // return metaSummaryCompletion;
   // extract the response text from the openai chat completion
-  const responseText = metaSummaryCompletion.choices[0].message.content;
+  const responseText = metaSummaryCompletion;
   return responseText;
 }
 
@@ -506,7 +507,7 @@ async function generateMetaSummary({
  * @returns {Promise<String>} A promise that resolves to a string containing the formatted summary.
  */
 async function formatSummary(summary) {
-  const formattedCompletion = await createChatCompletion([
+  const formattedCompletion = await llmHelper.createChatCompletion([
     {
       role: "user",
       content: `I want to format the summary: ${summary}`,
