@@ -1,4 +1,8 @@
-// helpers-llm.js
+/**
+ * @file helpers-llm.js
+ * @description Handles interactions with various LLM (Large Language Model) providers including OpenAI, Anthropic, and localhost instances.
+ */
+
 const OpenAI = require("openai");
 const Anthropic = require("@anthropic-ai/sdk");
 const axios = require("axios");
@@ -25,7 +29,6 @@ class LLMHelper {
       openai: {
         initialize: () => new OpenAI({ apiKey: process.env.OPENAI_API_KEY }),
         createCompletion: async (client, config) => {
-          // set the proper anthropic top-level model
           config.model = chatProviderModelOptions.openai[0];
           const res = await client.chat.completions.create(config);
           return res;
@@ -39,11 +42,7 @@ class LLMHelper {
         initialize: () =>
           new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY }),
         createCompletion: async (client, config) => {
-          // set the proper anthropic top-level model
           config.model = chatProviderModelOptions.anthropic[0];
-
-          // we gotta go thru all the messages and if the role is system, we change the role to user
-          // anthropic doesn't do more than just the initial system message
 
           config.messages = config.messages.map((msg) => {
             if (msg.role === "system") {
@@ -51,10 +50,6 @@ class LLMHelper {
             }
             return msg;
           });
-
-          // anthropic also hates multiple user messages in a row
-          // so if we find any sequential user messages
-          // we concat them with a newline
 
           const formattedMessages = config.messages.reduce((acc, msg) => {
             if (acc.length === 0) {
@@ -70,11 +65,7 @@ class LLMHelper {
             return [...acc, msg];
           }, []);
 
-          config.messages = formattedMessages;
-
-          // they also hate multiple ASSISTANT messages in a row
-          // so we concat them with a newline
-          config.messages = config.messages.reduce((acc, msg) => {
+          config.messages = formattedMessages.reduce((acc, msg) => {
             if (acc.length === 0) {
               return [msg];
             }
@@ -88,31 +79,24 @@ class LLMHelper {
             return [...acc, msg];
           }, []);
 
-          // anthropic also hates having presence_penalty in the config
-          // delete that
           delete config.presence_penalty;
-
-          // anthropic also requires temperature to be between 0 and 1
-          // so we clamp it
           config.temperature = Math.min(1, Math.max(0, config.temperature));
 
           const res = await client.messages.create(config);
-          console.log(`Anthropic response: ${JSON.stringify(res)}`);
+          logger.info(`Anthropic response: ${JSON.stringify(res)}`);
           return res;
         },
         normalizeCompletion: (completion) => ({
           content: completion.content[0].text,
-          role: "assistant", // Anthropic doesn't provide roles, so we assume it's always the assistant
+          role: "assistant",
         }),
       },
       localhost: {
         initialize: () => null,
         createCompletion: async (client, config) => {
-          // set the proper anthropic top-level model
           config.model = chatProviderModelOptions.localhost[0];
           const endpoint = "http://localhost:1234/v1/chat/completions";
 
-          // Ensure messages are in the correct format
           const formattedMessages = config.messages.map((msg) => ({
             role: msg.role,
             content:
@@ -136,12 +120,21 @@ class LLMHelper {
     this.currentClient = null;
   }
 
+  /**
+   * Retrieves the current LLM provider from the Supabase configuration.
+   * @returns {Promise<string>} The name of the current LLM provider.
+   */
   async getCurrentProvider() {
     const { CHAT_MODEL } = await getConfigFromSupabase();
     logger.info(`Current LLM provider from config: ${CHAT_MODEL}`);
     return CHAT_MODEL || "openai";
   }
 
+  /**
+   * Initializes the current LLM provider based on the configuration.
+   * @returns {Promise<void>}
+   * @throws {Error} If the provider is not supported.
+   */
   async initializeProvider() {
     const providerName = await this.getCurrentProvider();
     if (providerName !== this.currentProvider) {
@@ -154,6 +147,13 @@ class LLMHelper {
     }
   }
 
+  /**
+   * Creates a chat completion using the current LLM provider.
+   * @param {Array<Object>} messages - An array of message objects for the conversation.
+   * @param {Object} config - Configuration options for the LLM.
+   * @returns {Promise<Object>} The normalized completion response from the LLM.
+   * @throws {Error} If there is an issue creating the chat completion.
+   */
   async createChatCompletion(messages, config = {}) {
     await this.initializeProvider();
 
@@ -183,6 +183,10 @@ class LLMHelper {
     }
   }
 
+  /**
+   * Generates random AI completion parameters.
+   * @returns {Object} An object containing temperature, presence_penalty, and frequency_penalty values.
+   */
   generateAiCompletionParams() {
     return {
       temperature: chance.floating({ min: 0, max: 1.2 }),
@@ -191,19 +195,37 @@ class LLMHelper {
     };
   }
 
+  /**
+   * Retrieves the content of the last user message in the provided messages array.
+   * @param {Array<Object>} messagesArray - An array of message objects.
+   * @returns {string} The content of the last user message.
+   */
   lastUserMessage(messagesArray) {
     return messagesArray.find((m) => m.role === "user").content;
   }
 
+  /**
+   * Generates an AI completion based on the prompt, username, and messages provided.
+   * @param {string} prompt - The prompt for the AI completion.
+   * @param {string} username - The username associated with the messages.
+   * @param {Array<Object>} messages - An array of message objects for the conversation.
+   * @param {Object} config - Configuration options for the LLM.
+   * @returns {Promise<Object>} An object containing the updated messages array and the AI response.
+   * @throws {Error} If there is an issue generating the AI completion.
+   */
   async generateAiCompletion(prompt, username, messages, config = {}) {
     let { temperature, presence_penalty } = config;
 
     if (!temperature) temperature = 1;
     if (!presence_penalty) presence_penalty = 0;
 
-    if (messages[messages.length - 1].image)
+    if (messages[messages.length - 1].image) {
       delete messages[messages.length - 1].image;
+    }
 
+    logger.info(
+      `The length of the messages before adding preamble, filtering, and transformation is: ${messages.length}.`
+    );
     logger.info(
       `🤖 Generating AI completion for <${username}> from ${messages.length} messages: ${prompt}`
     );
@@ -212,7 +234,10 @@ class LLMHelper {
 
     messages = messages.filter((message) => message.content);
 
-    // Format messages
+    logger.info(
+      `The length of the messages after filtering but before transformation is: ${messages.length}.`
+    );
+
     messages = messages.map((msg) => ({
       role: msg.role,
       content:
@@ -221,11 +246,15 @@ class LLMHelper {
           : JSON.stringify(msg.content),
     }));
 
+    logger.info(
+      `The final length of the messages after transformation is: ${messages.length}.`
+    );
+
     try {
       logger.info(`🔧 Chat completion parameters:
   - Temperature: ${temperature}
   - Presence Penalty: ${presence_penalty}
-  - Message Count: ${messages.length}`);
+ - Message Count: ${messages.length}.`);
 
       const completion = await this.createChatCompletion(messages, {
         temperature,
@@ -237,6 +266,10 @@ class LLMHelper {
       const aiResponse = { role: completion.role, content: completion.content };
       messages.push(aiResponse);
 
+      logger.info(
+        `The length of the messages array after appending AI response is: ${messages.length}`
+      );
+
       return { messages, aiResponse };
     } catch (err) {
       logger.error(`Error creating chat completion ${err}`);
@@ -244,6 +277,13 @@ class LLMHelper {
     }
   }
 
+  /**
+   * Adds a preamble to the provided messages based on the username and prompt.
+   * @param {string} username - The username associated with the messages.
+   * @param {string} prompt - The prompt for the AI completion.
+   * @param {Array<Object>} messages - An array of message objects for the conversation.
+   * @returns {Promise<Array<Object>>} The messages array with the preamble added.
+   */
   async addPreambleToMessages(username, prompt, messages) {
     const preamble = await assembleMessagePreamble(username, prompt, messages);
     return [...preamble, ...messages.flat()];

@@ -59,7 +59,18 @@ module.exports = {
       isCapability = false,
       capabilityName = ""
     ) {
-      logger.info(`Logging interaction for ${username} in ${channel}`);
+      logger.info(`Trying to log interaction for ${username} in ${channel}`);
+
+      if (!prompt || !response || !conversationHistory) {
+        logger.error(
+          `Missing required parameters: ${JSON.stringify({
+            prompt,
+            response,
+            conversationHistory,
+          })}`
+        );
+        return "Error: Missing required parameters";
+      }
 
       // Validate input parameters
       const requiredParams = [
@@ -101,6 +112,7 @@ module.exports = {
 
       // Process response (handle images if present)
       const processedResponse = await processResponse(response);
+      logger.info(`Processed response: ${JSON.stringify(processedResponse)}`);
       logger.info(`Response processed, ${processedResponse.length} characters`);
 
       let rememberText = "";
@@ -150,14 +162,30 @@ module.exports = {
 
     // Helper function to process response (handle images)
     async function processResponse(response) {
+      if (!response) {
+        logger.error("No response provided to processResponse");
+        return null;
+      }
+
+      let content;
+
+      if (typeof response === "string") {
+        content = response;
+      } else if (typeof response === "object" && response.content) {
+        content = response.content;
+      } else {
+        logger.error("Invalid response format provided to processResponse");
+        return null;
+      }
+
       if (response.image) {
         const base64Image = response.image.split(";base64,").pop();
         vision.setImageBase64(base64Image);
         const imageDescription = await vision.fetchImageDescription();
-        response.content = `${response.content}\n\nDescription of user-provided image: ${imageDescription}`;
-        delete response.image;
+        content = `${content}\n\nDescription of user-provided image: ${imageDescription}`;
       }
-      return response.content;
+
+      return content;
     }
 
     // Generate remember completion using LLM

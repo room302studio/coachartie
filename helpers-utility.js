@@ -371,12 +371,12 @@ function getUniqueEmoji() {
  * @returns {boolean} - True if the message contains a capability, false otherwise.
  */
 function doesMessageContainCapability(rawMessage) {
-  // if (!message || !capability) {
-  //   console.warn(
-  //     "doesMessageContainCapability received undefined message or capability"
-  //   );
-  //   return false;
-  // }
+  if (!rawMessage) {
+    logger.error(`Cannot check if message contains capability: ${rawMessage}`);
+    return false;
+  }
+
+  logger.info(`Checking if message contains capability: ${rawMessage}`);
 
   // message might be a string, or an object with .content
   // lets handle both
@@ -403,6 +403,7 @@ function doesMessageContainCapability(rawMessage) {
   if (!regexMatches) {
     return false;
   }
+  logger.info(`Regex matches: ${regexMatches}`);
 
   // otherwise, return true
   return true;

@@ -67,13 +67,20 @@ class DiscordBot {
    * @param {string} message - The message to be sent.
    * @param {object} channel - The Discord channel object where the message will be sent.
    */
-  async sendMessage(messageObject, channel) {
-    const message = messageObject.content;
-    logger.info(`Sending message: ${message}`);
+  async sendMessage(message, channel) {
+    logger.info(`Sending message: ${JSON.stringify(message)}`);
     try {
-      splitAndSendMessage(message, channel);
+      if (typeof message === "string") {
+        await splitAndSendMessage(message, channel);
+      } else if (typeof message === "object" && message.content) {
+        await splitAndSendMessage(message.content, channel);
+      } else {
+        logger.error(`Invalid message format: ${JSON.stringify(message)}`);
+        return;
+      }
+      logger.info("📤 Message sent successfully");
     } catch (error) {
-      logger.error(`${error} on ${JSON.stringify(message)}`);
+      logger.error(`Error sending message: ${error}`, message);
     }
   }
 
@@ -148,17 +155,22 @@ class DiscordBot {
 
     // Don't respond to messages from the bot itself
     // otherwise we get an infinite loop and use all our credits
-    if (authorIsMe) return;
+    if (authorIsMe) {
+      logger.info("Message is from the bot itself, not responding");
+      return;
+    }
 
     // get the prompt from the message and remove any mentions of the bot from it
     let prompt = await this.processPrompt(message);
+    logger.info(`Processed prompt: ${prompt}`);
 
     // process the image attachment and add its description to the prompt
     let processedPrompt = await this.processImageAttachment(message, prompt);
+    logger.info(`Processed prompt with image (if any): ${processedPrompt}`);
 
     // get some info about the message
     const username = message.author.username;
-    const guild = message.guild.name;
+    const guild = message.guild ? message.guild.name : "DM";
     const messageId = message.id;
 
     // we need the channel to be the actual discord channel object
@@ -216,42 +228,71 @@ class DiscordBot {
     const msgEmbed = message.embeds.length > 0 ? message.embeds[0] : null;
     logger.info(`Message embed: ${JSON.stringify(msgEmbed)}`);
 
-    // TODO: add channelName- make it easier to understand what the var is and how it is meant to be used- some places expect an object, like splitAndSendMessage, and other things expect a name string, like the memory saving
+    // Process the message chain
+    // This forms a memory but does not send any messages
+    // It returns the updated messages array and the final content to be sent
+    logger.info("Processing message chain...");
+    const { messages, finalContent } = await this.processMessageChain(
+      processedPrompt,
+      {
+        username,
+        channel,
+        guild,
+        related_message_id: messageId,
+      }
+    );
+    logger.info(
+      `Message chain processed. Final content type: ${typeof finalContent}`
+    );
 
-    // create the messages array
-    // by processing the text from the user message
-    // this forms a memory but does not send any messages
-    // it just returns the updated messages array
-    let messages = await this.processMessageChain(processedPrompt, {
-      username,
-      channel,
-      guild,
-      related_message_id: messageId,
-    });
-
-    // and if we're not responding, we don't need to do anything else
-    if (!shouldRespond) return;
-
-    // Check if the last message contains an image- if so send it as a file
-    const lastMessage = messages[messages.length - 1];
-
-    // we need to make a better check of whether it is an image or not
-    // if it is, we are going to be receiving a buffer from the processMessageChain function
-    // if it isn't, it'll be a string
-    // so we check if the last message is a buffer
-    // if it is, we send it to the channel as an attachment
-    if (lastMessage.image) {
-      await this.sendAttachment(lastMessage.image, channelObj);
-      logger.info("📤 Sent image as attachment");
+    // If we're not responding, we don't need to do anything else
+    if (!shouldRespond) {
+      logger.info("Not responding to this message");
+      return;
     }
 
-    // if the last message is a string, we send it as a message
-    if (lastMessage.content) {
-      this.sendMessage(lastMessage.content, channelObj);
+    // Handle sending the response based on the finalContent
+    if (finalContent) {
+      logger.info(
+        `Preparing to send response. finalContent: ${JSON.stringify(
+          finalContent
+        )}`
+      );
+
+      if (typeof finalContent === "object" && finalContent.image) {
+        // Send the image as an attachment
+        logger.info("Sending image attachment...");
+        await this.sendAttachment(finalContent.image, channelObj);
+        logger.info("📤 Sent image as attachment");
+
+        // If there's also text content, send it as a message
+        if (finalContent.content) {
+          logger.info("Sending text content along with image...");
+          await this.sendMessage({ content: finalContent.content }, channelObj);
+          logger.info("📤 Sent text content along with image");
+        }
+      } else if (typeof finalContent === "string") {
+        // If it's just a string, send it as a message
+        logger.info("Sending text-only response...");
+        await this.sendMessage({ content: finalContent }, channelObj);
+        logger.info("📤 Sent text-only response");
+      } else if (typeof finalContent === "object" && finalContent.content) {
+        // If it's an object with a content property, send the content
+        logger.info("Sending text response from object...");
+        await this.sendMessage({ content: finalContent.content }, channelObj);
+        logger.info("📤 Sent text response from object");
+      } else {
+        // Log an error if the finalContent is in an unexpected format
+        logger.error("Unexpected finalContent format", finalContent);
+      }
+    } else {
+      // Log an error if there's no final content to send
+      logger.error("No final content to send");
     }
 
-    // and stop the typing indicator
+    // Stop the typing indicator
     clearInterval(typing);
+    logger.info("Response process completed");
   }
 
   /**
