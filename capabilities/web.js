@@ -4,7 +4,6 @@ const puppeteer = require("puppeteer");
 const { getPromptsFromSupabase } = require("../helpers");
 const { WEBPAGE_UNDERSTANDER_PROMPT, WEBPAGE_CHUNK_UNDERSTANDER_PROMPT } =
   getPromptsFromSupabase();
-const { encode, decode } = require("@nem035/gpt-3-encoder");
 // import chance
 const chance = require("chance").Chance();
 const {
@@ -17,6 +16,7 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const logger = require("../src/logger.js")("web");
+const llmHelper = require("../helpers-llm");
 
 // import OpenAI from "openai";
 // conver to require
@@ -304,36 +304,40 @@ async function processChunks(chunks, data, limit = 2, userPrompt = "") {
     const chunkPromises = chunks
       .slice(i, i + limit)
       .map(async (chunk, index) => {
-        // sleep so we don't anger the OpenAI gods
-        await sleep(500);
+        try {
+          // sleep so we don't anger the OpenAI gods
+          await sleep(500);
 
-        logger.info(`📝  Sending chunk ${i + index + 1} of ${chunkLength}...`);
-        logger.info(`Chunk text: ${chunk}`);
+          logger.info(
+            `📝  Sending chunk ${i + index + 1} of ${chunkLength}...`
+          );
+          logger.info(`Chunk text: ${chunk.substring(0, 100)}...`); // Log only the first 100 characters
 
-        const completion = await openai.chat.completions.create({
-          // model: "gpt-3.5-turbo-16k",
-          model: "gpt-4-0125-preview",
-          max_tokens: 2048,
-          // temperature: 0.5,
-          // presence_penalty: 0.66,
-          presence_penalty: -0.05,
-          // frequency_penalty: 0.1,
-          messages: [
+          const completion = await llmHelper.createChatCompletion(
+            [
+              {
+                role: "user",
+                content: userPrompt
+                  ? `# User goal: ${userPrompt}`
+                  : "Can you help me understand this chunk of a webpage please?",
+              },
+              {
+                role: "user",
+                content: `${WEBPAGE_CHUNK_UNDERSTANDER_PROMPT}\n\n${chunk}`,
+              },
+            ],
             {
-              role: "user",
-              content: userPrompt
-                ? `# User goal: ${userPrompt}`
-                : "Can you help me understand this chunk of a webpage please?",
-            },
-            {
-              role: "user",
-              content: `${WEBPAGE_CHUNK_UNDERSTANDER_PROMPT}
+              model: "gpt-4-0125-preview",
+              max_tokens: 2048,
+              presence_penalty: -0.05,
+            }
+          );
 
-            ${chunk}`,
-            },
-          ],
-        });
-        return completion.choices[0];
+          return completion.content;
+        } catch (error) {
+          logger.error(`Error processing chunk: ${error.message}`);
+          return `Error processing chunk: ${error.message}`;
+        }
       });
 
     const chunkResults = await Promise.all(chunkPromises);
@@ -441,30 +445,20 @@ async function fetchAndSummarizeUrl(url, userPrompt = "") {
     } fact summary. Generating summary of: ${factList}`
   );
 
-  // use gpt-3.5-turbo-16k for the final summary
-  const summaryCompletion = await openai.chat.completions.create({
-    // model: "gpt-3.5-turbo-16k",
-    model: "gpt-4-0125-preview",
-    // max_tokens: 2048,
-    max_tokens: 3072,
-    // temperature: 0.5,
-    // presence_penalty: 0.66,
-    // presence_penalty: -0.1,
-    // frequency_penalty: 0.1,
-    messages: [
+  const summaryCompletion = await llmHelper.createChatCompletion(
+    [
       {
         role: "user",
-        content: `# User goal: ${userPrompt}
-
-${WEBPAGE_UNDERSTANDER_PROMPT}
-
-## Facts
-${factList}`,
+        content: `# User goal: ${userPrompt}\n\n${WEBPAGE_UNDERSTANDER_PROMPT}\n\n## Facts\n${factList}`,
       },
     ],
-  });
+    {
+      model: "gpt-4-0125-preview",
+      max_tokens: 3072,
+    }
+  );
 
-  const summary = summaryCompletion.choices[0].message.content;
+  const summary = summaryCompletion.content;
   logger.info(`📝  Generated summary for URL: ${cleanedUrl}`, summary);
 
   // Save the summary to the cache
@@ -489,26 +483,27 @@ function randomUserAgent() {
 }
 
 async function handleCapabilityMethod(method, args, messages) {
-  // first we need to figure out what the method is
-  // then grab the URL from the args
-  // then we need to call the method with the URL
-  // then we need to return the result of the method
+  try {
+    const userPrompt = lastUserMessage(messages);
+    const url = destructureArgs(args)[0];
 
-  const userPrompt = lastUserMessage(messages);
-
-  const url = destructureArgs(args)[0];
-  if (method === "fetchAndSummarizeUrl") {
-    const summary = await fetchAndSummarizeUrl(url, userPrompt);
-    return summary;
-  } else if (method === "fetchAllLinks") {
-    const links = await fetchAllLinks(url);
-    return links;
-  } else if (method === "fetchLargestImage") {
-    const image = await fetchLargestImage(url);
-    return image;
+    if (method === "fetchAndSummarizeUrl") {
+      const summary = await fetchAndSummarizeUrl(url, userPrompt);
+      return summary;
+    } else if (method === "fetchAllLinks") {
+      const links = await fetchAllLinks(url);
+      return links;
+    } else if (method === "fetchLargestImage") {
+      const image = await fetchLargestImage(url);
+      return image;
+    } else {
+      throw new Error(`Unknown method: ${method}`);
+    }
+  } catch (error) {
+    logger.error(`Error in handleCapabilityMethod: ${error.message}`);
+    return `Error handling capability: ${error.message}`;
   }
 }
-
 module.exports = {
   fetchAndSummarizeUrl,
   fetchLargestImage,

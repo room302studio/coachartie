@@ -141,17 +141,17 @@ async function addRelevantMemories(username, messages, options = {}) {
   const relevantMemoryCount = chance.integer({ min: minCount, max: maxCount });
 
   // get the last user message to use as the query for relevant memories
-  const lastUserMessage = messages
+  const mostRecentUserMessage = messages
     .slice()
     .reverse()
     .find((message) => message.role === "user");
 
-  if (!lastUserMessage) {
+  if (!mostRecentUserMessage) {
     logger.info(`No last user message found for ${username}`);
     return;
   }
 
-  const queryString = lastUserMessage.content;
+  const queryString = mostRecentUserMessage.content;
 
   try {
     const relevantMemories = await getRelevantMemories(

@@ -189,13 +189,13 @@ module.exports = (async () => {
     // logger.info(
     //   `messages before finding last user message: ${JSON.stringify(messages)}`
     // );
-    const lastUserMessage = messages
+    const mostRecentUserMessage = messages
       .slice()
       .reverse()
       .find((m) => m.role === "user");
 
     // Extract the raw text from the user's message
-    const prompt = lastUserMessage.content;
+    const prompt = mostRecentUserMessage.content;
 
     // Store the user's message in our memory banks
     // This helps us maintain context over time

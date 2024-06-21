@@ -158,7 +158,7 @@ class LLMHelper {
     await this.initializeProvider();
 
     const defaultConfig = {
-      model: "gpt-3.5-turbo",
+      model: config.memoryModel ? config.memoryModel : "gpt-3.5-turbo",
       temperature: 0.5,
       presence_penalty: 0,
       max_tokens: 800,
@@ -193,15 +193,6 @@ class LLMHelper {
       presence_penalty: chance.floating({ min: -0.05, max: 0.1 }),
       frequency_penalty: chance.floating({ min: 0.0, max: 0.1 }),
     };
-  }
-
-  /**
-   * Retrieves the content of the last user message in the provided messages array.
-   * @param {Array<Object>} messagesArray - An array of message objects.
-   * @returns {string} The content of the last user message.
-   */
-  lastUserMessage(messagesArray) {
-    return messagesArray.find((m) => m.role === "user").content;
   }
 
   /**

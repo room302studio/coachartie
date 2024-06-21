@@ -444,6 +444,15 @@ function destructureArgs(argsString) {
   return argsString.split(",").map((arg) => arg.trim());
 }
 
+/**
+ * Retrieves the content of the last user message in the provided messages array.
+ * @param {Array<Object>} messagesArray - An array of message objects.
+ * @returns {string} The content of the last user message.
+ */
+function lastUserMessage(messagesArray) {
+  return messagesArray.find((m) => m.role === "user").content;
+}
+
 module.exports = {
   countTokens,
   countTokensInMessageArray,
@@ -461,4 +470,5 @@ module.exports = {
   doesMessageContainCapability,
   countMessageTokens,
   capabilityRegex,
+  lastUserMessage,
 };
