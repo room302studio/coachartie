@@ -97,11 +97,17 @@ function splitAndSendMessage(messageText, channel) {
 
   logger.info(`splitAndSendMessage: message length: ${messageText.length}`);
 
+  // make sure the channel is a Discord channel
+  if (!channel.send) {
+    logger.error("splitAndSendMessage: channel does not have a send method");
+    return;
+  }
+
   if (messageText.length < 2000) {
     try {
       channel.send(messageText);
     } catch (error) {
-      logger.info(`Error sending message: ${error}`);
+      logger.error(`Error sending message: ${error}`);
     }
   } else {
     const messageChunks = splitMessageIntoChunks(messageText);
@@ -109,7 +115,7 @@ function splitAndSendMessage(messageText, channel) {
       try {
         channel.send(chunk);
       } catch (error) {
-        logger.info(`Error sending message chunk ${index}: ${error}`);
+        logger.error(`Error sending message chunk ${index}: ${error}`);
       }
     });
   }

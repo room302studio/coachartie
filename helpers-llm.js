@@ -8,12 +8,25 @@ const { assembleMessagePreamble } = require("./helpers-prompt.js");
 const { Chance } = require("chance");
 const chance = new Chance();
 
+const chatProviderModelOptions = {
+  openai: ["gpt-4o", "gpt-3.5-turbo"],
+  anthropic: [
+    "claude-3-5-sonnet-20240620",
+    "claude-3-sonnet-20240229",
+    "claude-3-opus-20240229",
+    "claude-3-haiku-20240307",
+  ],
+  localhost: ["lmstudio-community/Meta-Llama-3-8B-Instruct-GGUF"],
+};
+
 class LLMHelper {
   constructor() {
     this.providers = {
       openai: {
         initialize: () => new OpenAI({ apiKey: process.env.OPENAI_API_KEY }),
         createCompletion: async (client, config) => {
+          // set the proper anthropic top-level model
+          config.model = chatProviderModelOptions.openai[0];
           const res = await client.chat.completions.create(config);
           return res;
         },
@@ -26,7 +39,65 @@ class LLMHelper {
         initialize: () =>
           new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY }),
         createCompletion: async (client, config) => {
+          // set the proper anthropic top-level model
+          config.model = chatProviderModelOptions.anthropic[0];
+
+          // we gotta go thru all the messages and if the role is system, we change the role to user
+          // anthropic doesn't do more than just the initial system message
+
+          config.messages = config.messages.map((msg) => {
+            if (msg.role === "system") {
+              return { ...msg, role: "user" };
+            }
+            return msg;
+          });
+
+          // anthropic also hates multiple user messages in a row
+          // so if we find any sequential user messages
+          // we concat them with a newline
+
+          const formattedMessages = config.messages.reduce((acc, msg) => {
+            if (acc.length === 0) {
+              return [msg];
+            }
+            if (msg.role === "user") {
+              const lastMsg = acc.pop();
+              return [
+                ...acc,
+                { ...lastMsg, content: `${lastMsg.content}\n${msg.content}` },
+              ];
+            }
+            return [...acc, msg];
+          }, []);
+
+          config.messages = formattedMessages;
+
+          // they also hate multiple ASSISTANT messages in a row
+          // so we concat them with a newline
+          config.messages = config.messages.reduce((acc, msg) => {
+            if (acc.length === 0) {
+              return [msg];
+            }
+            if (msg.role === "assistant") {
+              const lastMsg = acc.pop();
+              return [
+                ...acc,
+                { ...lastMsg, content: `${lastMsg.content}\n${msg.content}` },
+              ];
+            }
+            return [...acc, msg];
+          }, []);
+
+          // anthropic also hates having presence_penalty in the config
+          // delete that
+          delete config.presence_penalty;
+
+          // anthropic also requires temperature to be between 0 and 1
+          // so we clamp it
+          config.temperature = Math.min(1, Math.max(0, config.temperature));
+
           const res = await client.messages.create(config);
+          console.log(`Anthropic response: ${JSON.stringify(res)}`);
           return res;
         },
         normalizeCompletion: (completion) => ({
@@ -37,7 +108,10 @@ class LLMHelper {
       localhost: {
         initialize: () => null,
         createCompletion: async (client, config) => {
+          // set the proper anthropic top-level model
+          config.model = chatProviderModelOptions.localhost[0];
           const endpoint = "http://localhost:1234/v1/chat/completions";
+
           // Ensure messages are in the correct format
           const formattedMessages = config.messages.map((msg) => ({
             role: msg.role,

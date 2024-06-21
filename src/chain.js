@@ -114,13 +114,18 @@ module.exports = (async () => {
     );
 
     // Process each capability call sequentially
-    for (const [_, capSlug, capMethod, capArgs] of capabilityCalls) {
-      await splitAndSendMessage(
-        options.channel,
-        `Processing capability: ${capSlug}:${capMethod}`
-      );
-      messages = await processCapability(messages, options);
-    }
+
+    // TODO: Honestly I don't understand this at all, really?
+    // Like, why are we processing capabilities in a loop?
+    // we should refactor this whole dealy
+
+    // for (const [_, capSlug, capMethod, capArgs] of capabilityCalls) {
+    //   await splitAndSendMessage(
+    //     options.channel,
+    //     `Processing capability: ${capSlug}:${capMethod}`
+    //   );
+    //   messages = await processCapability(messages, options);
+    // }
 
     // If we processed any capabilities, recurse to handle any new capability calls
     // Otherwise, return the final message array
