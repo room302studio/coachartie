@@ -69,6 +69,17 @@ function log(numbers) {
 function handleCapabilityMethod(methodName, args) {
   const [arg1, arg2] = destructureArgs(args);
 
+  logger.info(
+    `🚀 handleCapabilityMethod called with method: ${method}, args: ${JSON.stringify(
+      args
+    )}, messages length: ${messages?.length}`
+  );
+
+  if (!messages || !Array.isArray(messages)) {
+    logger.error(`Invalid messages array: ${JSON.stringify(messages)}`);
+    throw new Error("Invalid messages array");
+  }
+
   switch (methodName) {
     case "add":
       return add([arg1, arg2]);

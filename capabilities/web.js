@@ -483,6 +483,15 @@ function randomUserAgent() {
 }
 
 async function handleCapabilityMethod(method, args, messages) {
+  logger.info(`🚀 handleCapabilityMethod in web.js called with:`);
+  logger.info(`- method: ${method}`);
+  logger.info(`- args: ${JSON.stringify(args)}`);
+  logger.info(
+    `- messages: ${messages ? "defined" : "undefined"}, length: ${
+      messages?.length
+    }`
+  );
+
   try {
     const userPrompt = lastUserMessage(messages);
     const url = destructureArgs(args)[0];

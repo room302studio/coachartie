@@ -1,7 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-const { getPromptsFromSupabase, capabilityRegex } = require("../helpers");
-const winston = require("winston");
+const { getPromptsFromSupabase, capabilityRegexSingle } = require("../helpers");
 
 const logger = require("../src/logger.js")("capabilities");
 
@@ -60,38 +59,52 @@ ${prepareCapabilities.join("\n")}
  * @param {Array} messages - All of the conversation messages so far
  * @returns {Promise<*>} - The response from the capability method.
  */
-async function callCapabilityMethod(
-  capabilitySlug,
-  methodName,
-  args,
-  messages
-) {
+async function callCapabilityMethod(capSlug, capMethod, capArgs, messages) {
+  logger.info(
+    `Attempting to call capability: ${capSlug}:${capMethod}(${capArgs})`
+  );
+  logger.info(`Messages array length: ${messages?.length || "undefined"}`);
+
   try {
-    const capability = require(`../capabilities/${capabilitySlug}`);
-    const capabilityResponse = await capability.handleCapabilityMethod(
-      methodName,
-      args,
+    const capability = require(`../capabilities/${capSlug}`);
+    logger.info(
+      `Imported capability: ${JSON.stringify(Object.keys(capability))}`
+    );
+
+    if (typeof capability.handleCapabilityMethod !== "function") {
+      logger.error(
+        `handleCapabilityMethod is not a function in capability ${capSlug}`
+      );
+      throw new Error(`Invalid capability structure for ${capSlug}`);
+    }
+
+    logger.info(`Calling handleCapabilityMethod for ${capSlug}:${capMethod}`);
+    logger.info(
+      `Params being passed: method=${capMethod}, args=${JSON.stringify(
+        capArgs
+      )}, messages length=${messages?.length}`
+    );
+
+    // Explicitly spread the arguments to ensure they're all passed
+    const result = await capability.handleCapabilityMethod(
+      capMethod,
+      capArgs,
       messages
     );
 
-    // Ensure there's a response
-    if (!capabilityResponse) {
-      throw new Error(
-        `Capability ${capabilitySlug} did not return a response.`
-      );
-    }
-
-    // Return a success response
-    return { success: true, data: capabilityResponse };
+    logger.info(
+      `Result from ${capSlug}:${capMethod}: ${JSON.stringify(result)}`
+    );
+    return { success: true, data: result };
   } catch (error) {
-    logger.info(`Error running ${capabilitySlug}.${methodName}: ${error}`);
-    // Return an error response
+    logger.error(
+      `Error calling capability ${capSlug}:${capMethod}: ${error.message}`
+    );
     return { success: false, error: error.message };
   }
 }
 
 module.exports = {
-  capabilityRegex,
   capabilities,
   callCapabilityMethod,
 };

@@ -37,7 +37,9 @@ const {
   splitAndSendMessage,
   splitMessageIntoChunks,
   getConfigFromSupabase,
-  capabilityRegex,
+  // capabilityRegex,
+  capabilityRegexGlobal,
+  capabilityRegexSingle,
   lastUserMessage,
 } = require("./helpers-utility.js");
 
@@ -69,6 +71,8 @@ module.exports = {
   addUserMemories,
   addRelevantMemories,
   addGeneralMemories,
-  capabilityRegex,
+  // capabilityRegex,
+  capabilityRegexGlobal,
+  capabilityRegexSingle,
   lastUserMessage,
 };

@@ -3,11 +3,15 @@ const logger = require("./src/logger.js")("helpers-utility");
 const { supabase } = require("./src/supabaseclient");
 
 const testString = "calculator:add(12,24)";
-const capabilityRegex = /(\w+):(\w+)\(([^)]*?)\)/g;
-// this regex works poorly and
-const match = testString.match(capabilityRegex) || [];
+// const capabilityRegex = /(\w+):(\w+)\(([^)]*?)\)/g;
+const capabilityRegexGlobal = /(\w+):(\w+)\((.*?)\)/g;
+const capabilityRegexSingle = /(\w+):(\w+)\((.*?)\)/;
 
-logger.info(`Regex test on ${testString}: ${match.join("  ")}`);
+// test out the global and single
+const matchGlobal = testString.match(capabilityRegexGlobal) || [];
+const matchSingle = testString.match(capabilityRegexSingle) || [];
+logger.info(`Regex test on ${testString}: ${matchGlobal.join("  ")}`);
+logger.info(`Regex test on ${testString}: ${matchSingle.join("  ")}`);
 
 /**
  * Counts the number of tokens in a string.
@@ -397,7 +401,7 @@ function doesMessageContainCapability(rawMessage) {
   }
 
   // use regex to check if the message contains the capability
-  const regexMatches = content.match(capabilityRegex);
+  const regexMatches = content.match(capabilityRegexSingle);
 
   // if there are no matches, return false
   if (!regexMatches) {
@@ -440,16 +444,26 @@ function countMessageTokens(messageArray = []) {
  * @param {string} argsString - The string of arguments to destructure.
  * @returns {Array<string>} - An array of trimmed arguments.
  */
-function destructureArgs(argsString) {
-  return argsString.split(",").map((arg) => arg.trim());
+function destructureArgs(args) {
+  logger.info(`Destructuring args: ${args}`);
+  if (typeof args === "string") {
+    return args.split(",").map((arg) => arg.trim());
+  }
+  return Array.isArray(args) ? args : [args];
 }
-
 /**
  * Retrieves the content of the last user message in the provided messages array.
  * @param {Array<Object>} messagesArray - An array of message objects.
  * @returns {string} The content of the last user message.
  */
 function lastUserMessage(messagesArray) {
+  logger.info(`🔍 lastUserMessage called with ${messages?.length} messages`);
+  if (!messages || !Array.isArray(messages)) {
+    logger.error(
+      `Invalid messages array in lastUserMessage: ${JSON.stringify(messages)}`
+    );
+    return null;
+  }
   return messagesArray.find((m) => m.role === "user").content;
 }
 
@@ -469,6 +483,8 @@ module.exports = {
   getUniqueEmoji,
   doesMessageContainCapability,
   countMessageTokens,
-  capabilityRegex,
+  // capabilityRegex,
   lastUserMessage,
+  capabilityRegexGlobal,
+  capabilityRegexSingle,
 };
