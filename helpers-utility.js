@@ -456,17 +456,16 @@ function destructureArgs(args) {
  * @param {Array<Object>} messagesArray - An array of message objects.
  * @returns {string} The content of the last user message.
  */
-function lastUserMessage(messagesArray) {
-  logger.info(`🔍 lastUserMessage called with ${messages?.length} messages`);
+function lastUserMessage(messages) {
   if (!messages || !Array.isArray(messages)) {
-    logger.error(
-      `Invalid messages array in lastUserMessage: ${JSON.stringify(messages)}`
-    );
-    return null;
+    logger.warn("lastUserMessage called with invalid messages array");
+    return "";
   }
-  return messagesArray.find((m) => m.role === "user").content;
+  const userMessages = messages.filter((message) => message.role === "user");
+  return userMessages.length > 0
+    ? userMessages[userMessages.length - 1].content
+    : "";
 }
-
 module.exports = {
   countTokens,
   countTokensInMessageArray,

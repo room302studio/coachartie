@@ -250,13 +250,13 @@ module.exports = (async () => {
     return calls;
   }
 
-  async function processLLMResponse(messages, options) {
+  async function processLLMResponse(messages, options, sendToChannel = true) {
     const llmResponse = messages[messages.length - 1];
     const { explanationText, capabilityCalls } = splitLLMResponse(
       llmResponse.content
     );
 
-    if (explanationText) {
+    if (explanationText && sendToChannel) {
       await sendExplanationText(explanationText, options);
     }
 
@@ -271,6 +271,13 @@ module.exports = (async () => {
     }
 
     return messages;
+  }
+
+  function sendExplanationText(text, options, sendToChannel = true) {
+    const { channel } = options;
+    if (sendToChannel) {
+      return channel.send(text);
+    }
   }
 
   function splitLLMResponse(content) {
@@ -289,25 +296,90 @@ module.exports = (async () => {
     return { explanationText: explanationText.trim(), capabilityCalls };
   }
 
-  async function sendExplanationText(text, options) {
-    const { channel } = options;
-    if (channel && typeof channel.send === "function") {
-      await channel.send(text);
-    } else {
-      logger.error("Invalid channel object in sendExplanationText");
+  async function processMessageChainRecursively(
+    messages,
+    options,
+    isInitialCall = true
+  ) {
+    try {
+      logger.info("Entering processMessageChainRecursively");
+      if (!messages || !Array.isArray(messages) || messages.length === 0) {
+        logger.error(
+          "Invalid messages array in processMessageChainRecursively"
+        );
+        return [];
+      }
+
+      const lastMessage = messages[messages.length - 1];
+
+      if (!lastMessage || !lastMessage.content) {
+        logger.error("Invalid last message in processMessageChainRecursively");
+        return messages;
+      }
+
+      logger.info(`Processing message: ${JSON.stringify(lastMessage)}`);
+
+      // Process user message or AI response
+      if (lastMessage.role === "user") {
+        logger.info("Processing user message");
+        messages = await processUserMessage(messages, options);
+      } else {
+        logger.info("Processing LLM response");
+        messages = await processLLMResponse(messages, options, isInitialCall);
+      }
+
+      logger.info("Extracting capability calls");
+      const lastProcessedMessage = messages[messages.length - 1];
+      const capabilityCalls = extractCapabilityCalls(
+        lastProcessedMessage.content
+      );
+      logger.info(
+        `Extracted capability calls: ${JSON.stringify(capabilityCalls)}`
+      );
+
+      // If we found any new capability calls, execute them
+      if (capabilityCalls.length > 0) {
+        logger.info("Executing capability chain");
+        messages = await executeCapabilityChain(
+          messages,
+          capabilityCalls,
+          options,
+          isInitialCall // Only send updates to channel on initial call
+        );
+        // After executing capabilities, let the LLM generate a response
+        logger.info("Recursing to process new messages");
+        return processMessageChainRecursively(messages, options, false);
+      }
+
+      logger.info("No more capability calls, returning messages");
+      return messages;
+    } catch (error) {
+      logger.error(
+        `Error in processMessageChainRecursively: ${error.message}\nStack: ${error.stack}`
+      );
+      throw error;
     }
   }
 
-  async function executeCapabilityChain(messages, capabilityCalls, options) {
+  async function executeCapabilityChain(
+    messages,
+    capabilityCalls,
+    options,
+    sendUpdatesToChannel = true
+  ) {
     const { channel } = options;
     for (const call of capabilityCalls) {
       logger.info(`Processing capability call: ${JSON.stringify(call)}`);
       const { slug, method, args } = call;
 
-      // Send an update to the user
-      await sendExplanationText(`Executing capability: ${slug}:${method}`, {
-        channel,
-      });
+      // Send an update to the user (if sendUpdatesToChannel is true)
+      // await sendExplanationText(
+      //   `Executing capability: ${slug}:${method}`,
+      //   {
+      //     channel,
+      //   },
+      //   sendUpdatesToChannel
+      // );
 
       // Call the capability method
       const capabilityResponse = await callCapabilityMethod(
@@ -335,10 +407,11 @@ module.exports = (async () => {
 
         messages.push(message);
 
-        // Send an update to the user
+        // Send an update to the user (if sendUpdatesToChannel is true)
         await sendExplanationText(
           `Capability ${slug}:${method} executed successfully`,
-          { channel }
+          { channel },
+          sendUpdatesToChannel
         );
       } else {
         messages.push({
@@ -346,10 +419,11 @@ module.exports = (async () => {
           content: `Error running capability ${slug}:${method}: ${capabilityResponse.error}`,
         });
 
-        // Send an update to the user
+        // Send an update to the user (if sendUpdatesToChannel is true)
         await sendExplanationText(
           `Error executing capability ${slug}:${method}`,
-          { channel }
+          { channel },
+          sendUpdatesToChannel
         );
       }
     }
