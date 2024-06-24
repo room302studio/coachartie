@@ -470,9 +470,7 @@ Webpage URL: ${cleanedUrl}
 User's request: ${userPrompt}
 
 Webpage facts:
-${factList}
-
-Summary:`;
+${JSON.stringify(factList, null, 2)}`;
 
   logger.info(
     `📝 Summary prompt (first 500 chars): ${summaryPrompt.substring(0, 500)}...`

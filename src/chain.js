@@ -1,437 +1,293 @@
-/**
- * chain.js
- *
- * This file handles the recursive processing of user messages, LLM responses, and capability execution.
- * Key Functions:
- *
- * - processMessageChain: Main entry point for processing a message chain.
- * - processMessageChainRecursively: Recursively processes messages and executes capabilities.
- * - processUserMessage: Handles incoming user messages and initiates the conversation turn.
- * - generateLLMResponse: Sends the user message and context to the LLM for generating a response.
- * - processLLMResponse: Splits the LLM response into explanation text and capability calls.
- * - sendExplanationText: Sends the explanation text to the user immediately via the Discord channel.
- * - extractCapabilityCalls: Extracts the capability calls from the LLM response for execution.
- * - executeCapabilityChain: Recursively executes the capability calls and sends updates to the user.
- *
- * The main conversation loop starts with processUserMessage and continues recursively through
- * executeCapabilityChain until no more capability calls are found in the LLM responses.
- *
- * Throughout the process, the user receives real-time updates and explanations via the Discord
- * channel, while the capability chain executes asynchronously in the background.
- */
+const memoryFunctionsPromise = require("./memory");
 const { callCapabilityMethod } = require("./capabilities");
 const {
+  capabilityRegex,
   capabilityRegexGlobal,
-  capabilityRegexSingle,
-} = require("../helpers-utility");
-
+} = require("../helpers-utility.js");
 const { storeUserMessage } = require("./remember");
-const { logInteraction } = require("./memory");
 const logger = require("../src/logger.js")("chain");
-const llmHelper = require("../helpers-llm");
+const llmHelper = require("../helpers-llm"); // Import the LLMHelper
+const { getUniqueEmoji } = require("../helpers-utility");
+
+const { getConfigFromSupabase, countTokens } = require("../helpers-utility");
+let config;
+
+(async function loadConfig() {
+  config = await getConfigFromSupabase();
+  logger.info(`Loaded configuration: ${JSON.stringify(config)}`);
+})();
 
 module.exports = (async () => {
-  const {
-    countMessageTokens,
-    doesMessageContainCapability,
-    getConfigFromSupabase,
-  } = require("../helpers");
+  async function processMessageChain(
+    messages,
+    { username, channel, guild, related_message_id, sendMessage, sendImage },
+    retryCount = 0,
+    capabilityCallCount = 0
+  ) {
+    if (!config) {
+      config = await getConfigFromSupabase();
+    }
+    const chainId = getUniqueEmoji();
+    logger.info(
+      `[${chainId}] Starting message chain processing for ${username} in ${
+        guild ? guild + " - " : ""
+      }${channel.name}`
+    );
 
-  const { TOKEN_LIMIT, WARNING_BUFFER, MAX_RETRY_COUNT } =
-    await getConfigFromSupabase();
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      logger.error(`[${chainId}] Invalid or empty message array`);
+      return { messages: [], finalContent: null };
+    }
 
-  /**
-   * Processes a message chain.
-   * @param {Array} messages - The array of messages to process.
-   * @param {Object} options - The options object containing username, channel, and guild.
-   * @returns {Promise<Object>} - The processed message chain and final content.
-   */
-  async function processMessageChain(messages, options, retryCount = 0) {
     try {
-      logger.info("Entering processMessageChain");
-      const { username, channel, guild, related_message_id } = options;
-
-      if (
-        !messages ||
-        !Array.isArray(messages) ||
-        messages.length === 0 ||
-        !username ||
-        !channel
+      while (
+        retryCount <= config.MAX_RETRY_COUNT &&
+        capabilityCallCount < config.MAX_CAPABILITY_CALLS
       ) {
-        logger.error(
-          `Invalid arguments - cannot process message chain. Messages: ${JSON.stringify(
-            messages
-          )}, Options: ${JSON.stringify(options)}`
+        const { updatedMessages, updatedCapabilityCallCount, shouldContinue } =
+          await processMessageChainIteration(
+            messages,
+            {
+              username,
+              channel,
+              guild,
+              related_message_id,
+              sendMessage,
+              sendImage,
+            },
+            capabilityCallCount,
+            chainId
+          );
+
+        messages = updatedMessages;
+        capabilityCallCount = updatedCapabilityCallCount;
+
+        if (!shouldContinue) break;
+      }
+
+      if (capabilityCallCount >= config.MAX_CAPABILITY_CALLS) {
+        await sendMessage(
+          `Reached maximum capability calls (${config.MAX_CAPABILITY_CALLS}). Stopping execution.`
         );
-        return { messages: [], finalContent: null };
       }
 
       logger.info(
-        `Processing message chain: ${JSON.stringify({ messages, options })}`
+        `[${chainId}] Message chain processing completed. Final message count: ${messages.length}`
       );
-
-      logger.info("Calling processMessageChainRecursively");
-      const processedMessages = await processMessageChainRecursively(
+      return { messages, finalContent: messages[messages.length - 1].content };
+    } catch (error) {
+      return await handleMessageChainError(
         messages,
-        options
+        { username, channel, guild, related_message_id, sendMessage },
+        retryCount,
+        capabilityCallCount,
+        error,
+        chainId
       );
-      logger.info("processMessageChainRecursively completed");
-
-      const finalMessage = processedMessages[processedMessages.length - 1];
-      const finalContent = finalMessage ? finalMessage.content : null;
-
-      logger.info(`Final message content: ${finalContent}`);
-
-      return { messages: processedMessages, finalContent };
-    } catch (error) {
-      logger.error(
-        `Error in processMessageChain: ${error.message}\nStack: ${error.stack}`
-      );
-      if (retryCount < MAX_RETRY_COUNT) {
-        logger.warn(`Retrying (${retryCount + 1}/${MAX_RETRY_COUNT})`);
-        return processMessageChain(messages, options, retryCount + 1);
-      } else {
-        logger.error("Maximum retries exceeded");
-        throw error;
-      }
     }
   }
 
-  /**
-   * Recursively processes a message chain, and will call capabilities for as long as they exist in the final message.
-   * @param {Array} messages - The array of messages to process.
-   * @param {Object} options - The options object containing username, channel, and guild.
-   * @returns {Promise<Array>} - The processed message chain.
-   */
-  async function processMessageChainRecursively(messages, options) {
-    try {
-      logger.info("Entering processMessageChainRecursively");
-      if (!messages || !Array.isArray(messages) || messages.length === 0) {
-        logger.error(
-          "Invalid messages array in processMessageChainRecursively"
-        );
-        return [];
-      }
+  async function processMessageChainIteration(
+    messages,
+    options,
+    capabilityCallCount,
+    chainId
+  ) {
+    const lastMessage = messages[messages.length - 1];
 
-      const lastMessage = messages[messages.length - 1];
-
-      if (!lastMessage || !lastMessage.content) {
-        logger.error("Invalid last message in processMessageChainRecursively");
-        return messages;
-      }
-
-      logger.info(`Processing message: ${JSON.stringify(lastMessage)}`);
-
-      // Process user message or AI response
-      if (lastMessage.role === "user") {
-        logger.info("Processing user message");
-        messages = await processUserMessage(messages, options);
-      } else {
-        logger.info("Processing LLM response");
-        messages = await processLLMResponse(messages, options);
-      }
-
-      logger.info("Extracting capability calls");
-      const lastProcessedMessage = messages[messages.length - 1];
-      const capabilityCalls = extractCapabilityCalls(
-        lastProcessedMessage.content
+    if (lastMessage.role === "user") {
+      await storeUserMessage(
+        {
+          username: options.username,
+          channel: options.channel.name,
+          guild: options.guild,
+        },
+        lastMessage.content
       );
+      const aiResponse = await generateLLMResponse(messages, options);
+      messages.push(aiResponse);
+      await options.sendMessage(aiResponse.content);
+    }
+
+    if (lastMessage.image) {
       logger.info(
-        `Extracted capability calls: ${JSON.stringify(capabilityCalls)}`
+        `[${chainId}] Last message is an image. Skipping further processing.`
       );
+      return {
+        updatedMessages: messages,
+        updatedCapabilityCallCount: capabilityCallCount,
+        shouldContinue: false,
+      };
+    }
 
-      // If we found any new capability calls, execute them
-      if (capabilityCalls.length > 0) {
-        logger.info("Executing capability chain");
-        messages = await executeCapabilityChain(
-          messages,
-          capabilityCalls,
-          options
-        );
-        // After executing capabilities, let the LLM generate a response
-        logger.info("Recursing to process new messages");
-        return processMessageChainRecursively(messages, options);
+    const capabilityCalls = extractCapabilityCalls(lastMessage.content);
+
+    for (const call of capabilityCalls) {
+      if (capabilityCallCount >= config.MAX_CAPABILITY_CALLS) {
+        return {
+          updatedMessages: messages,
+          updatedCapabilityCallCount: capabilityCallCount,
+          shouldContinue: false,
+        };
       }
 
-      logger.info("No more capability calls, returning messages");
-      return messages;
-    } catch (error) {
-      logger.error(
-        `Error in processMessageChainRecursively: ${error.message}\nStack: ${error.stack}`
-      );
-      throw error;
+      // verbose capability logging to channel
+      // await options.sendMessage(
+      //   `Executing capability: ${call.slug}:${call.method}`
+      // );
+
+      const capabilityResult = await executeCapability(call, messages);
+      messages.push(capabilityResult);
+
+      if (capabilityResult.image) {
+        await options.sendImage(capabilityResult.image);
+        await options.sendMessage(
+          `Image generated by ${call.slug}:${call.method}`
+        );
+      } else {
+        // await options.sendMessage(
+        //   `Capability ${call.slug}:${
+        //     call.method
+        //   } executed. Result: ${JSON.stringify(capabilityResult.content)}`
+        // );
+      }
+
+      capabilityCallCount++;
+
+      const aiResponse = await generateLLMResponse(messages, options);
+      messages.push(aiResponse);
+      await options.sendMessage(aiResponse.content);
     }
+
+    return {
+      updatedMessages: messages,
+      updatedCapabilityCallCount: capabilityCallCount,
+      shouldContinue: true,
+    };
   }
 
-  async function processUserMessage(messages, options) {
-    try {
-      const { username, channel, guild } = options;
-      const userMessage = messages[messages.length - 1];
-
-      const storedMessageId = await storeUserMessage(
-        { username, channel, guild },
-        userMessage.content
+  async function handleMessageChainError(
+    messages,
+    options,
+    retryCount,
+    capabilityCallCount,
+    error,
+    chainId
+  ) {
+    if (retryCount < config.MAX_RETRY_COUNT) {
+      logger.warn(
+        `[${chainId}] Error processing message chain, retrying (${
+          retryCount + 1
+        }/${config.MAX_RETRY_COUNT}): ${error}`
       );
-
-      const llmResponse = await generateLLMResponse(messages, options);
-      const processedResponse = await processLLMResponse(
-        [...messages, llmResponse],
-        options
+      await options.sendMessage(
+        `An error occurred. Retrying (attempt ${retryCount + 1}/${
+          config.MAX_RETRY_COUNT
+        })...`
       );
-
-      return processedResponse;
-    } catch (error) {
-      logger.error(`Error processing user message: ${error}`);
-      throw error;
+      return processMessageChain(
+        messages,
+        options,
+        retryCount + 1,
+        capabilityCallCount
+      );
+    } else {
+      logger.error(
+        `[${chainId}] Error processing message chain, maximum retries exceeded: ${error}`
+      );
+      await options.sendMessage(
+        "I apologize, but I've encountered multiple errors while processing your request. Here's my best attempt at a response based on our conversation so far:"
+      );
+      const finalResponse = await generateFinalResponse(messages, options);
+      messages.push(finalResponse);
+      await options.sendMessage(finalResponse.content);
+      return { messages, finalContent: finalResponse.content };
     }
   }
 
   async function generateLLMResponse(messages, options) {
-    try {
-      const { username } = options;
-      const lastMessage = messages[messages.length - 1];
+    const { username } = options;
+    const { temperature, frequency_penalty } =
+      llmHelper.generateAiCompletionParams();
 
-      // Generate AI completion params
-      const { temperature, frequency_penalty } =
-        llmHelper.generateAiCompletionParams();
+    const completion = await llmHelper.generateAiCompletion(
+      messages[messages.length - 1].content,
+      username,
+      messages,
+      { temperature, frequency_penalty }
+    );
+    const aiResponse =
+      completion.messages[completion.messages.length - 1].content;
 
-      // Prepare the prompt, including embed information if available
-      let prompt = lastMessage.content;
-      if (lastMessage.embeds && lastMessage.embeds.length > 0) {
-        prompt += "\n\nMessage includes the following embeds:\n";
-        lastMessage.embeds.forEach((embed, index) => {
-          prompt += `Embed ${index + 1}:\n`;
-          if (embed.title) prompt += `Title: ${embed.title}\n`;
-          if (embed.description)
-            prompt += `Description: ${embed.description}\n`;
-          if (embed.fields) {
-            embed.fields.forEach((field) => {
-              prompt += `${field.name}: ${field.value}\n`;
-            });
-          }
-          prompt += "\n";
-        });
-      }
-
-      // Generate AI completion
-      const completion = await llmHelper.generateAiCompletion(
-        prompt,
-        username,
-        messages,
-        {
-          temperature,
-          frequency_penalty,
-        }
-      );
-
-      const aiResponse =
-        completion.messages[completion.messages.length - 1].content;
-
-      return {
-        role: "assistant",
-        content: aiResponse,
-      };
-    } catch (error) {
-      logger.error(`Error generating LLM response: ${error}`);
-      throw error;
-    }
+    return { role: "assistant", content: aiResponse };
   }
 
   function extractCapabilityCalls(content) {
-    const calls = Array.from(content.matchAll(capabilityRegexGlobal)).map(
-      (match) => ({
-        full: match[0],
-        slug: match[1],
-        method: match[2],
-        args: match[3],
-      })
-    );
-    logger.info(`Extracted capability calls: ${JSON.stringify(calls)}`);
-    return calls;
+    return Array.from(content.matchAll(capabilityRegexGlobal)).map((match) => ({
+      full: match[0],
+      slug: match[1],
+      method: match[2],
+      args: match[3],
+    }));
   }
 
-  async function processLLMResponse(messages, options, sendToChannel = true) {
-    const llmResponse = messages[messages.length - 1];
-    const { explanationText, capabilityCalls } = splitLLMResponse(
-      llmResponse.content
-    );
-
-    if (explanationText && sendToChannel) {
-      await sendExplanationText(explanationText, options);
-    }
-
-    if (capabilityCalls.length > 0) {
-      logger.info(`Found ${capabilityCalls.length} capability calls`);
-      messages.push({
-        role: "system",
-        content: `Capability calls:\n${capabilityCalls.join("\n")}`,
-      });
-    } else {
-      logger.info("No capability calls found in LLM response");
-    }
-
-    return messages;
-  }
-
-  function sendExplanationText(text, options, sendToChannel = true) {
-    const { channel } = options;
-    if (sendToChannel) {
-      return channel.send(text);
-    }
-  }
-
-  function splitLLMResponse(content) {
-    const capabilityMatches = Array.from(
-      content.matchAll(capabilityRegexGlobal)
-    );
-    let explanationText = content;
-    const capabilityCalls = [];
-
-    for (const match of capabilityMatches) {
-      const [fullMatch] = match;
-      explanationText = explanationText.replace(fullMatch, "");
-      capabilityCalls.push(fullMatch.trim());
-    }
-
-    return { explanationText: explanationText.trim(), capabilityCalls };
-  }
-
-  async function processMessageChainRecursively(
-    messages,
-    options,
-    isInitialCall = true
-  ) {
+  async function executeCapability(call, messages) {
+    const { slug, method, args } = call;
     try {
-      logger.info("Entering processMessageChainRecursively");
-      if (!messages || !Array.isArray(messages) || messages.length === 0) {
-        logger.error(
-          "Invalid messages array in processMessageChainRecursively"
-        );
-        return [];
-      }
+      logger.info(`Calling Capability: ${slug}:${method}`);
+      const response = await callCapabilityMethod(slug, method, args, messages);
 
-      const lastMessage = messages[messages.length - 1];
-
-      if (!lastMessage || !lastMessage.content) {
-        logger.error("Invalid last message in processMessageChainRecursively");
-        return messages;
-      }
-
-      logger.info(`Processing message: ${JSON.stringify(lastMessage)}`);
-
-      // Process user message or AI response
-      if (lastMessage.role === "user") {
-        logger.info("Processing user message");
-        messages = await processUserMessage(messages, options);
-      } else {
-        logger.info("Processing LLM response");
-        messages = await processLLMResponse(messages, options, isInitialCall);
-      }
-
-      logger.info("Extracting capability calls");
-      const lastProcessedMessage = messages[messages.length - 1];
-      const capabilityCalls = extractCapabilityCalls(
-        lastProcessedMessage.content
-      );
-      logger.info(
-        `Extracted capability calls: ${JSON.stringify(capabilityCalls)}`
-      );
-
-      // If we found any new capability calls, execute them
-      if (capabilityCalls.length > 0) {
-        logger.info("Executing capability chain");
-        messages = await executeCapabilityChain(
-          messages,
-          capabilityCalls,
-          options,
-          isInitialCall // Only send updates to channel on initial call
-        );
-        // After executing capabilities, let the LLM generate a response
-        logger.info("Recursing to process new messages");
-        return processMessageChainRecursively(messages, options, false);
-      }
-
-      logger.info("No more capability calls, returning messages");
-      return messages;
-    } catch (error) {
-      logger.error(
-        `Error in processMessageChainRecursively: ${error.message}\nStack: ${error.stack}`
-      );
-      throw error;
-    }
-  }
-
-  async function executeCapabilityChain(
-    messages,
-    capabilityCalls,
-    options,
-    sendUpdatesToChannel = true
-  ) {
-    const { channel } = options;
-    for (const call of capabilityCalls) {
-      logger.info(`Processing capability call: ${JSON.stringify(call)}`);
-      const { slug, method, args } = call;
-
-      // Send an update to the user (if sendUpdatesToChannel is true)
-      // await sendExplanationText(
-      //   `Executing capability: ${slug}:${method}`,
-      //   {
-      //     channel,
-      //   },
-      //   sendUpdatesToChannel
-      // );
-
-      // Call the capability method
-      const capabilityResponse = await callCapabilityMethod(
-        slug,
-        method,
-        args,
-        messages
-      );
-
-      if (capabilityResponse.success) {
-        const message = {
-          role: "system",
-          content: `# Capability ${slug}:${method} was run
-  ## Args:
-  ${args}
-  
-  ## Response:
-  ${JSON.stringify(capabilityResponse.data, null, 2)}`,
-        };
-
-        // Add the image to the message if it exists
-        if (capabilityResponse.data.image) {
-          message.image = capabilityResponse.data.image;
+      if (response.success) {
+        if (response.data.image) {
+          logger.info("Capability Response is an Image");
+          return {
+            role: "system",
+            content: `Image generated by ${slug}:${method}`,
+            image: response.data.image,
+          };
         }
-
-        messages.push(message);
-
-        // Send an update to the user (if sendUpdatesToChannel is true)
-        await sendExplanationText(
-          `Capability ${slug}:${method} executed successfully`,
-          { channel },
-          sendUpdatesToChannel
-        );
+        return { role: "system", content: trimResponseIfNeeded(response.data) };
       } else {
-        messages.push({
+        logger.info(`Capability Failed: ${response.error}`);
+        return {
           role: "system",
-          content: `Error running capability ${slug}:${method}: ${capabilityResponse.error}`,
-        });
-
-        // Send an update to the user (if sendUpdatesToChannel is true)
-        await sendExplanationText(
-          `Error executing capability ${slug}:${method}`,
-          { channel },
-          sendUpdatesToChannel
-        );
+          content: `Error executing capability ${slug}:${method}: ${response.error}`,
+        };
       }
+    } catch (error) {
+      logger.error(`Unexpected error in executeCapability: ${error}`);
+      return {
+        role: "system",
+        content: `Unexpected error executing capability ${slug}:${method}: ${error.message}`,
+      };
     }
-
-    return messages;
   }
 
-  return {
-    processMessageChain,
-  };
+  async function generateFinalResponse(messages, options) {
+    const retryMessage =
+      "I apologize, but I've encountered multiple issues while processing your request. Here's my best attempt at a response based on our conversation so far:";
+    const llmResponse = await generateLLMResponse(
+      [...messages, { role: "system", content: retryMessage }],
+      options
+    );
+    return {
+      role: "assistant",
+      content: `${retryMessage}\n\n${llmResponse.content}`,
+    };
+  }
+
+  function trimResponseIfNeeded(capabilityResponse) {
+    if (typeof capabilityResponse !== "string") {
+      capabilityResponse = JSON.stringify(capabilityResponse);
+    }
+    while (countTokens(capabilityResponse) > config.TOKEN_LIMIT) {
+      capabilityResponse = capabilityResponse
+        .split("\n")
+        .slice(0, -1)
+        .join("\n");
+    }
+    return capabilityResponse;
+  }
+
+  return { processMessageChain };
 })();

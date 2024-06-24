@@ -73,7 +73,7 @@ const chance = new Chance();
  * @returns {Promise<void>} - A promise that resolves when the user messages have been added to the array.
  */
 async function addUserMessages(username, messages, options = {}) {
-  const { minCount = 2, maxCount = 16 } = options;
+  const { minCount = 2, maxCount = 8 } = options;
   const userMessageCount = chance.integer({ min: minCount, max: maxCount });
   // Retrieve user messages and add them to the messages array
   logger.info(
@@ -110,7 +110,7 @@ async function addUserMessages(username, messages, options = {}) {
  * @returns {Promise<void>} - A promise that resolves when the user memories are added to the messages array.
  */
 async function addUserMemories(username, messages, options = {}) {
-  const { minCount = 2, maxCount = 12 } = options;
+  const { minCount = 2, maxCount = 6 } = options;
   const userMemoryCount = chance.integer({ min: minCount, max: maxCount });
   try {
     const userMemories = await getUserMemory(username, userMemoryCount);
@@ -136,7 +136,7 @@ async function addUserMemories(username, messages, options = {}) {
  * @returns {Promise<void>} - A promise that resolves when the relevant memories are added to the messages array.
  */
 async function addRelevantMemories(username, messages, options = {}) {
-  const { minCount = 1, maxCount = 8 } = options;
+  const { minCount = 1, maxCount = 4 } = options;
 
   const relevantMemoryCount = chance.integer({ min: minCount, max: maxCount });
 
@@ -177,7 +177,7 @@ async function addRelevantMemories(username, messages, options = {}) {
       });
     }
   } catch (err) {
-    logger.error(err);
+    logger.error(`${err} - Error retrieving relevant memories`);
   }
 }
 
@@ -190,7 +190,7 @@ async function addRelevantMemories(username, messages, options = {}) {
  * @returns {Promise<void>} - A promise that resolves when the general memories are added to the messages array.
  */
 async function addGeneralMemories(messages, options = {}) {
-  const { minCount = 1, maxCount = 10 } = options;
+  const { minCount = 1, maxCount = 3 } = options;
   const generalMemoryCount = chance.integer({ min: minCount, max: maxCount });
   try {
     const generalMemories = await getAllMemories(generalMemoryCount);

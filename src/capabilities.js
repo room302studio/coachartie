@@ -85,11 +85,14 @@ async function callCapabilityMethod(capSlug, capMethod, capArgs, messages) {
       )}, messages length=${messages?.length}`
     );
 
+    const originalUserPrompt =
+      messages.find((msg) => msg.role === "user")?.content || "";
+
     // Explicitly spread the arguments to ensure they're all passed
     const result = await capability.handleCapabilityMethod(
       capMethod,
       capArgs,
-      messages
+      originalUserPrompt
     );
 
     logger.info(
@@ -97,10 +100,14 @@ async function callCapabilityMethod(capSlug, capMethod, capArgs, messages) {
     );
     return { success: true, data: result };
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error(
-      `Error calling capability ${capSlug}:${capMethod}: ${error.message}`
+      `Error calling capability ${capSlug}:${capMethod}: ${errorMessage}`
     );
-    return { success: false, error: error.message };
+    logger.error(
+      `Full error: ${JSON.stringify(error, Object.getOwnPropertyNames(error))}`
+    );
+    return { success: false, error: errorMessage };
   }
 }
 
