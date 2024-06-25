@@ -66,7 +66,12 @@ function displayTypingIndicator(message) {
  * @param {Message} message - The message object.
  */
 function startTypingIndicator(message) {
-  message.channel.sendTyping();
+  try {
+    message.channel.sendTyping();
+    logger.info("Started typing indicator");
+  } catch (error) {
+    logger.error(`Error starting typing indicator: ${error}`);
+  }
 }
 
 /**
@@ -75,7 +80,14 @@ function startTypingIndicator(message) {
  * @returns {number} - The ID of the interval.
  */
 function setTypingInterval(message) {
-  return setInterval(() => message.channel.sendTyping(), 5000);
+  return setInterval(() => {
+    try {
+      message.channel.sendTyping();
+      logger.info("Typing indicator sent");
+    } catch (error) {
+      logger.error(`Error sending typing indicator: ${error}`);
+    }
+  }, 5000);
 }
 /**
  * Splits a message into chunks and sends them as separate messages.

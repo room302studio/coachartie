@@ -30,11 +30,6 @@ class DiscordBot {
     this.bot.on("ready", this.onClientReady.bind(this));
     this.bot.on("messageCreate", this.onMessageCreate.bind(this));
 
-    // getConfigFromSupabase().then((config) => {
-    //   logger.info(`Supabase config: ${JSON.stringify(config)}`);
-    //   this.config = config;
-    // });
-
     client = this.bot;
   }
 
@@ -43,18 +38,32 @@ class DiscordBot {
   }
 
   async onMessageCreate(message) {
-    if (message.author.bot) return;
-
-    const shouldRespond = this.detectBotMentionOrChannel(message);
-    if (!shouldRespond) return;
-
-    const typing = displayTypingIndicator(message);
-    const prompt = await this.processPrompt(message);
-    const processedPrompt = await this.processImageAttachment(message, prompt);
-
-    logger.info(`Processing message: ${processedPrompt}`);
-
     try {
+      logger.info(`📩 Message received: ${message.content}`);
+
+      if (message.author.bot) {
+        logger.info("Ignoring message from bot.");
+        return;
+      }
+
+      const shouldRespond = this.detectBotMentionOrChannel(message);
+      logger.info(`Should respond: ${shouldRespond}`);
+      if (!shouldRespond) {
+        logger.info("Not responding to message.");
+        return;
+      }
+
+      logger.info("Displaying typing indicator...");
+      const typing = displayTypingIndicator(message);
+
+      const prompt = await this.processPrompt(message);
+      const processedPrompt = await this.processImageAttachment(
+        message,
+        prompt
+      );
+
+      logger.info(`Processing message: ${processedPrompt}`);
+
       const result = await this.processMessageChain(processedPrompt, {
         username: message.author.username,
         channel: message.channel,
@@ -64,17 +73,23 @@ class DiscordBot {
         sendImage: (image) => this.sendAttachment(image, message.channel),
       });
 
+      logger.info(`Message chain result: ${JSON.stringify(result)}`);
+
       if (result.image) {
+        logger.info("Sending image attachment.");
         await this.sendAttachment(result.image, message.channel);
+      } else if (result.content) {
+        logger.info("Sending text message.");
+        await this.sendMessage(result.content, message.channel);
       }
+
+      clearInterval(typing);
     } catch (error) {
       logger.error(`Error processing message: ${error}`);
       await this.sendMessage(
         "I'm sorry, but an error occurred while processing your request.",
         message.channel
       );
-    } finally {
-      clearInterval(typing);
     }
   }
 
@@ -94,6 +109,7 @@ class DiscordBot {
   }
 
   async sendAttachment(image, channel) {
+    logger.info("Sending attachment...");
     try {
       await channel.send({
         files: [{ attachment: image, name: "image.png" }],
@@ -104,10 +120,12 @@ class DiscordBot {
   }
 
   async processPrompt(message) {
+    logger.info("Processing prompt...");
     return removeMentionFromMessage(message.content, client.user.id);
   }
 
   async processImageAttachment(message, prompt) {
+    logger.info("Processing image attachment...");
     if (message.attachments.size > 0) {
       const imageUrl = message.attachments.first().url;
       vision.setImageUrl(imageUrl);
@@ -118,6 +136,7 @@ class DiscordBot {
   }
 
   detectBotMentionOrChannel(message) {
+    logger.info("Detecting bot mention or bot channel...");
     const botMentioned = message.mentions.has(client.user);
     const channelNameHasBot = message.channel.name.includes("🤖");
     return botMentioned || channelNameHasBot;
