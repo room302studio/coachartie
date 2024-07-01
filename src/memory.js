@@ -4,6 +4,7 @@ const {
   getAllMemories,
   storeUserMemory,
   getRelevantMemories,
+  storeRobotMessage,
 } = require("./remember.js");
 const {
   createTodo,
@@ -20,8 +21,6 @@ const llmHelpers = require("../helpers-llm");
 const DISABLE_MEMORIES = true; // Set to false to enable memory storage
 const DISABLE_TASK_ANALYSIS = true; // Set to false to enable task analysis
 const DISABLE_REMEMBER_COMPLETIONS = true; // Set to false to enable remember completions
-
-const { getPromptsFromSupabase, getConfigFromSupabase } = require("../helpers");
 
 // Initialize prompts and config
 let PROMPT_REMEMBER,
@@ -114,6 +113,12 @@ module.exports = {
       const processedResponse = await processResponse(response);
       logger.info(`Processed response: ${JSON.stringify(processedResponse)}`);
       logger.info(`Response processed, ${processedResponse.length} characters`);
+
+      // store the robot message response
+      await storeRobotMessage(
+        { username, channel, conversation_id: channel, related_message_id },
+        processedResponse
+      );
 
       let rememberText = "";
       if (!DISABLE_REMEMBER_COMPLETIONS) {
