@@ -101,7 +101,7 @@ module.exports = {
     // const desArgs = destructureArgs(args);
     // const [arg1, arg2] = desArgs;
     const [arg1, arg2] = destructureArgs(args);
-    logger.info(`⚡️ Calling capability method: supabasetodo.${method}
+    logger.info(`⚡️ Calling capability method: todo.${method}
     
     ${JSON.stringify(args)}`);
 

@@ -87,7 +87,7 @@ module.exports = {
     // const [arg1, arg2] = desArgs;
     const [arg1, arg2, arg3] = destructureArgs(args);
     logger.info(
-      `⚡️ Calling capability method: supabasetodo.${method} with args: ${arg1}, ${arg2}, ${arg3}`,
+      `⚡️ Calling capability method: supabasetodo.${method} with args: ${arg1}, ${arg2}, ${arg3}`
     );
 
     if (method === "select") {

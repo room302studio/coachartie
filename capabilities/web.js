@@ -444,8 +444,31 @@ async function fetchAndSummarizeUrl(url, userPrompt = "") {
 
   logger.info(`📝 Split text into ${chunks.length} chunks`);
 
-  // Process the chunks
-  const cacheKey = crypto.createHash("md5").update(url).digest("hex");
+  try {
+    // Check if the chunks are already cached
+    const cacheKey = crypto.createHash("md5").update(url).digest("hex");
+    let chunkResponses;
+    if (fs.existsSync(path.join(__dirname, `../cache/${cacheKey}.json`))) {
+      logger.info("📝  Using cached chunks...");
+      chunkResponses = JSON.parse(
+        fs.readFileSync(
+          path.join(__dirname, `../cache/${cacheKey}.json`),
+          "utf8"
+        )
+      );
+    } else {
+      chunkResponses = await processChunks(chunks, cleanText);
+      // Cache the chunks
+      fs.writeFileSync(
+        path.join(__dirname, `../cache/${cacheKey}.json`),
+        JSON.stringify(chunkResponses)
+      );
+    }
+  } catch (error) {
+    logger.error(`Error in processing chunks: ${error.message}`);
+    logger.error(`Error stack: ${error.stack}`);
+  }
+
   const chunkCachePath = path.join(__dirname, `../cache/${cacheKey}.json`);
 
   let chunkResponses;
