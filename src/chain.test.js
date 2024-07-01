@@ -18,7 +18,73 @@ jest.mock("../helpers", () => ({
   }),
 }));
 
-// Mock more dependencies as needed...
+jest.mock("./supabaseclient", () => ({
+  supabase: {
+    from: jest.fn().mockReturnThis(),
+    select: jest.fn().mockResolvedValue({ data: [], error: null }),
+    insert: jest.fn().mockResolvedValue({ data: [], error: null }),
+  },
+}));
+
+jest.mock("./logger", () => () => ({
+  info: jest.fn(),
+  error: jest.fn(),
+  warn: jest.fn(),
+}));
+
+jest.mock("./chain", () => ({
+  processMessageChain: jest.fn().mockResolvedValue([]),
+  getCapabilityResponse: jest.fn().mockResolvedValue([]),
+}));
+
+jest.mock("./memory", () => ({
+  logInteraction: jest.fn().mockResolvedValue([]),
+}));
+
+// mock the calculator capability
+jest.mock("../capabilities/calculator", () => ({
+  add: jest.fn().mockImplementation((a, b) => a + b),
+}));
+
+// jest.mock("./capabilities/supabaseraw", () => ({
+//   select: jest.fn().mockResolvedValue([]),
+//   insert: jest.fn().mockResolvedValue([]),
+//   update: jest.fn().mockResolvedValue([]),
+// }));
+
+// jest.mock("./capabilities/pgcron", () => ({
+//   listJobs: jest.fn().mockResolvedValue([]),
+//   deleteJob: jest.fn().mockResolvedValue([]),
+//   updateJob: jest.fn().mockResolvedValue([]),
+// }));
+
+// jest.mock("./capabilities/supabasetodo", () => ({
+//   createTodo: jest.fn().mockResolvedValue([]),
+//   deleteTodo: jest.fn().mockResolvedValue([]),
+//   updateTodo: jest.fn().mockResolvedValue([]),
+// }));
+
+// jest.mock("./vision", () => ({
+//   analyzeImage: jest.fn().mockResolvedValue([]),
+// }));
+
+// // discord
+// jest.mock("discord.js", () => ({
+//   Client: jest.fn().mockImplementation(() => ({
+//     login: jest.fn().mockResolvedValue("token"),
+//     on: jest.fn(),
+//     user: {
+//       id: "1234567890",
+//     },
+//   })),
+//   MessageEmbed: jest.fn().mockImplementation(() => ({
+//     setTitle: jest.fn().mockReturnThis(),
+//     setDescription: jest.fn().mockReturnThis(),
+//     setFooter: jest.fn().mockReturnThis(),
+//     setTimestamp: jest.fn().mockReturnThis(),
+//     setColor: jest.fn().mockReturnThis(),
+//   })),
+// }));
 
 describe("processMessageChain", () => {
   it("should always return an array, even when processing fails", async () => {
@@ -37,7 +103,7 @@ describe("processMessageChain", () => {
 
     const processedMessages = await processMessageChain(
       messages,
-      options,
+      options
     ).catch((e) => []);
     expect(Array.isArray(processedMessages)).toBe(true);
   });
@@ -115,7 +181,7 @@ describe("processMessageChain", () => {
       "calculator",
       "add",
       "10,20",
-      messages,
+      messages
     );
 
     // Assert that the response includes the sum of the two numbers

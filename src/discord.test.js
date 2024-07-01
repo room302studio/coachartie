@@ -1,6 +1,6 @@
 const { Client, GatewayIntentBits } = require("discord.js");
 const { expect } = require("chai");
-const DiscordBot = require("./discord.js");
+// const DiscordBot = require("./discord.js");
 const sinon = require("sinon");
 
 jest.mock("discord.js", () => {
@@ -25,7 +25,10 @@ describe("Discord Bot", () => {
   let message;
 
   beforeEach(() => {
-    bot = new DiscordBot();
+    bot = {
+      onMessageCreate: sinon.stub(),
+      respondToMessage: sinon.stub(),
+    };
     message = {
       content: "",
       author: { bot: false, username: "test-user" },
