@@ -1,62 +1,67 @@
 const logger = require("./src/logger")("helpers-memory");
-const { getRelevantMemories } = require("./src/remember");
+const {
+  getRelevantMemories,
+  getUserMemory,
+  getUserMessageHistory,
+  getAllMemories,
+} = require("./src/remember");
 const { supabase } = require("./src/supabaseclient");
 const { Chance } = require("chance");
 
 const chance = new Chance();
 
-async function getUserMemory(username, limit = 10) {
-  const { data, error } = await supabase
-    .from("memories")
-    .select("*")
-    .eq("user_id", username)
-    .order("created_at", { ascending: false })
-    .limit(limit);
+// async function getUserMemory(username, limit = 10) {
+//   const { data, error } = await supabase
+//     .from("memories")
+//     .select("*")
+//     .eq("user_id", username)
+//     .order("created_at", { ascending: false })
+//     .limit(limit);
 
-  if (error) {
-    logger.error(
-      `Error retrieving user memory for ${username}: ${JSON.stringify(error)}`
-    );
-    return [];
-  }
+//   if (error) {
+//     logger.error(
+//       `Error retrieving user memory for ${username}: ${JSON.stringify(error)}`
+//     );
+//     return [];
+//   }
 
-  return data;
-}
+//   return data;
+// }
 
-async function getUserMessageHistory(username, limit = 10) {
-  const { data, error } = await supabase
-    .from("messages")
-    .select("*")
-    .eq("user_id", username)
-    .order("created_at", { ascending: false })
-    .limit(limit);
+// async function getUserMessageHistory(username, limit = 10) {
+//   const { data, error } = await supabase
+//     .from("messages")
+//     .select("*")
+//     .eq("user_id", username)
+//     .order("created_at", { ascending: false })
+//     .limit(limit);
 
-  if (error) {
-    logger.error(
-      `Error retrieving message history for ${username}: ${JSON.stringify(
-        error
-      )}`
-    );
-    return [];
-  }
+//   if (error) {
+//     logger.error(
+//       `Error retrieving message history for ${username}: ${JSON.stringify(
+//         error
+//       )}`
+//     );
+//     return [];
+//   }
 
-  return data;
-}
+//   return data;
+// }
 
-async function getAllMemories(limit = 10) {
-  const { data, error } = await supabase
-    .from("memories")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(limit);
+// async function getAllMemories(limit = 10) {
+//   const { data, error } = await supabase
+//     .from("memories")
+//     .select("*")
+//     .order("created_at", { ascending: false })
+//     .limit(limit);
 
-  if (error) {
-    logger.error(`Error retrieving general memories: ${JSON.stringify(error)}`);
-    return [];
-  }
+//   if (error) {
+//     logger.error(`Error retrieving general memories: ${JSON.stringify(error)}`);
+//     return [];
+//   }
 
-  return data;
-}
+//   return data;
+// }
 
 /**
  * Retrieves previous messages for a user and adds them to the messages array.
@@ -68,7 +73,7 @@ async function getAllMemories(limit = 10) {
  * @returns {Promise<void>} - A promise that resolves when the user messages have been added to the array.
  */
 async function addUserMessages(username, messages, options = {}) {
-  const { minCount = 4, maxCount = 24 } = options;
+  const { minCount = 2, maxCount = 8 } = options;
   const userMessageCount = chance.integer({ min: minCount, max: maxCount });
   // Retrieve user messages and add them to the messages array
   logger.info(
@@ -80,7 +85,7 @@ async function addUserMessages(username, messages, options = {}) {
       userMessageCount
     );
     if (!userMessages) {
-      logger.info(`No previous messages found for ${username}`);
+      logger.warn(`No previous messages found for ${username}`);
       return;
     }
     userMessages.reverse();
@@ -105,7 +110,7 @@ async function addUserMessages(username, messages, options = {}) {
  * @returns {Promise<void>} - A promise that resolves when the user memories are added to the messages array.
  */
 async function addUserMemories(username, messages, options = {}) {
-  const { minCount = 4, maxCount = 24 } = options;
+  const { minCount = 2, maxCount = 6 } = options;
   const userMemoryCount = chance.integer({ min: minCount, max: maxCount });
   try {
     const userMemories = await getUserMemory(username, userMemoryCount);
@@ -131,25 +136,22 @@ async function addUserMemories(username, messages, options = {}) {
  * @returns {Promise<void>} - A promise that resolves when the relevant memories are added to the messages array.
  */
 async function addRelevantMemories(username, messages, options = {}) {
-  const { minCount = 1, maxCount = 16 } = options;
+  const { minCount = 1, maxCount = 4 } = options;
 
   const relevantMemoryCount = chance.integer({ min: minCount, max: maxCount });
 
   // get the last user message to use as the query for relevant memories
-  const lastUserMessage = messages
+  const mostRecentUserMessage = messages
     .slice()
     .reverse()
     .find((message) => message.role === "user");
 
-  if (!lastUserMessage) {
+  if (!mostRecentUserMessage) {
     logger.info(`No last user message found for ${username}`);
     return;
   }
 
-  const queryString = lastUserMessage.content;
-  logger.info(
-    `🔧 Querying for relevant memories for ${username}: ${queryString}`
-  );
+  const queryString = mostRecentUserMessage.content;
 
   try {
     const relevantMemories = await getRelevantMemories(
@@ -157,13 +159,17 @@ async function addRelevantMemories(username, messages, options = {}) {
       relevantMemoryCount
     );
     logger.info(
-      `🔧 Retrieving ${relevantMemoryCount} relevant memories for ${queryString}`
+      `🔧 Retrieving ${relevantMemoryCount} relevant memories for ${queryString.slice(
+        0,
+        40
+      )}...`
     );
 
-    if (relevantMemories.length === 0) {
+    if (relevantMemories.length != 0) {
       relevantMemories.forEach((memory) => {
         // log out the memories
-        logger.info("relevant memory " + JSON.stringify(memory));
+        // logger.info("relevant memory " + JSON.stringify(memory));
+
         messages.push({
           role: "system",
           content: `${memory.created_at}: ${memory.value}`,
@@ -171,7 +177,7 @@ async function addRelevantMemories(username, messages, options = {}) {
       });
     }
   } catch (err) {
-    logger.error(err);
+    logger.error(`${err} - Error retrieving relevant memories`);
   }
 }
 
@@ -184,7 +190,7 @@ async function addRelevantMemories(username, messages, options = {}) {
  * @returns {Promise<void>} - A promise that resolves when the general memories are added to the messages array.
  */
 async function addGeneralMemories(messages, options = {}) {
-  const { minCount = 3, maxCount = 20 } = options;
+  const { minCount = 1, maxCount = 3 } = options;
   const generalMemoryCount = chance.integer({ min: minCount, max: maxCount });
   try {
     const generalMemories = await getAllMemories(generalMemoryCount);

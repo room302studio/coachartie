@@ -1,13 +1,15 @@
 const { getConfigFromSupabase } = require("./helpers-utility.js");
 const logger = require("./src/logger.js")("helpers-prompt");
+// const {  } = require("./src/remember.js");
 const {
-  addUserMessages,
   addUserMemories,
   addRelevantMemories,
   addGeneralMemories,
+  addUserMessages,
 } = require("./helpers-memory.js");
+
 const { supabase } = require("./src/supabaseclient");
-const { listTodos } = require("./capabilities/supabasetodo.js");
+// const { listTodos } = require("./capabilities/supabasetodo.js");
 const { Chance } = require("chance");
 const chance = new Chance();
 const fs = require("fs");
@@ -40,20 +42,50 @@ function loadCapabilityManifest() {
 async function assembleMessagePreamble(
   username,
   prompt,
+  messages,
   options = { shuffle: false }
 ) {
-  logger.info(`🔧 Assembling message preamble for <${username}> message`);
-  // log the options
-  logger.info(`🔧 Options: ${JSON.stringify(options)}`);
-  let messages = [];
+  // logger.info(`🔧 Assembling message preamble for <${username}> message`);
+  // logger.info(`🔧 Options: ${JSON.stringify(options)}`);
+
+  // if there ain't no messages, console.error
+  if (!messages) {
+    logger.error("No messages array provided");
+    return [];
+  }
+
+  let addedMessages = [];
   addCurrentDateTime(messages);
-  await addHexagramPrompt(messages);
-  await addTodosToMessages(messages);
-  await addUserMemories(username, messages);
-  await addRelevantMemories(username, messages);
-  await addCapabilityPromptIntro(messages);
-  await addCapabilityManifestMessage(messages);
-  await addGeneralMemories(messages);
+  if (chance.bool({ likelihood: 90 })) {
+    await addHexagramPrompt(messages);
+    addedMessages.push("hexagram");
+  }
+  if (chance.bool({ likelihood: 90 })) {
+    await addTodosToMessages(messages);
+    addedMessages.push("todos");
+  }
+  if (chance.bool({ likelihood: 90 })) {
+    await addUserMemories(username, messages);
+    addedMessages.push("memories");
+  }
+  if (chance.bool({ likelihood: 90 })) {
+    await addRelevantMemories(username, messages);
+    addedMessages.push("relevant memories");
+  }
+  if (chance.bool({ likelihood: 90 })) {
+    await addCapabilityPromptIntro(messages);
+    addedMessages.push("capability prompt intro");
+  }
+  if (chance.bool({ likelihood: 90 })) {
+    await addCapabilityManifestMessage(messages);
+    addedMessages.push("capability manifest");
+  }
+  if (chance.bool({ likelihood: 90 })) {
+    await addGeneralMemories(messages);
+    addedMessages.push("general memories");
+  }
+
+  logger.info(`🔧 Added messages: ${addedMessages.join(", ")}`);
 
   // BE WARNED
   // Shuffling does some weird shit
@@ -68,18 +100,25 @@ async function assembleMessagePreamble(
   await addUserMessages(username, messages);
   await addSystemPrompt(messages);
 
+  // and finally, no matter what, end with a user message re-iterating the prompt
+  messages.push({
+    role: "user",
+    content: prompt,
+  });
+
   return messages;
 }
 
 async function addTodosToMessages(messages) {
-  const todos = await listTodos();
-  logger.info(`🔧 Adding todos to messages: ${todos.length}`);
-  const todoString = JSON.stringify(todos);
-  messages.push({
-    role: "system",
-    content: `Here are your todos: 
-${todoString}`,
-  });
+  // TODO: Fix this
+  //   const todos = await listTodos();
+  //   logger.info(`🔧 Adding todos to messages: ${todos.length}`);
+  //   const todoString = JSON.stringify(todos);
+  //   messages.push({
+  //     role: "system",
+  //     content: `Here are your todos:
+  // ${todoString}`,
+  //   });
 }
 
 /**

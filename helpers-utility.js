@@ -2,7 +2,16 @@ const { encode } = require("@nem035/gpt-3-encoder");
 const logger = require("./src/logger.js")("helpers-utility");
 const { supabase } = require("./src/supabaseclient");
 
-const capabilityRegex = /(\w+):(\w+)\(([^]*?)\)/; // captures newlines in the  third argument
+const testString = "calculator:add(12,24)";
+// const capabilityRegex = /(\w+):(\w+)\(([^)]*?)\)/g;
+const capabilityRegexGlobal = /(\w+):(\w+)\((.*?)\)/g;
+const capabilityRegexSingle = /(\w+):(\w+)\((.*?)\)/;
+
+// test out the global and single
+const matchGlobal = testString.match(capabilityRegexGlobal) || [];
+const matchSingle = testString.match(capabilityRegexSingle) || [];
+logger.info(`Regex test on ${testString}: ${matchGlobal.join("  ")}`);
+logger.info(`Regex test on ${testString}: ${matchSingle.join("  ")}`);
 
 /**
  * Counts the number of tokens in a string.
@@ -57,7 +66,12 @@ function displayTypingIndicator(message) {
  * @param {Message} message - The message object.
  */
 function startTypingIndicator(message) {
-  message.channel.sendTyping();
+  try {
+    message.channel.sendTyping();
+    logger.info("Started typing indicator");
+  } catch (error) {
+    logger.error(`Error starting typing indicator: ${error}`);
+  }
 }
 
 /**
@@ -66,7 +80,14 @@ function startTypingIndicator(message) {
  * @returns {number} - The ID of the interval.
  */
 function setTypingInterval(message) {
-  return setInterval(() => message.channel.sendTyping(), 5000);
+  return setInterval(() => {
+    try {
+      message.channel.sendTyping();
+      logger.info("Typing indicator sent");
+    } catch (error) {
+      logger.error(`Error sending typing indicator: ${error}`);
+    }
+  }, 5000);
 }
 /**
  * Splits a message into chunks and sends them as separate messages.
@@ -84,13 +105,25 @@ function splitAndSendMessage(messageText, channel) {
     return;
   }
 
+  // make sure channel exists
+  if (!channel) {
+    logger.error("splitAndSendMessage: channel does not exist");
+    return;
+  }
+
   logger.info(`splitAndSendMessage: message length: ${messageText.length}`);
+
+  // make sure the channel is a Discord channel
+  if (!channel.send) {
+    logger.error("splitAndSendMessage: channel does not have a send method");
+    return;
+  }
 
   if (messageText.length < 2000) {
     try {
       channel.send(messageText);
     } catch (error) {
-      logger.info(`Error sending message: ${error}`);
+      logger.error(`Error sending message: ${error}`);
     }
   } else {
     const messageChunks = splitMessageIntoChunks(messageText);
@@ -98,7 +131,7 @@ function splitAndSendMessage(messageText, channel) {
       try {
         channel.send(chunk);
       } catch (error) {
-        logger.info(`Error sending message chunk ${index}: ${error}`);
+        logger.error(`Error sending message chunk ${index}: ${error}`);
       }
     });
   }
@@ -132,15 +165,6 @@ function splitMessageIntoChunks(messageText) {
   }
 
   return messageChunks;
-}
-
-/**
- * Destructures a string of arguments into an array of trimmed arguments.
- * @param {string} argsString - The string of arguments to destructure.
- * @returns {Array<string>} - An array of trimmed arguments.
- */
-function destructureArgs(argsString) {
-  return argsString.split(",").map((arg) => arg.trim());
 }
 
 /**
@@ -362,9 +386,43 @@ function getUniqueEmoji() {
  * @param {string} message - The message to check.
  * @returns {boolean} - True if the message contains a capability, false otherwise.
  */
-function doesMessageContainCapability(message) {
-  if (!capabilityRegex) logger.error(`Capability regex not found`);
-  return !!message.match(capabilityRegex);
+function doesMessageContainCapability(rawMessage) {
+  if (!rawMessage) {
+    logger.error(`Cannot check if message contains capability: ${rawMessage}`);
+    return false;
+  }
+
+  logger.info(`Checking if message contains capability: ${rawMessage}`);
+
+  // message might be a string, or an object with .content
+  // lets handle both
+  let content = "";
+  if (typeof rawMessage === "string") {
+    logger.info("Message is a string");
+    content = rawMessage;
+  } else if (typeof rawMessage === "object" && rawMessage.content) {
+    logger.info("Message is an object with content");
+    content = rawMessage.content;
+  } else {
+    logger.warn(
+      `Message is not a string or object with content: ${JSON.stringify(
+        rawMessage
+      )}`
+    );
+    return false;
+  }
+
+  // use regex to check if the message contains the capability
+  const regexMatches = content.match(capabilityRegexSingle);
+
+  // if there are no matches, return false
+  if (!regexMatches) {
+    return false;
+  }
+  logger.info(`Regex matches: ${regexMatches}`);
+
+  // otherwise, return true
+  return true;
 }
 
 /**
@@ -393,6 +451,33 @@ function countMessageTokens(messageArray = []) {
   return totalTokens;
 }
 
+/**
+ * Destructures a string of arguments into an array of trimmed arguments.
+ * @param {string} argsString - The string of arguments to destructure.
+ * @returns {Array<string>} - An array of trimmed arguments.
+ */
+function destructureArgs(args) {
+  logger.info(`Destructuring args: ${args}`);
+  if (typeof args === "string") {
+    return args.split(",").map((arg) => arg.trim());
+  }
+  return Array.isArray(args) ? args : [args];
+}
+/**
+ * Retrieves the content of the last user message in the provided messages array.
+ * @param {Array<Object>} messagesArray - An array of message objects.
+ * @returns {string} The content of the last user message.
+ */
+function lastUserMessage(messages) {
+  if (!messages || !Array.isArray(messages)) {
+    logger.warn("lastUserMessage called with invalid messages array");
+    return "";
+  }
+  const userMessages = messages.filter((message) => message.role === "user");
+  return userMessages.length > 0
+    ? userMessages[userMessages.length - 1].content
+    : "";
+}
 module.exports = {
   countTokens,
   countTokensInMessageArray,
@@ -409,5 +494,8 @@ module.exports = {
   getUniqueEmoji,
   doesMessageContainCapability,
   countMessageTokens,
-  capabilityRegex,
+  // capabilityRegex,
+  lastUserMessage,
+  capabilityRegexGlobal,
+  capabilityRegexSingle,
 };
