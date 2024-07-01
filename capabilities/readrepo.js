@@ -2,7 +2,7 @@ const { Octokit } = require("@octokit/rest");
 const dotenv = require("dotenv");
 const { destructureArgs } = require("../helpers");
 const logger = require("../src/logger.js")("readrepo");
-const { countTokens} = require('../helpers.js');
+const { countTokens } = require("../helpers.js");
 
 // Load environment variables from a .env file into process.env
 dotenv.config();
@@ -52,7 +52,9 @@ class RepoReader {
             repo,
             path: content.path,
           });
-          logger.info(`${content.path} content fetched ${fileContent.data.content.length}`);
+          logger.info(
+            `${content.path} content fetched ${fileContent.data.content.length}`,
+          );
           const fileData = Buffer.from(
             fileContent.data.content,
             "base64",
@@ -69,9 +71,9 @@ class RepoReader {
     logger.info(`Completed reading repository contents for ${owner}/${repo}.`);
     logger.info(`Contents length: ${contents.length}`);
     // make sure contents is a string
-    console.log(contents)
+    console.log(contents);
     // count the tokens in the content string
-    logger.info('Counting tokens')
+    logger.info("Counting tokens");
     // const tokenCount = countTokens(contents);
     // logger.info(`Token count: ${tokenCount}`);
     const contentsStringified = JSON.stringify(contents);

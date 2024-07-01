@@ -4,7 +4,6 @@ const puppeteer = require("puppeteer");
 const { getPromptsFromSupabase } = require("../helpers");
 const { WEBPAGE_UNDERSTANDER_PROMPT, WEBPAGE_CHUNK_UNDERSTANDER_PROMPT } =
   getPromptsFromSupabase();
-const { encode, decode } = require("@nem035/gpt-3-encoder");
 // import chance
 const chance = require("chance").Chance();
 const {
@@ -17,6 +16,7 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const logger = require("../src/logger.js")("web");
+const llmHelper = require("../helpers-llm");
 
 // import OpenAI from "openai";
 // conver to require
@@ -40,8 +40,7 @@ dotenv.config();
 
 // The purpose of this file is to enable basic web browser access for the robot: given a URL, access it, parse it as JSON, and return the page contents to the main bot.
 
-const allowedTextEls =
-  "p, h1, h2, h3, h4, h5, h6, a, td, th, tr, pre, code, blockquote";
+const allowedTextEls = "p, h1, h2, h3, h4, h5, h6, a, td, th, tr";
 
 function cleanUrlForPuppeteer(dirtyUrl) {
   // if the url starts and ends with ' then remove them
@@ -80,41 +79,81 @@ function cleanUrlForPuppeteer(dirtyUrl) {
 
 // Refactored function to be exported
 async function webPageToText(url) {
+  logger.info(`Starting webPageToText for URL: ${url}`);
   const browser = await puppeteer.launch();
   const page = await browser.newPage();
   await page.setUserAgent(randomUserAgent());
-  await page.goto(url);
 
-  logger.info("🕸️  Navigating to " + url);
+  try {
+    logger.info(`Navigating to ${url}`);
+    const response = await page.goto(url, { waitUntil: "networkidle0" });
 
-  const title = await page.title();
+    if (!response.ok()) {
+      throw new Error(
+        `HTTP response status ${response.status()} ${response.statusText()}`
+      );
+    }
 
-  // wait for body to load
-  await page.waitForSelector("body");
+    logger.info(`Page loaded, getting title`);
+    const title = await page.title();
+    logger.info(`Page title: ${title}`);
 
-  // Extract text from the page
-  const text = await page.$$eval(allowedTextEls, (elements) => {
-    return elements
-      .map((element) => {
-        if (element.tagName === "PRE") {
-          return "```\n" + element.textContent + "\n```";
+    logger.info(`Waiting for body to load`);
+    await page.waitForSelector("body", { timeout: 10000 });
+
+    logger.info(`Extracting text from the page`);
+    const text = await page.evaluate(() => {
+      // Select the main content area - adjust this selector based on Bloomberg's structure
+      const mainContent = document.querySelector("article") || document.body;
+
+      // Function to get text from an element, excluding certain tags
+      const getText = (element) => {
+        if (
+          element.tagName === "SCRIPT" ||
+          element.tagName === "STYLE" ||
+          element.tagName === "NAV"
+        ) {
+          return "";
         }
         if (element.tagName === "A") {
-          // const url = new URL(element.href);
-          return `${element.textContent} (${element.href}) `;
+          return element.textContent + " ";
         }
-        return element.textContent + " ";
-      })
-      .join(" ");
-  });
+        return Array.from(element.childNodes)
+          .map((node) =>
+            node.nodeType === Node.TEXT_NODE ? node.textContent : getText(node)
+          )
+          .join("");
+      };
 
-  const trimmedText = text.replace(/\s+/g, " ").trim();
+      return getText(mainContent).trim();
+    });
 
-  await browser.close();
+    logger.info(`Raw text length: ${text.length}`);
+    logger.info(`First 500 characters of raw text: ${text.substring(0, 500)}`);
 
-  return { title, text: trimmedText };
+    const trimmedText = text.replace(/\s+/g, " ").trim();
+    logger.info(`Trimmed text length: ${trimmedText.length}`);
+    logger.info(
+      `First 500 characters of trimmed text: ${trimmedText.substring(0, 500)}`
+    );
+
+    if (trimmedText.length === 0) {
+      logger.warn(`No text found on the page. Fetching full HTML content...`);
+      const fullHtml = await page.content();
+      logger.warn(
+        `Full HTML content (first 1000 chars): ${fullHtml.substring(0, 1000)}`
+      );
+    }
+
+    return { title, text: trimmedText };
+  } catch (error) {
+    logger.error(`Error in webPageToText: ${error.message}`);
+    logger.error(`Error stack: ${error.stack}`);
+    return { title: "Error", text: `Failed to fetch page: ${error.message}` };
+  } finally {
+    await browser.close();
+  }
 }
-
 async function webpageToHTML(url) {
   const browser = await puppeteer.launch();
   const page = await browser.newPage();
@@ -138,7 +177,16 @@ async function webpageToHTML(url) {
 }
 
 async function fetchAndParseURL(url) {
+  logger.info(`Starting fetchAndParseURL for URL: ${url}`);
   const { title, text } = await webPageToText(url);
+
+  if (text.startsWith("Failed to fetch page:")) {
+    logger.error(`Failed to fetch page: ${text}`);
+    throw new Error(text);
+  }
+
+  logger.info(`Fetched title: ${title}`);
+  logger.info(`Fetched text length: ${text.length}`);
 
   return { title, text };
 }
@@ -304,31 +352,40 @@ async function processChunks(chunks, data, limit = 2, userPrompt = "") {
     const chunkPromises = chunks
       .slice(i, i + limit)
       .map(async (chunk, index) => {
-        // sleep so we don't anger the OpenAI gods
-        await sleep(500);
+        try {
+          // sleep so we don't anger the OpenAI gods
+          await sleep(500);
 
-        logger.info(`📝  Sending chunk ${i + index + 1} of ${chunkLength}...`);
-        logger.info(`Chunk text: ${chunk}`);
+          logger.info(
+            `📝  Sending chunk ${i + index + 1} of ${chunkLength}...`
+          );
+          logger.info(`Chunk text: ${chunk.substring(0, 100)}...`); // Log only the first 100 characters
 
-        const completion = await openai.chat.completions.create({
-          // model: "gpt-3.5-turbo-16k",
-          model: "gpt-4-0125-preview",
-          max_tokens: 2048,
-          // temperature: 0.5,
-          // presence_penalty: 0.66,
-          presence_penalty: -0.05,
-          // frequency_penalty: 0.1,
-          messages: [
-            { role: "user", content: userPrompt },
+          const completion = await llmHelper.createChatCompletion(
+            [
+              {
+                role: "user",
+                content: userPrompt
+                  ? `# User goal: ${userPrompt}`
+                  : "Can you help me understand this chunk of a webpage please?",
+              },
+              {
+                role: "user",
+                content: `${WEBPAGE_CHUNK_UNDERSTANDER_PROMPT}\n\n${chunk}`,
+              },
+            ],
             {
-              role: "user",
-              content: `${WEBPAGE_CHUNK_UNDERSTANDER_PROMPT}
+              model: "gpt-4-0125-preview",
+              max_tokens: 2048,
+              presence_penalty: -0.05,
+            }
+          );
 
-            ${chunk}`,
-            },
-          ],
-        });
-        return completion.choices[0];
+          return completion.content;
+        } catch (error) {
+          logger.error(`Error processing chunk: ${error.message}`);
+          return `Error processing chunk: ${error.message}`;
+        }
       });
 
     const chunkResults = await Promise.all(chunkPromises);
@@ -344,7 +401,12 @@ async function processChunks(chunks, data, limit = 2, userPrompt = "") {
  * @returns {Promise<string>} - The generated summary.
  */
 async function fetchAndSummarizeUrl(url, userPrompt = "") {
+  logger.info(`🚀 Starting fetchAndSummarizeUrl for URL: ${url}`);
+  logger.info(`User prompt: ${userPrompt}`);
+
   const cleanedUrl = cleanUrlForPuppeteer(url);
+  logger.info(`Cleaned URL: ${cleanedUrl}`);
+
   const hashedUrl = crypto.createHash("md5").update(cleanedUrl).digest("hex");
   const cachePath = path.join(__dirname, "cache", `${hashedUrl}.json`);
 
@@ -353,115 +415,78 @@ async function fetchAndSummarizeUrl(url, userPrompt = "") {
     fs.existsSync(cachePath) &&
     (Date.now() - fs.statSync(cachePath).mtime) / 1000 < 3600
   ) {
-    logger.info(`📝  Using cached data for URL: ${cleanedUrl}`);
+    logger.info(`📝 Using cached data for URL: ${cleanedUrl}`);
     return fs.readFileSync(cachePath, "utf8");
   }
 
-  logger.info(`📝  Fetching URL: ${cleanedUrl}`);
+  logger.info(`📝 Fetching URL: ${cleanedUrl}`);
   const { text } = await fetchAndParseURL(cleanedUrl);
-  logger.info(`📝  Fetched text: ${text}`);
-  logger.info(`📝  Fetched URL: ${cleanedUrl}`);
+  logger.info(`📝 Fetched text length: ${text.length}`);
+  logger.info(
+    `📝 First 1000 characters of fetched text: ${text.substring(0, 1000)}`
+  );
 
-  logger.info("📝  Generating summary...");
+  logger.info("📝 Generating summary...");
 
-  // if data.text is longer than 4096 characters, split it into chunks of 4096 characters and send each chunk as a separate message and then combine the responses
+  // Clean and chunk the text
+  const cleanText = text
+    .replace(/\n/g, " ")
+    .replace(/\t/g, " ")
+    .replace(/ +(?= )/g, "");
 
-  // remove newlines
-  let cleanText = text.replace(/\n/g, " ");
+  const tokenCount = countMessageTokens(cleanText);
+  logger.info(`📝 Total token count: ${tokenCount}`);
 
-  // remove tabs
-  cleanText = cleanText.replace(/\t/g, " ");
-
-  // remove multiple spaces
-  cleanText = cleanText.replace(/ +(?= )/g, "");
-
-  // we need to refactor to use countMessageTokens instead of character count, so we split the text into chunks with CHUNK_TOKEN_AMOUNT tokens each
-  let chunks = [];
-  let chunkStart = 0;
-  // now we need to split the text into chunks of 13592 tokens each
-  // so we need to figure out how many tokens are in the text
-  // we will use the countMessageTokens function to do this
-  let tokenCount = countMessageTokens(text);
-  logger.info(`📝  Token count: ${tokenCount}`);
-  let chunkEnd = CHUNK_TOKEN_AMOUNT; // set the chunkEnd to the CHUNK_TOKEN_AMOUNT so we can start the loop
-  while (chunkStart < tokenCount) {
-    // we need to make sure that the chunkEnd is not greater than the tokenCount
-    if (chunkEnd > tokenCount) {
-      chunkEnd = tokenCount;
-    }
-    // now we can push the chunk to the chunks array
-    chunks.push(text.slice(chunkStart, chunkEnd));
-    // now we can set the chunkStart to the chunkEnd
-    chunkStart = chunkEnd;
-    // now we can set the chunkEnd to the chunkStart + CHUNK_TOKEN_AMOUNT
-    chunkEnd = chunkStart + CHUNK_TOKEN_AMOUNT;
+  const chunks = [];
+  for (let i = 0; i < tokenCount; i += CHUNK_TOKEN_AMOUNT) {
+    chunks.push(cleanText.slice(i, i + CHUNK_TOKEN_AMOUNT));
   }
 
-  logger.info(`📝  Splitting text into ${chunks.length} chunks...`);
-  logger.info(`📝  Chunk length: ${CHUNK_TOKEN_AMOUNT} tokens`);
+  logger.info(`📝 Split text into ${chunks.length} chunks`);
 
-  let factList = "";
-  try {
-    // Check if the chunks are already cached
-    const cacheKey = crypto.createHash("md5").update(url).digest("hex");
-    let chunkResponses;
-    if (fs.existsSync(path.join(__dirname, `../cache/${cacheKey}.json`))) {
-      logger.info("📝  Using cached chunks...");
-      chunkResponses = JSON.parse(
-        fs.readFileSync(
-          path.join(__dirname, `../cache/${cacheKey}.json`),
-          "utf8"
-        )
-      );
-    } else {
-      chunkResponses = await processChunks(chunks, cleanText);
-      // Cache the chunks
-      fs.writeFileSync(
-        path.join(__dirname, `../cache/${cacheKey}.json`),
-        JSON.stringify(chunkResponses)
-      );
-    }
+  // Process the chunks
+  const cacheKey = crypto.createHash("md5").update(url).digest("hex");
+  const chunkCachePath = path.join(__dirname, `../cache/${cacheKey}.json`);
 
-    factList = chunkResponses.join("\n");
-
-    // return chunkResponses;
-  } catch (error) {
-    logger.info(error);
-    return error;
+  let chunkResponses;
+  if (fs.existsSync(chunkCachePath)) {
+    logger.info("📝 Using cached chunks...");
+    chunkResponses = JSON.parse(fs.readFileSync(chunkCachePath, "utf8"));
+  } else {
+    logger.info("📝 Processing chunks...");
+    chunkResponses = await processChunks(chunks, cleanText);
+    fs.writeFileSync(chunkCachePath, JSON.stringify(chunkResponses));
   }
 
-  logger.info(`📝  Generated ${factList.split("\n").length} fact summary.`);
-  logger.info(`📝  Generating summary of: ${factList}`);
+  const factList = chunkResponses.join("\n");
+  logger.info(`📝 Generated ${factList.split("\n").length} facts`);
 
-  // use gpt-3.5-turbo-16k for the final summary
-  const summaryCompletion = await openai.chat.completions.create({
-    // model: "gpt-3.5-turbo-16k",
-    model: "gpt-4-0125-preview",
-    // max_tokens: 2048,
-    max_tokens: 3072,
-    // temperature: 0.5,
-    // presence_penalty: 0.66,
-    // presence_penalty: -0.1,
-    // frequency_penalty: 0.1,
-    messages: [
-      {
-        role: "user",
-        content: `# User goal: ${userPrompt}
+  // Generate the summary
+  const summaryPrompt = `
+Please summarize the following webpage. Focus on the main points and key takeaways that are relevant to the user's request.
 
-${WEBPAGE_UNDERSTANDER_PROMPT}
+Webpage URL: ${cleanedUrl}
 
-## Facts
-${factList}`,
-      },
-    ],
-  });
+User's request: ${userPrompt}
 
-  const summary = summaryCompletion.choices[0].message.content;
+Webpage facts:
+${JSON.stringify(factList, null, 2)}`;
 
-  logger.info(`📝  Generated summary for URL: ${cleanedUrl}`, summary);
+  logger.info(
+    `📝 Summary prompt (first 500 chars): ${summaryPrompt.substring(0, 500)}...`
+  );
 
-  // Save the summary to the cache
+  const summaryCompletion = await llmHelper.createChatCompletion(
+    [{ role: "user", content: summaryPrompt }],
+    { model: "gpt-4-0125-preview", max_tokens: 3072 }
+  );
+
+  const summary = summaryCompletion.content;
+  logger.info(`📝 Generated summary length: ${summary.length}`);
+
+  // Cache the summary
   fs.writeFileSync(cachePath, summary);
+  logger.info(`📝 Summary cached at ${cachePath}`);
 
   return summary;
 }
@@ -482,26 +507,48 @@ function randomUserAgent() {
 }
 
 async function handleCapabilityMethod(method, args, messages) {
-  // first we need to figure out what the method is
-  // then grab the URL from the args
-  // then we need to call the method with the URL
-  // then we need to return the result of the method
+  logger.info(`🚀 handleCapabilityMethod in web.js called with:`);
+  logger.info(`- method: ${method}`);
+  logger.info(`- args: ${JSON.stringify(args)}`);
+  logger.info(
+    `- messages: ${messages ? "defined" : "undefined"}, length: ${
+      messages?.length
+    }`
+  );
 
-  const userPrompt = lastUserMessage(messages);
+  try {
+    logger.info(`Attempting to get userPrompt`);
+    const userPrompt = messages ? lastUserMessage(messages) : "";
+    logger.info(`userPrompt: ${userPrompt}`);
 
-  const url = destructureArgs(args)[0];
-  if (method === "fetchAndSummarizeUrl") {
-    const summary = await fetchAndSummarizeUrl(url, userPrompt);
-    return summary;
-  } else if (method === "fetchAllLinks") {
-    const links = await fetchAllLinks(url);
-    return links;
-  } else if (method === "fetchLargestImage") {
-    const image = await fetchLargestImage(url);
-    return image;
+    logger.info(`Attempting to destructure args`);
+    const url = destructureArgs(args)[0];
+    logger.info(`url: ${url}`);
+
+    if (method === "fetchAndSummarizeUrl") {
+      logger.info(`Calling fetchAndSummarizeUrl`);
+      const summary = await fetchAndSummarizeUrl(url, userPrompt);
+      logger.info(`fetchAndSummarizeUrl completed`);
+      return summary;
+    } else if (method === "fetchAllLinks") {
+      logger.info(`Calling fetchAllLinks`);
+      const links = await fetchAllLinks(url);
+      logger.info(`fetchAllLinks completed`);
+      return links;
+    } else if (method === "fetchLargestImage") {
+      logger.info(`Calling fetchLargestImage`);
+      const image = await fetchLargestImage(url);
+      logger.info(`fetchLargestImage completed`);
+      return image;
+    } else {
+      throw new Error(`Unknown method: ${method}`);
+    }
+  } catch (error) {
+    logger.error(`Error in handleCapabilityMethod: ${error.message}`);
+    logger.error(`Error stack: ${error.stack}`);
+    return `Error handling capability: ${error.message}`;
   }
 }
-
 module.exports = {
   fetchAndSummarizeUrl,
   fetchLargestImage,

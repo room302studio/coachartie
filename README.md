@@ -20,6 +20,8 @@ Coach Artie is an advanced AI assistant that facilitates collaboration, helps an
 
 **Purpose:** Processes a message in the same way as if it were a message from Discord.
 
+
+
 **Request Body:**
 - `message` (String): The text of the message to be processed.
 - `username` (String, optional): Identifier for the user sending the message. Defaults to "API User" if not provided.
@@ -59,6 +61,14 @@ The codebase is primarily divided into three main files: `discord.js`, `capabili
     },
   ]
 ```
+
+### Capability Player
+Capabilities can be developed and tested locally using the capability player with the --runCapability flag. The capability player will load the capability and run the specified method with the provided parameters.
+```bash
+node capability-player.js --runCapability="calculator:add(4,23)"
+```
+
+Running the capability player with the --runCapability flag will present you with a list of available capabilities and a lightweight interactive shell to enter the capability you want to run.
 
 
 ## Database Overview
@@ -161,6 +171,42 @@ VALUES
     ('MESSAGES_TABLE_NAME', 'messages'),
     ('MEMORIES_TABLE_NAME', 'memories');
 ```
+
+### Chat Models Configuration
+
+The `CHAT_MODELS` configuration is stored as a JSON string in the `config_value` column of the `config` table. This allows for dynamic configuration of the available chat models without the need for a separate table or changes to the database schema.
+
+The JSON string should be an array of objects, each representing a chat model with the following properties:
+
+- `name`: The unique identifier for the chat model.
+- `model`: The specific model to use for this chat model.
+- `handler`: The name of the function that handles the completion for this chat model.
+
+Example:
+
+```json
+[
+  {
+    "name": "openai",
+    "model": "gpt-3.5-turbo",
+    "handler": "createOpenAICompletion"
+  },
+  {
+    "name": "claude",
+    "model": "claude-v1",
+    "handler": "createClaudeCompletion"
+  },
+  {
+    "name": "localhost",
+    "model": "localhost-v1",
+    "handler": "createLocalhostCompletion"
+  }
+]
+```
+
+To add or update the CHAT_MODELS configuration, insert a new row or update the existing row in the config table with the config_key set to 'CHAT_MODELS' and the config_value set to the JSON string representing the chat models configuration.
+
+The createChatCompletion function in helpers-llm.js fetches the CHAT_MODELS configuration from the config table and parses it as JSON. If the CHAT_MODELS configuration doesn't exist, it falls back to a default array of chat models.
 
 ### Matching Query
   
