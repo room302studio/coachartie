@@ -1,7 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-const { getPromptsFromSupabase, capabilityRegex } = require("../helpers");
-const winston = require("winston");
+const { getPromptsFromSupabase, capabilityRegexSingle } = require("../helpers");
 
 const logger = require("../src/logger.js")("capabilities");
 
@@ -9,11 +8,14 @@ const logger = require("../src/logger.js")("capabilities");
 const callSomething = "callSomething:callSomething()";
 
 const capabilityFile = fs.readFileSync(
-  path.join(__dirname, "../capabilities/_manifest.json"),
+  path.join(__dirname, "../capabilities/_manifest.json")
 );
 
 // parse the json
 const capabilities = JSON.parse(capabilityFile);
+// count the number of capabilities
+const capabilityCount = Object.keys(capabilities).length;
+logger.info(`Loaded ${capabilityCount} capabilities`);
 
 (async () => {
   const { CAPABILITY_PROMPT_INTRO } = await getPromptsFromSupabase();
@@ -57,38 +59,59 @@ ${prepareCapabilities.join("\n")}
  * @param {Array} messages - All of the conversation messages so far
  * @returns {Promise<*>} - The response from the capability method.
  */
-async function callCapabilityMethod(
-  capabilitySlug,
-  methodName,
-  args,
-  messages,
-) {
+async function callCapabilityMethod(capSlug, capMethod, capArgs, messages) {
+  logger.info(
+    `Attempting to call capability: ${capSlug}:${capMethod}(${capArgs})`
+  );
+  logger.info(`Messages array length: ${messages?.length || "undefined"}`);
+
   try {
-    const capability = require(`../capabilities/${capabilitySlug}`);
-    const capabilityResponse = await capability.handleCapabilityMethod(
-      methodName,
-      args,
-      messages,
+    const capability = require(`../capabilities/${capSlug}`);
+    logger.info(
+      `Imported capability: ${JSON.stringify(Object.keys(capability))}`
     );
 
-    // Ensure there's a response
-    if (!capabilityResponse) {
-      throw new Error(
-        `Capability ${capabilitySlug} did not return a response.`,
+    if (typeof capability.handleCapabilityMethod !== "function") {
+      logger.error(
+        `handleCapabilityMethod is not a function in capability ${capSlug}`
       );
+      throw new Error(`Invalid capability structure for ${capSlug}`);
     }
 
-    // Return a success response
-    return { success: true, data: capabilityResponse };
+    logger.info(`Calling handleCapabilityMethod for ${capSlug}:${capMethod}`);
+    logger.info(
+      `Params being passed: method=${capMethod}, args=${JSON.stringify(
+        capArgs
+      )}, messages length=${messages?.length}`
+    );
+
+    const originalUserPrompt =
+      messages.find((msg) => msg.role === "user")?.content || "";
+
+    // Explicitly spread the arguments to ensure they're all passed
+    const result = await capability.handleCapabilityMethod(
+      capMethod,
+      capArgs,
+      originalUserPrompt
+    );
+
+    logger.info(
+      `Result from ${capSlug}:${capMethod}: ${JSON.stringify(result)}`
+    );
+    return { success: true, data: result };
   } catch (error) {
-    logger.info(`Error running ${capabilitySlug}.${methodName}: ${error}`);
-    // Return an error response
-    return { success: false, error: error.message };
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error(
+      `Error calling capability ${capSlug}:${capMethod}: ${errorMessage}`
+    );
+    logger.error(
+      `Full error: ${JSON.stringify(error, Object.getOwnPropertyNames(error))}`
+    );
+    return { success: false, error: errorMessage };
   }
 }
 
 module.exports = {
-  capabilityRegex,
   capabilities,
   callCapabilityMethod,
 };

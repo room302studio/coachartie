@@ -52,6 +52,10 @@ module.exports = function (serviceName) {
             logString = chalk.red(logString);
           }
 
+          if (serviceName === "capabilities") {
+            logString = chalk.magenta(logString);
+          }
+
           return logString;
         })
       ),
