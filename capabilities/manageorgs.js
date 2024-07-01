@@ -30,15 +30,15 @@ const ORG_EMAIL_TABLE_NAME = "org_emails";
  * @throws {Error} If there is an error with the Supabase operations.
  */
 async function createOrg({
-                           name,
-                           shortname,
-                           aliases,
-                           summary,
-                           note,
-                           firstContact,
-                           primaryEmailAddress,
-                           emailAddresses,
-                         }) {
+  name,
+  shortname,
+  aliases,
+  summary,
+  note,
+  firstContact,
+  primaryEmailAddress,
+  emailAddresses,
+}) {
   if (!name) throw new Error("Missing required fields");
 
   const newLabel = await createSharedLabel({
@@ -46,7 +46,7 @@ async function createOrg({
     shareWithOrganization: true,
     organization: process.env.MISSIVE_ORGANIZATION,
   });
-  const labelId = newLabel.shared_labels[0].id
+  const labelId = newLabel.shared_labels[0].id;
 
   const newPost = await createPost({
     addSharedLabels: [labelId, process.env.MISSIVE_SHARED_LABEL],
@@ -57,45 +57,57 @@ async function createOrg({
     notificationTitle: "New org",
     notificationBody: name,
     text: name,
-  })
+  });
 
-  let newlyAddedEmails = []
+  let newlyAddedEmails = [];
   if (primaryEmailAddress || emailAddresses) {
-    const newEmailAddresses = [primaryEmailAddress, ...(emailAddresses || [])].map(emailAddress => ({ email_address: emailAddress }))
+    const newEmailAddresses = [
+      primaryEmailAddress,
+      ...(emailAddresses || []),
+    ].map((emailAddress) => ({ email_address: emailAddress }));
     const { data, error } = await supabase
       .from(EMAIL_TABLE_NAME)
-      .upsert(newEmailAddresses, { onConflict: 'email_address', ignoreDuplicates: false })
+      .upsert(newEmailAddresses, {
+        onConflict: "email_address",
+        ignoreDuplicates: false,
+      })
       .select("id, email_address");
     if (error) throw new Error(error.message);
-    newlyAddedEmails = data
+    newlyAddedEmails = data;
   }
 
-  const { data, error } = await supabase.from(ORG_TABLE_NAME).insert([
-    {
-      name,
-      shortname: shortname || name.replace(/\s/g, '-'),
-      aliases,
-      summary,
-      note,
-      missive_conversation_id: newPost.posts.conversation,
-      missive_label_id: labelId,
-      first_contact: firstContact || new Date(),
-      primary_email_address: primaryEmailAddress,
-    },
-  ]).select("id");
+  const { data, error } = await supabase
+    .from(ORG_TABLE_NAME)
+    .insert([
+      {
+        name,
+        shortname: shortname || name.replace(/\s/g, "-"),
+        aliases,
+        summary,
+        note,
+        missive_conversation_id: newPost.posts.conversation,
+        missive_label_id: labelId,
+        first_contact: firstContact || new Date(),
+        primary_email_address: primaryEmailAddress,
+      },
+    ])
+    .select("id");
   if (error) throw new Error(error.message);
 
-  const orgEmails = newlyAddedEmails.filter(email => email.email_address !== primaryEmailAddress).map(email => ({
-    email_id: email.id,
-    org_id: data[0].id,
-  }))
+  const orgEmails = newlyAddedEmails
+    .filter((email) => email.email_address !== primaryEmailAddress)
+    .map((email) => ({
+      email_id: email.id,
+      org_id: data[0].id,
+    }));
   if (orgEmails.length > 0) {
-    const { error: orgEmailError } = await supabase.from(ORG_EMAIL_TABLE_NAME).insert(orgEmails)
+    const { error: orgEmailError } = await supabase
+      .from(ORG_EMAIL_TABLE_NAME)
+      .insert(orgEmails);
     if (orgEmailError) throw new Error(orgEmailError.message);
   }
   return `Successfully added org: ${name}`;
 }
-
 
 /**
  * Updates an existing organization in the database and sends a notification.
@@ -110,18 +122,23 @@ async function createOrg({
  * @throws {Error} If there is an error with the Supabase operations.
  */
 async function updateOrg({ name, newName, newAliases, newFirstContact }) {
-  if (!newName && !newAliases && !newFirstContact) return "No changes made"
+  if (!newName && !newAliases && !newFirstContact) return "No changes made";
 
-  const { data: [orgBefore], error: errorGetOrg } = await supabase
+  const {
+    data: [orgBefore],
+    error: errorGetOrg,
+  } = await supabase
     .from(ORG_TABLE_NAME)
-    .select('aliases, first_contact, missive_conversation_id')
-    .match({ name })
+    .select("aliases, first_contact, missive_conversation_id")
+    .match({ name });
   if (errorGetOrg) throw new Error(errorGetOrg.message);
   if (
     (!newName || newName === name) &&
-    (!newAliases || JSON.stringify(newAliases) === JSON.stringify(orgBefore.aliases)) &&
+    (!newAliases ||
+      JSON.stringify(newAliases) === JSON.stringify(orgBefore.aliases)) &&
     (!newFirstContact || newFirstContact === orgBefore.first_contact)
-  ) return "No changes made";
+  )
+    return "No changes made";
 
   const { error } = await supabase
     .from(ORG_TABLE_NAME)
@@ -131,30 +148,36 @@ async function updateOrg({ name, newName, newAliases, newFirstContact }) {
 
   const updateNotificationParts = [];
   if (newName) {
-    name = newName
-    updateNotificationParts.push(`- Org updated: ${orgBefore.name} changed to ${newName}`);
+    name = newName;
+    updateNotificationParts.push(
+      `- Org updated: ${orgBefore.name} changed to ${newName}`,
+    );
   }
   if (newAliases) {
     updateNotificationParts.push(`- ${name} alias added: ${newAliases}`);
-    updateNotificationParts.push(`- ${name} alias removed: ${orgBefore.aliases}`);
+    updateNotificationParts.push(
+      `- ${name} alias removed: ${orgBefore.aliases}`,
+    );
   }
   if (newFirstContact) {
-    updateNotificationParts.push(`- First contact with ${name} on ${newFirstContact}`);
+    updateNotificationParts.push(
+      `- First contact with ${name} on ${newFirstContact}`,
+    );
   }
-  const updateNotificationMarkdown = updateNotificationParts.join('\n');
+  const updateNotificationMarkdown = updateNotificationParts.join("\n");
   await createPost({
     notificationTitle: "Update org",
     notificationBody: "Update org",
     markdown: updateNotificationMarkdown,
     conversation: orgBefore.missive_conversation_id,
-  })
+  });
   return updateNotificationMarkdown;
 }
 
 module.exports = {
   handleCapabilityMethod: async (method, args) => {
     console.log(`⚡️ Calling capability method: supabaseorg.${method}`);
-    const arg = parseJSONArg(args)
+    const arg = parseJSONArg(args);
     if (method === "createOrg") {
       return await createOrg(arg);
     } else if (method === "updateOrg") {
@@ -163,5 +186,5 @@ module.exports = {
       throw new Error(`Invalid method: ${method}`);
     }
   },
-  ORG_TABLE_NAME
+  ORG_TABLE_NAME,
 };

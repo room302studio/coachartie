@@ -171,6 +171,11 @@ class GithubCoach {
       }
     `);
 
+    logger.info(`listProjectColumnsAndCards data: ${JSON.stringify(data)}`);
+
+    if (!data.node)
+      return `No project data found for ID: ${projectId}, please check the project ID and try again.`;
+
     const columns = data.node.columns.nodes;
     if (!columns) {
       return "No columns found for this project.";
@@ -361,7 +366,7 @@ class GithubCoach {
     title,
     headBranch,
     baseBranch,
-    description,
+    description
   ) {
     const response = await this.octokit.pulls.create({
       owner: process.env.GITHUB_USER,
@@ -425,7 +430,7 @@ module.exports = {
         return await githubCoach.listUserProjects(...destructuredArgs);
       case "listProjectColumnsAndCards":
         return await githubCoach.listProjectColumnsAndCards(
-          ...destructuredArgs,
+          ...destructuredArgs
         );
       case "addDraftIssueToProject":
         return await githubCoach.addDraftIssueToProject(...destructuredArgs);

@@ -3,8 +3,17 @@ const cheerio = require("cheerio");
 const dotenv = require("dotenv");
 dotenv.config();
 const { webPageToText, webpageToHTML } = require("./web.js"); // Adjust the path as necessary
-const { destructureArgs, createChatCompletion, getPromptsFromSupabase } = require("../helpers");
-const { storeUserMemory, hasMemoryOfResource, deleteMemoriesOfResource, getResourceMemories } = require("../src/remember");
+const {
+  destructureArgs,
+  createChatCompletion,
+  getPromptsFromSupabase,
+} = require("../helpers");
+const {
+  storeUserMemory,
+  hasMemoryOfResource,
+  deleteMemoriesOfResource,
+  getResourceMemories,
+} = require("../src/remember");
 const logger = require("../src/logger.js")("ingest-capability");
 const { convert } = require("html-to-text");
 const fs = require("fs");
@@ -49,7 +58,7 @@ async function deepDocumentIngest(url) {
     fs.existsSync(cacheFilePath) &&
     Date.now() - fs.statSync(cacheFilePath).mtimeMs < 3600000
   ) {
-    console.log("Using cached data");
+    logger.info("Using cached data");
     cachedData = JSON.parse(fs.readFileSync(cacheFilePath, "utf8"));
   }
 
@@ -60,16 +69,13 @@ async function deepDocumentIngest(url) {
     });
 
     // check if we have memories about this URL *already*
-    const hasMemory = await hasMemoryOfResource(
-      url
-    );
+    const hasMemory = await hasMemoryOfResource(url);
 
     // if we DO have memories, delete them
     if (hasMemory) {
       // get the date of the previous ingest from created_at
       const resourceMemories = await getResourceMemories(url, 1);
       const prevImportDate = resourceMemories[0].created_at;
-
 
       // delete all the memories about this URL
       const memoryDeleteResult = await deleteMemoriesOfResource(url);
@@ -81,9 +87,8 @@ async function deepDocumentIngest(url) {
         { username: "capability-deepdocumentingest", guild: "" },
         updateMessage,
         "capability-deepdocumentingest",
-        url,
+        url
       );
-      
     }
 
     const messages = [
@@ -97,7 +102,7 @@ ${PROMPT_DEEP_INGEST}
 Make separate sections of facts for each section of the document, using \`\`\`---\`\`\` between each section. Respond immediately, beginning with the first section, no introductions or confirmation.`,
       },
     ];
-    const completion = await createChatCompletion(messages, {
+    const completion = await llmHelper.createChatCompletion(messages, {
       max_tokens: 4000,
     });
 
@@ -111,7 +116,7 @@ Make separate sections of facts for each section of the document, using \`\`\`--
         { username: "capability-deepdocumentingest", guild: "" },
         factAsMemory,
         "capability",
-        url,
+        url
       );
     });
 
@@ -123,22 +128,26 @@ Make separate sections of facts for each section of the document, using \`\`\`--
       },
     ];
 
-    const metaSummaryCompletion = await createChatCompletion(
+    const metaSummaryCompletion = await llmHelper.createChatCompletion(
       metaSummaryMessages,
       {
         max_tokens: 2000,
-      },
+      }
     );
 
     await storeUserMemory(
       { username: "capability-deepdocumentingest", guild: "" },
       metaSummaryCompletion,
       "capability-deepdocumentingest",
-      url,
+      url
     );
 
     // Cache the current document for future reference
-    fs.writeFileSync(cacheFilePath, JSON.stringify({ document, facts, metaSummary: metaSummaryCompletion }), "utf8");
+    fs.writeFileSync(
+      cacheFilePath,
+      JSON.stringify({ document, facts, metaSummary: metaSummaryCompletion }),
+      "utf8"
+    );
 
     return `Document ingested successfully. ${facts.length} groups of facts were extracted from the ${url}.`;
   } catch (error) {

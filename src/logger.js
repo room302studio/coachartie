@@ -2,6 +2,10 @@ const winston = require("winston");
 require("winston-syslog");
 const os = require("os");
 require("dotenv").config();
+const { supabase } = require("./supabaseclient"); // Importing the existing Supabase client
+// import format from date-fns so we can get nice looking timestamps
+const { format } = require("date-fns");
+const chalk = require("chalk");
 
 module.exports = function (serviceName) {
   let loggers = [];
@@ -17,19 +21,45 @@ module.exports = function (serviceName) {
     return message;
   };
 
+  // Function to send log to Supabase
+  const sendLogToSupabase = async (level, message) => {
+    const response = await supabase.from("logs").insert([
+      {
+        level,
+        message,
+        timestamp: new Date().toISOString(),
+        service: serviceName,
+      },
+    ]);
+
+    if (response.error) {
+      console.error("Error sending log to Supabase:", response.error);
+    }
+  };
+
   loggers.push(
     new winston.transports.Console({
       format: winston.format.combine(
         winston.format.timestamp(),
         winston.format.printf((info) => {
-          const lineNumber = info.stack ? info.stack.split("\n")[2].trim() : "";
           const { level, message, timestamp } = info;
-          // Truncate message if necessary
           const truncatedMessage = truncateMessage(message);
-          return `${timestamp} ${serviceName} ${lineNumber} : ${truncatedMessage}`;
-        }),
+          const prettyTimestamp = format(new Date(timestamp), "HH:mm:ss");
+
+          let logString = `${prettyTimestamp} ${serviceName}: ${truncatedMessage}`;
+
+          if (level === "error") {
+            logString = chalk.red(logString);
+          }
+
+          if (serviceName === "capabilities") {
+            logString = chalk.magenta(logString);
+          }
+
+          return logString;
+        })
       ),
-    }),
+    })
   );
 
   // Only add console and file transports if local logs are not disabled
@@ -44,9 +74,9 @@ module.exports = function (serviceName) {
             // Truncate message if necessary
             const truncatedMessage = truncateMessage(message);
             return `${timestamp} ${level}: ${truncatedMessage}`;
-          }),
+          })
         ),
-      }),
+      })
     );
 
     loggers.push(
@@ -59,9 +89,9 @@ module.exports = function (serviceName) {
             // Truncate message if necessary
             const truncatedMessage = truncateMessage(message);
             return `${timestamp} ${level}: ${truncatedMessage}`;
-          }),
+          })
         ),
-      }),
+      })
     );
   }
 
@@ -99,9 +129,28 @@ module.exports = function (serviceName) {
   }
 
   return {
-    log: (message) => winstonLogger.log("info", truncateMessage(message)),
-    info: (message) => winstonLogger.info(truncateMessage(message)),
-    warn: (message) => winstonLogger.warn(truncateMessage(message)),
-    error: (message) => winstonLogger.error("🚨 " + truncateMessage(message)),
+    log: (message) => {
+      const truncatedMessage = truncateMessage(message);
+      winstonLogger.log("info", truncatedMessage);
+      sendLogToSupabase("info", truncatedMessage);
+    },
+    // info: (message) => winstonLogger.info(truncateMessage(message)),
+    info: (message) => {
+      const truncatedMessage = truncateMessage(message);
+      winstonLogger.info(truncateMessage(message));
+      sendLogToSupabase("info", truncatedMessage);
+    },
+    // warn: (message) => winstonLogger.warn(truncateMessage(message)),
+    warn: (message) => {
+      const truncatedMessage = truncateMessage(message);
+      winstonLogger.warn(truncateMessage(message));
+      sendLogToSupabase("warn", truncatedMessage);
+    },
+    // error: (message) => winstonLogger.error("🚨 " + truncateMessage(message)),
+    error: (message) => {
+      const truncatedMessage = truncateMessage(message);
+      winstonLogger.error("🚨 " + truncatedMessage);
+      sendLogToSupabase("error", truncatedMessage);
+    },
   };
 };

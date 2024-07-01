@@ -5,7 +5,7 @@ const logger = require("../src/logger.js")("pgcron-capability");
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_API_KEY,
-  { db: { schema: "cron" } },
+  { db: { schema: "cron" } }
 );
 const { destructureArgs } = require("../helpers");
 
@@ -25,7 +25,7 @@ async function createJob(schedule, command) {
   });
 
   if (error) {
-    console.error("Error creating job with pg_cron:", error);
+    logger.error("Error creating job with pg_cron:", error);
     throw error;
   }
   return `Job created: ${data}`;
@@ -57,7 +57,7 @@ async function createWebhook(schedule, url, body, headers, name) {
 
   // load webhook-authentication key from environment
   const webhookAuthentication = process.env.OUTGOING_WEBHOOK_AUTHENTICATION;
-  if (webhookAuthentication) {
+  if (!webhookAuthentication) {
     headers["Authorization"] = `Bearer ${webhookAuthentication}`;
   }
 
@@ -91,7 +91,7 @@ async function listWebhookJobs() {
 
   // no jobs without `net.http_post(`
   const filteredJobs = data.filter((job) =>
-    job.command.includes("net.http_post("),
+    job.command.includes("net.http_post(")
   );
 
   logger.info("Webhook Jobs:", data);
@@ -107,14 +107,14 @@ async function listJobs() {
     const { data, error } = await supabase.from("job").select("*").limit(100);
 
     if (error) {
-      console.error("Error listing jobs with pg_cron:", error);
+      logger.error("Error listing jobs with pg_cron:", error);
       throw error;
     }
 
     logger.info("Jobs:", data);
     return JSON.stringify(data, null, 2);
   } catch (err) {
-    console.error("Failed to list jobs:", err.message);
+    logger.error("Failed to list jobs:", err.message);
     throw new Error("Failed to list jobs with pg_cron");
   }
 }
@@ -132,14 +132,14 @@ async function deleteJob(name) {
     });
 
     if (error) {
-      console.error("Error deleting job with pg_cron:", error.message);
+      logger.error("Error deleting job with pg_cron:", error.message);
       throw error;
     }
 
     logger.info("Successfully deleted job:", data);
     return `Successfully deleted job: ${name}`;
   } catch (err) {
-    console.error("Failed to delete job:", err.message);
+    logger.error("Failed to delete job:", err.message);
     throw new Error("Failed to delete job with pg_cron");
   }
 }
@@ -161,14 +161,14 @@ async function updateJob(name, schedule, command) {
     });
 
     if (error) {
-      console.error("Error updating job with pg_cron:", error.message);
+      logger.error("Error updating job with pg_cron:", error.message);
       throw error;
     }
 
     logger.info("Successfully updated job:", data);
     return `Successfully updated job: ${name}`;
   } catch (err) {
-    console.error("Failed to update job:", err.message);
+    logger.error("Failed to update job:", err.message);
     throw new Error("Failed to update job with pg_cron");
   }
 }
@@ -220,7 +220,7 @@ module.exports = {
         processedArgs[1],
         processedArgs[2],
         processedArgs[3],
-        processedArgs[4],
+        processedArgs[4]
       );
     } else if (method === "listWebhookJobs") {
       return await listWebhookJobs();

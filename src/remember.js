@@ -58,7 +58,7 @@ async function getMemoriesBetweenDates(startDate, endDate) {
 
   logger.info(`Looking for memories between ${startDate} and ${endDate}`);
   logger.info(
-    `Looking for memories between ${startDate.toISOString()} and ${endDate.toISOString()}`,
+    `Looking for memories between ${startDate.toISOString()} and ${endDate.toISOString()}`
   );
 
   const { supabase } = require("./supabaseclient.js");
@@ -114,37 +114,37 @@ async function storeUserMemory(
   { username, channel, guild, related_message_id },
   value,
   memoryType = "user",
-  resourceId = null,
+  resourceId = null
 ) {
   // first we do some checks to make sure we have the right types of data
   if (!username) {
-    logger.info("No username provided to storeUserMemory");
+    logger.warn("No username provided to storeUserMemory");
   }
 
   // if the user id is not a string, we need to error out
   if (typeof username !== "string") {
-    logger.info("username provided to storeUserMemory is not a string");
+    logger.warn("username provided to storeUserMemory is not a string");
   }
 
   // if the value is not a string, we need to error out
   if (typeof value !== "string") {
-    logger.info("value provided to storeUserMemory is not a string");
+    logger.warn("value provided to storeUserMemory is not a string");
   }
 
-  if(!channel) {
-    logger.info("No channel provided to storeUserMemory");
+  if (!channel) {
+    logger.warn("No channel provided to storeUserMemory");
   }
 
-  if(!guild) {
-    logger.info("No guild provided to storeUserMemory");
+  if (!guild) {
+    logger.warn("No guild provided to storeUserMemory");
   }
 
-  if(!related_message_id) {
-    logger.info("No related_message_id provided to storeUserMemory");
+  if (!related_message_id) {
+    logger.warn("No related_message_id provided to storeUserMemory");
   }
 
-  if(!memoryType) {
-    logger.info("No memoryType provided to storeUserMemory");
+  if (!memoryType) {
+    logger.warn("No memoryType provided to storeUserMemory");
   }
 
   // TODO: Check .env for any non-openAI embedding models
@@ -166,10 +166,6 @@ async function storeUserMemory(
   //   logger.info(`Error making embeddings: ${e.message}`);
   // }
 
-  logger.info(
-    `Storing memory for ${username}: ${value} in ${memoryType} memory`,
-  );
-
   // const { embedding1: embedding, embedding2, embedding3, embedding4 } = embeddings;
   let embedding;
   try {
@@ -180,7 +176,7 @@ async function storeUserMemory(
 
     const [{ embedding: fetchedEmbedding }] = openAiEmbeddingResponse.data;
     embedding = fetchedEmbedding; // Assign the fetched embedding to the outer scope variable
-    logger.info(`Embedding length: ${embedding.length}`);
+    // logger.info(`Embedding length: ${embedding.length}`);
   } catch (error) {
     logger.info(`Error fetching embedding: ${error.message}`);
     embedding = null; // Ensure embedding is null if there was an error
@@ -212,13 +208,16 @@ async function storeUserMemory(
   //   data,
   // );
 
-  logger.info(`Stored memory for ${username}: ${value} in ${memoryType} memory ${JSON.stringify(data)}`);
+  logger.info(
+    `Stored memory for ${username}: ${value} in ${memoryType} memory ${JSON.stringify(
+      data
+    )}`
+  );
 
   if (error) {
     logger.info(`Error storing user memory: ${error.message}`);
   }
 }
-
 
 /**
  * Retrieve memories associated with a specific file ID
@@ -338,9 +337,12 @@ async function deleteMemoriesOfResource(resourceId) {
  * @param {string} guildId - The ID of the guild where the message was sent.
  * @returns {Promise<object>} - A promise that resolves to the stored message data.
  */
-async function storeUserMessage({ username, channel, guild, conversation_id }, value) {
+async function storeUserMessage(
+  { username, channel, guild, conversation_id },
+  value
+) {
   const { supabase } = require("./supabaseclient.js");
-  const {data, error } = await supabase
+  const { data, error } = await supabase
     // .from("messages")
     .from(MESSAGES_TABLE_NAME)
     .insert({
@@ -350,13 +352,13 @@ async function storeUserMessage({ username, channel, guild, conversation_id }, v
       conversation_id: conversation_id,
       value,
     })
-    .select()
+    .select();
 
   if (error) {
     logger.info(`Error storing user message: ${error.message}`);
   }
 
-  return data[0].id
+  return data[0].id;
 }
 
 /**
@@ -423,7 +425,7 @@ async function voyageEmbedding(string, model = "voyage-large-2") {
         "Content-Type": "application/json",
         Authorization: `Bearer ${process.env.VOYAGE_API_KEY}`,
       },
-    },
+    }
   );
   return response.data;
 }
@@ -455,7 +457,7 @@ async function stringToEmbedding(string) {
       logger.info(`Embedding 2 length: ${embedding2.length}`);
     }
   } catch (error) {
-    console.error("Error generating embedding2:", error);
+    logger.error("Error generating embedding2:", error);
   }
 
   let embedding3 = null;
@@ -466,7 +468,7 @@ async function stringToEmbedding(string) {
       logger.info(`Embedding 3 length: ${embedding3.length}`);
     }
   } catch (error) {
-    console.error("Error generating embedding3:", error);
+    logger.error("Error generating embedding3:", error);
     return {
       embedding1: embedding1 || null,
       embedding2: embedding2 || null,
@@ -529,23 +531,6 @@ async function getRelevantMemories(queryString, limit = 5) {
   if (typeof queryString !== "string") {
     return logger.info("No query string provided to getRelevantMemories");
   }
-  // queryStrings look like: <@1086489885269037128> What you do remember about to-do lists?
-  // we need to clean the query string so that it's not too long
-  let cleanQueryString = queryString.replace(/<@.*>/, "").trim();
-  cleanQueryString = cleanQueryString.replace(/<.*>/, "").trim();
-  cleanQueryString = cleanQueryString.replace(/\?/, "").trim();
-  cleanQueryString = cleanQueryString.replace(/!/, "").trim();
-  cleanQueryString = cleanQueryString.replace(/:/, "").trim();
-  cleanQueryString = cleanQueryString.replace(/\./, "").trim();
-  cleanQueryString = cleanQueryString.replace(/,/, "").trim();
-
-  logger.info("Looking for memories relevant to " + cleanQueryString);
-  // turn the cleanQueryString into an embedding
-  if (!cleanQueryString) {
-    return [];
-  }
-
-  // const { embedding1: embedding } = await stringToEmbedding(queryString);
 
   const openAiEmbeddingResponse = await openai.embeddings.create({
     model: "text-embedding-ada-002",
@@ -571,6 +556,10 @@ async function getRelevantMemories(queryString, limit = 5) {
   if (Object.keys(data).length === 0) {
     return [];
   }
+
+  logger.info(
+    `Found ${data.length}/${limit} relevant memories with threshold at ${0.85}`
+  );
 
   return data;
 }
@@ -610,5 +599,5 @@ module.exports = {
   hasRecentMemoryOfResource,
   getMemoriesBetweenDates,
   getMemoriesByString,
-  deleteMemoriesOfResource
+  deleteMemoriesOfResource,
 };

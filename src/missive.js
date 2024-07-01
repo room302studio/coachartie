@@ -335,7 +335,12 @@ async function listSharedLabels() {
   return data;
 }
 
-async function createSharedLabel({ name, organization, parent, shareWithOrganization }) {
+async function createSharedLabel({
+  name,
+  organization,
+  parent,
+  shareWithOrganization,
+}) {
   const url = `${apiFront}/shared_labels`;
   const options = {
     method: "POST",
@@ -344,19 +349,20 @@ async function createSharedLabel({ name, organization, parent, shareWithOrganiza
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      shared_labels: [{
-        name,
-        organization,
-        parent,
-        share_with_organization: shareWithOrganization,
-      }],
+      shared_labels: [
+        {
+          name,
+          organization,
+          parent,
+          share_with_organization: shareWithOrganization,
+        },
+      ],
     }),
   };
 
   const response = await fetch(url, options);
   return await response.json();
 }
-
 
 async function createPost({
   conversationSubject,
@@ -368,7 +374,7 @@ async function createPost({
   notificationBody,
   text,
   markdown,
-  conversation
+  conversation,
 }) {
   const url = `${apiFront}/posts`;
   const options = {
@@ -393,7 +399,7 @@ async function createPost({
         },
       },
     }),
-  }
+  };
   const response = await fetch(url, options);
   return await response.json();
 }
@@ -434,5 +440,11 @@ async function listUsers() {
 }
 
 module.exports = {
-  listConversations, listConversationMessages, getMessage, listSharedLabels, createSharedLabel, createPost, listUsers,
+  listConversations,
+  listConversationMessages,
+  getMessage,
+  listSharedLabels,
+  createSharedLabel,
+  createPost,
+  listUsers,
 };

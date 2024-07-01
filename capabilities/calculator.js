@@ -1,4 +1,5 @@
 const { destructureArgs } = require("../helpers");
+const logger = require("../src/logger.js")("capability-calculator");
 
 /**
  * Adds up an array of numbers.

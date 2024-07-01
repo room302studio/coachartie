@@ -12,12 +12,10 @@ jest.mock("../helpers", () => ({
   doesMessageContainCapability: jest.fn().mockReturnValue(false),
   isExceedingTokenLimit: jest.fn().mockReturnValue(false),
   countMessageTokens: jest.fn().mockReturnValue(0),
-  createTokenLimitWarning: jest
-    .fn()
-    .mockReturnValue({
-      role: "system",
-      content: "Warning: Token limit approaching.",
-    }),
+  createTokenLimitWarning: jest.fn().mockReturnValue({
+    role: "system",
+    content: "Warning: Token limit approaching.",
+  }),
 }));
 
 // Mock more dependencies as needed...
@@ -39,7 +37,7 @@ describe("processMessageChain", () => {
 
     const processedMessages = await processMessageChain(
       messages,
-      options,
+      options
     ).catch((e) => []);
     expect(Array.isArray(processedMessages)).toBe(true);
   });
@@ -117,7 +115,7 @@ describe("processMessageChain", () => {
       "calculator",
       "add",
       "10,20",
-      messages,
+      messages
     );
 
     // Assert that the response includes the sum of the two numbers
