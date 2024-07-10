@@ -307,6 +307,8 @@ app.post("/api/message", async (req, res) => {
   const { password, message, username } = req.body;
   const passphrase = process.env.WEBHOOK_PASSPHRASE;
 
+  const { processMessageChain } = await require("./src/chain");
+
   // Verify the password
   if (password !== passphrase) {
     logger.error(`Password does not match passphrase`);
