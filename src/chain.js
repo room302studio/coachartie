@@ -34,7 +34,7 @@ module.exports = (async () => {
     logger.info(
       `[${chainId}] Starting message chain processing for ${username} in ${
         guild ? guild + " - " : ""
-      }${channel.name}`
+      }${channel?.name}`
     );
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
