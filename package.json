@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node bot.js",
     "web": "node web.js",
+    "api": "node api.js",
     "player": "nodemon capability-player.js",
     "manifest": "node capabilities/_generate-manifest.js",
     "test": "jest"

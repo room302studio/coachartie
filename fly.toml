@@ -22,5 +22,5 @@ primary_region = "ewr"
   cpus = 1
 
 [processes]
-  web = "npm run web"
+  api = "npm run api"
   discord = "npm run start"
