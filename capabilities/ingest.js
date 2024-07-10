@@ -2,7 +2,7 @@ const puppeteer = require("puppeteer");
 const cheerio = require("cheerio");
 const dotenv = require("dotenv");
 dotenv.config();
-const { webPageToText, webpageToHTML } = require("./web.js"); // Adjust the path as necessary
+const { webPageToText, webpageToHTML } = require("../capabilities/web.js");
 const {
   destructureArgs,
   createChatCompletion,
