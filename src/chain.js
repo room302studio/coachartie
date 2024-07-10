@@ -95,6 +95,13 @@ module.exports = (async () => {
     const lastMessage = messages[messages.length - 1];
     logger.info(`[${chainId}] Last message: ${JSON.stringify(lastMessage)}`);
 
+    // if options doesn't come with a sendMessage, we need to stub it
+    if (!options.sendMessage) {
+      options.sendMessage = async (content) => {
+        logger.info(`[${chainId}] Stubbed sendMessage: ${content}`);
+      };
+    }
+
     if (lastMessage.role === "user") {
       await storeUserMessage(
         {
