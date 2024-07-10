@@ -326,8 +326,13 @@ app.post("/api/message", async (req, res) => {
       { username }
     );
 
-    const lastMessage = processedMessage[processedMessage.length - 1];
-    res.status(200).json({ response: lastMessage.content });
+    console.log(`Processed message: ${JSON.stringify(processedMessage)}`);
+
+    // const lastMessage = processedMessage[processedMessage.length - 1];
+    const lastMessage = processedMessage.finalContent;
+
+    console.log(`Last message: ${JSON.stringify(lastMessage)}`);
+    res.status(200).json({ response: lastMessage });
   } catch (error) {
     logger.error(`Error processing message: ${error.message}`);
     res
