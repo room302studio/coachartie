@@ -303,7 +303,6 @@ app.post("/api/missive-reply", async (req, res) => {
 });
 
 app.post("/api/message", async (req, res) => {
-  const { processMessageChain } = require("./src/chain");
   const { password, message, username } = req.body;
   const passphrase = process.env.WEBHOOK_PASSPHRASE;
 
