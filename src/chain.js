@@ -17,6 +17,12 @@ let config;
   logger.info(`Loaded configuration: ${JSON.stringify(config)}`);
 })();
 
+function safeGet(obj, path, defaultValue = undefined) {
+  return (
+    path.split(".").reduce((acc, part) => acc && acc[part], obj) ?? defaultValue
+  );
+}
+
 module.exports = (async () => {
   async function processMessageChain(
     messages,
@@ -31,10 +37,20 @@ module.exports = (async () => {
     }
 
     const chainId = getUniqueEmoji();
+    // logger.info(
+    //   `[${chainId}] Starting message chain processing for ${username} in ${
+    //     guild ? guild + " - " : ""
+    //   }${channel?.name}`
+    // );
+
     logger.info(
-      `[${chainId}] Starting message chain processing for ${username} in ${
-        guild ? guild + " - " : ""
-      }${channel?.name}`
+      `[${chainId}] Starting message chain processing for ${
+        options.username
+      } in ${
+        safeGet(options, "guild", "")
+          ? safeGet(options, "guild", "") + " - "
+          : ""
+      }${safeGet(options, "channel.name", "unknown channel")}`
     );
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
@@ -111,8 +127,8 @@ module.exports = (async () => {
       await storeUserMessage(
         {
           username: options.username,
-          channel: options.channel.name,
-          guild: options.guild,
+          channel: safeGet(options, "channel.name", "unknown"),
+          guild: safeGet(options, "guild", "unknown"),
         },
         lastMessage.content
       );
@@ -204,11 +220,11 @@ module.exports = (async () => {
     error,
     chainId
   ) {
-    if (!options.sendMessage) {
-      options.sendMessage = async (content) => {
+    const sendMessage =
+      options.sendMessage ||
+      (async (content) => {
         logger.info(`[${chainId}] Stubbed sendMessage: ${content}`);
-      };
-    }
+      });
 
     if (retryCount < config.MAX_RETRY_COUNT) {
       logger.warn(
@@ -216,7 +232,7 @@ module.exports = (async () => {
           retryCount + 1
         }/${config.MAX_RETRY_COUNT}): ${error}`
       );
-      await options.sendMessage(
+      await sendMessage(
         `An error occurred. Retrying (attempt ${retryCount + 1}/${
           config.MAX_RETRY_COUNT
         })...`
