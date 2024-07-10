@@ -139,7 +139,7 @@ async function processMissiveRequest(body) {
           { username, channel: conversationId, guild: "missive" },
           `Attachment ${body.comment.attachment.filename}: ${attachmentDescription}`,
           "attachment",
-          resourceId,
+          resourceId
         );
 
         // Add the attachment description to the formatted messages array
@@ -163,7 +163,7 @@ async function processMissiveRequest(body) {
               role: "user",
               content: m.value,
             };
-          }),
+          })
         );
       } catch (error) {
         // Log any errors that occur during fetching resource memories
@@ -186,7 +186,7 @@ async function processMissiveRequest(body) {
         content: `#### Contextual message in conversation:\n${m.content}`,
       };
       return obj;
-    }),
+    })
   );
 
   // Add the webhook description to the formatted messages array as a system message
@@ -199,7 +199,7 @@ async function processMissiveRequest(body) {
   formattedMessages.push({
     role: "user",
     content: `During this conversation, I might reference some of this information: ${jsonToMarkdownList(
-      body,
+      body
     )}`,
   });
 
@@ -302,6 +302,39 @@ app.post("/api/missive-reply", async (req, res) => {
     });
 });
 
+app.post("/api/message", async (req, res) => {
+  const { processMessageChain } = require("./src/chain");
+  const { password, message, username } = req.body;
+  const passphrase = process.env.WEBHOOK_PASSPHRASE;
+
+  // Verify the password
+  if (password !== passphrase) {
+    logger.error(`Password does not match passphrase`);
+    return res.status(401).send("Unauthorized request");
+  }
+
+  try {
+    // Process the message chain
+    const processedMessage = await processMessageChain(
+      [
+        {
+          role: "user",
+          content: message,
+        },
+      ],
+      { username }
+    );
+
+    const lastMessage = processedMessage[processedMessage.length - 1];
+    res.status(200).json({ response: lastMessage.content });
+  } catch (error) {
+    logger.error(`Error processing message: ${error.message}`);
+    res
+      .status(500)
+      .json({ error: `Error processing message: ${error.message}` });
+  }
+});
+
 app.post("/api/webhook-prompt", async (req, res) => {
   const { getPromptsFromSupabase } = require("./helpers.js");
   const { processMessageChain } = await require("./src/chain.js");
@@ -352,7 +385,7 @@ app.post("/api/webhook-prompt", async (req, res) => {
         content: `${prompt.prompt_text} \n ${message}`,
       },
     ],
-    { username },
+    { username }
   );
 
   logger.info(`Processed message: ${JSON.stringify(processedMessage)}`);
@@ -368,7 +401,7 @@ function jsonToMarkdownList(jsonObj, indentLevel = 0) {
     if (typeof value === "object" && value !== null) {
       str += `${indentSpaces}- **${key}**:\n${jsonToMarkdownList(
         value,
-        indentLevel + 1,
+        indentLevel + 1
       )}`;
     } else {
       str += `${indentSpaces}- ${key}: ${value}\n`;
