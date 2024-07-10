@@ -44,13 +44,9 @@ module.exports = (async () => {
     // );
 
     logger.info(
-      `[${chainId}] Starting message chain processing for ${
-        options.username
-      } in ${
-        safeGet(options, "guild", "")
-          ? safeGet(options, "guild", "") + " - "
-          : ""
-      }${safeGet(options, "channel.name", "unknown channel")}`
+      `[${chainId}] Starting message chain processing for ${username} in ${
+        safeGet(guild, "name", "") ? safeGet(guild, "name", "") + " - " : ""
+      }${safeGet(channel, "name", "unknown channel")}`
     );
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
