@@ -1,284 +1,197 @@
-/**
- * @file helpers-llm.js
- * @description Handles interactions with various LLM (Large Language Model) providers including OpenAI, Anthropic, and localhost instances.
- */
+require("dotenv").config();
+const b = require("blessed"),
+  fs = require("fs"),
+  path = require("path"),
+  m = require("gray-matter"),
+  chokidar = require("chokidar"),
+  diff = require("diff");
+const LLMHelper = require("./helpers-llm");
 
-const OpenAI = require("openai");
-const Anthropic = require("@anthropic-ai/sdk");
-const axios = require("axios");
-const logger = require("./src/logger.js")("helpers-llm");
-const { getConfigFromSupabase } = require("./helpers-utility.js");
-const { assembleMessagePreamble } = require("./helpers-prompt.js");
-const { Chance } = require("chance");
-const chance = new Chance();
+const d = process.env.DRAFTS_DIR,
+  s = b.screen({ smartCSR: true }),
+  main = b.box({ parent: s, top: 0, left: 0, width: "100%", height: "100%" }),
+  title = b.text({
+    parent: main,
+    top: 0,
+    left: "center",
+    content: "Draft Assistant",
+  }),
+  status = b.text({ parent: main, bottom: 0, left: 0, right: 0, height: 1 }),
+  draftList = b.list({
+    parent: main,
+    top: 2,
+    left: 0,
+    width: "100%",
+    height: "100%-3",
+    keys: true,
+    vi: true,
+    mouse: true,
+    items: [],
+    style: { selected: { inverse: true } },
+  }),
+  content = b.box({
+    parent: main,
+    top: 2,
+    left: 0,
+    width: "100%",
+    height: "100%-3",
+    hidden: true,
+    content: "",
+    scrollable: true,
+    alwaysScroll: true,
+    keys: true,
+    vi: true,
+    mouse: true,
+    wrap: true,
+    tags: true,
+  });
 
-const chatProviderModelOptions = {
-  openai: ["gpt-4o", "gpt-3.5-turbo"],
-  anthropic: [
-    "claude-3-5-sonnet-20240620",
-    "claude-3-sonnet-20240229",
-    "claude-3-opus-20240229",
-    "claude-3-haiku-20240307",
-  ],
-  localhost: ["lmstudio-community/Meta-Llama-3-8B-Instruct-GGUF"],
-};
+const gdi = (f) => {
+    try {
+      const c = fs.readFileSync(path.join(d, f), "utf-8"),
+        { data, content: body } = m(c);
+      return {
+        f,
+        dek: data.dek || "No dek",
+        mt: fs.statSync(path.join(d, f)).mtime,
+        content: body,
+        wc: body.split(/\s+/).length,
+        hc: body.split("\n").filter((l) => l.startsWith("#")).length,
+        ...data,
+      };
+    } catch (e) {
+      return null;
+    }
+  },
+  ft = (t) =>
+    t
+      .replace(/\*\*(.*?)\*\*/g, "{bold}$1{/bold}")
+      .replace(/\*(.*?)\*/g, "{italic}$1{/italic}")
+      .replace(/`(.*?)`/g, "{underline}$1{/underline}")
+      .replace(/^# (.*$)/gm, "{bold}$1{/bold}")
+      .replace(/^## (.*$)/gm, "{bold}$1{/bold}")
+      .replace(/^### (.*$)/gm, "{bold}$1{/bold}");
 
-class LLMHelper {
-  constructor() {
-    this.providers = {
-      openai: {
-        initialize: () => new OpenAI({ apiKey: process.env.OPENAI_API_KEY }),
-        createCompletion: async (client, config) => {
-          config.model = chatProviderModelOptions.openai[0];
-          const res = await client.chat.completions.create(config);
-          return res;
-        },
-        normalizeCompletion: (completion) => ({
-          content: completion.choices[0].message.content,
-          role: completion.choices[0].message.role,
-        }),
-      },
-      anthropic: {
-        initialize: () =>
-          new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY }),
-        createCompletion: async (client, config) => {
-          config.model = chatProviderModelOptions.anthropic[0];
+let dDrafts = [],
+  cDraft,
+  vInd = "|",
+  editCount = 0;
 
-          config.messages = config.messages.map((msg) => {
-            if (msg.role === "system") {
-              return { ...msg, role: "user" };
-            }
-            return msg;
-          });
-
-          const formattedMessages = config.messages.reduce((acc, msg) => {
-            if (acc.length === 0) {
-              return [msg];
-            }
-            if (msg.role === "user") {
-              const lastMsg = acc.pop();
-              return [
-                ...acc,
-                { ...lastMsg, content: `${lastMsg.content}\n${msg.content}` },
-              ];
-            }
-            return [...acc, msg];
-          }, []);
-
-          config.messages = formattedMessages.reduce((acc, msg) => {
-            if (acc.length === 0) {
-              return [msg];
-            }
-            if (msg.role === "assistant") {
-              const lastMsg = acc.pop();
-              return [
-                ...acc,
-                { ...lastMsg, content: `${lastMsg.content}\n${msg.content}` },
-              ];
-            }
-            return [...acc, msg];
-          }, []);
-
-          delete config.presence_penalty;
-          config.temperature = Math.min(1, Math.max(0, config.temperature));
-
-          const res = await client.messages.create(config);
-          logger.info(`Anthropic response: ${JSON.stringify(res)}`);
-          return res;
-        },
-        normalizeCompletion: (completion) => ({
-          content: completion.content[0].text,
-          role: "assistant",
-        }),
-      },
-      localhost: {
-        initialize: () => null,
-        createCompletion: async (client, config) => {
-          config.model = chatProviderModelOptions.localhost[0];
-          const endpoint = "http://localhost:1234/v1/chat/completions";
-
-          const formattedMessages = config.messages.map((msg) => ({
-            role: msg.role,
-            content:
-              typeof msg.content === "string"
-                ? msg.content
-                : JSON.stringify(msg.content),
-          }));
-          const response = await axios.post(endpoint, {
-            ...config,
-            messages: formattedMessages,
-          });
-          return response.data;
-        },
-        normalizeCompletion: (completion) => ({
-          content: completion.choices[0].message.content,
-          role: completion.choices[0].message.role,
-        }),
-      },
-    };
-    this.currentProvider = null;
-    this.currentClient = null;
-  }
-
-  /**
-   * Retrieves the current LLM provider from the Supabase configuration.
-   * @returns {Promise<string>} The name of the current LLM provider.
-   */
-  async getCurrentProvider() {
-    const { CHAT_MODEL } = await getConfigFromSupabase();
-    logger.info(`Current LLM provider from config: ${CHAT_MODEL}`);
-    return CHAT_MODEL || "openai";
-  }
-
-  /**
-   * Initializes the current LLM provider based on the configuration.
-   * @returns {Promise<void>}
-   * @throws {Error} If the provider is not supported.
-   */
-  async initializeProvider() {
-    const providerName = await this.getCurrentProvider();
-    if (providerName !== this.currentProvider) {
-      const provider = this.providers[providerName];
-      if (!provider) {
-        throw new Error(`Unsupported LLM provider: ${providerName}`);
+const uVI = () => {
+    vInd = ["|", "/", "-", "\\"][(["|", "/", "-", "\\"].indexOf(vInd) + 1) % 4];
+    uStatus();
+  },
+  uStatus = () => {
+    status.setContent(
+      `${vInd} ${
+        cDraft ? `${cDraft.f} (${cDraft.wc} words)` : "No draft"
+      } | Edits: ${editCount} | ↑↓/jk:Nav | Enter:Select | z:Zoom | q:Quit`
+    );
+    s.render();
+  },
+  ld = () => {
+    try {
+      const a = fs
+        .readdirSync(d)
+        .filter((f) => f.endsWith(".md") && !f.startsWith("!"))
+        .map(gdi)
+        .filter((d) => d !== null)
+        .sort((a, b) => b.mt - a.mt);
+      dDrafts = [
+        ...a.slice(0, 3),
+        ...a
+          .slice(3)
+          .sort(() => 0.5 - Math.random())
+          .slice(0, 2),
+        ...a.slice(3),
+      ];
+      draftList.setItems(
+        dDrafts.map(
+          (d, i) =>
+            `${i < 3 ? "▶" : i < 5 ? "?" : "✧"} ${d.f} - ${d.dek} (${
+              d.wc
+            } words, ${d.hc} headers)`
+        )
+      );
+      if (!cDraft) {
+        draftList.select(0);
+        draftList.focus();
+        draftList.show();
+        content.hide();
       }
-      this.currentProvider = providerName;
-      this.currentClient = provider.initialize();
+      uStatus();
+    } catch (e) {
+      status.setContent(`Error: ${e.message}`);
     }
-  }
-
-  /**
-   * Creates a chat completion using the current LLM provider.
-   * @param {Array<Object>} messages - An array of message objects for the conversation.
-   * @param {Object} config - Configuration options for the LLM.
-   * @returns {Promise<Object>} The normalized completion response from the LLM.
-   * @throws {Error} If there is an issue creating the chat completion.
-   */
-  async createChatCompletion(messages, config = {}) {
-    await this.initializeProvider();
-
-    const defaultConfig = {
-      model: config.memoryModel ? config.memoryModel : "gpt-3.5-turbo",
-      temperature: 0.5,
-      presence_penalty: 0,
-      max_tokens: 800,
-    };
-
-    config = { ...defaultConfig, ...config, messages };
-
+  },
+  gt = async (d) => {
+    content.setContent("Analyzing...");
+    draftList.hide();
+    content.show();
+    content.focus();
+    s.render();
     try {
-      logger.info(`Creating chat completion with ${this.currentProvider}`);
-      const rawCompletion = await this.providers[
-        this.currentProvider
-      ].createCompletion(this.currentClient, config);
-      const normalizedCompletion =
-        this.providers[this.currentProvider].normalizeCompletion(rawCompletion);
-      logger.info(`Chat completion created successfully`);
-      return normalizedCompletion;
-    } catch (error) {
-      logger.error(
-        `Error creating chat completion with ${this.currentProvider}: ${error.message}`
-      );
-      throw error;
+      const completion = await LLMHelper.createChatCompletion([
+        { role: "user", content: `Analyze:\n\n${d.content}` },
+      ]);
+      content.setContent(ft(completion.content));
+      s.render();
+    } catch (e) {
+      content.setContent(`Error: ${e.message}`);
+    }
+    uStatus();
+  };
+
+setInterval(uVI, 250);
+ld();
+
+chokidar
+  .watch(d, { ignored: /(^|[\/\\])\../, persistent: true })
+  .on("change", (p) => {
+    const newDraft = gdi(path.basename(p));
+    if (cDraft && cDraft.f === path.basename(p)) {
+      editCount++;
+      cDraft = newDraft;
+      if (content.visible) gt(cDraft);
+    }
+    ld();
+  });
+
+draftList.on("select", (_, i) => {
+  cDraft = dDrafts[i];
+  gt(cDraft);
+});
+
+s.key(["escape", "q"], () => process.exit(0));
+s.key(["b"], () => {
+  cDraft = null;
+  content.hide();
+  draftList.show();
+  draftList.focus();
+  uStatus();
+});
+s.key(["z"], () => {
+  if (draftList.visible) {
+    const d = dDrafts[draftList.selected];
+    if (d) {
+      const m = Object.entries(d)
+        .filter(([k]) => !["f", "content", "mt"].includes(k))
+        .map(([k, v]) => `${k}: ${v}`)
+        .join("\n");
+      content.setContent(m);
+      draftList.hide();
+      content.show();
+      uStatus();
     }
   }
+});
+s.key(["j"], () => {
+  draftList.down(1);
+  s.render();
+});
+s.key(["k"], () => {
+  draftList.up(1);
+  s.render();
+});
 
-  /**
-   * Generates random AI completion parameters.
-   * @returns {Object} An object containing temperature, presence_penalty, and frequency_penalty values.
-   */
-  generateAiCompletionParams() {
-    return {
-      temperature: chance.floating({ min: 0, max: 1.2 }),
-      presence_penalty: chance.floating({ min: -0.05, max: 0.1 }),
-      frequency_penalty: chance.floating({ min: 0.0, max: 0.1 }),
-    };
-  }
-
-  /**
-   * Generates an AI completion based on the prompt, username, and messages provided.
-   * @param {string} prompt - The prompt for the AI completion.
-   * @param {string} username - The username associated with the messages.
-   * @param {Array<Object>} messages - An array of message objects for the conversation.
-   * @param {Object} config - Configuration options for the LLM.
-   * @returns {Promise<Object>} An object containing the updated messages array and the AI response.
-   * @throws {Error} If there is an issue generating the AI completion.
-   */
-  async generateAiCompletion(prompt, username, messages, config = {}) {
-    let { temperature, presence_penalty } = config;
-
-    if (!temperature) temperature = 1;
-    if (!presence_penalty) presence_penalty = 0;
-
-    if (messages[messages.length - 1].image) {
-      delete messages[messages.length - 1].image;
-    }
-
-    logger.info(
-      `The length of the messages before adding preamble, filtering, and transformation is: ${messages.length}.`
-    );
-    logger.info(
-      `🤖 Generating AI completion for <${username}> from ${messages.length} messages: ${prompt}`
-    );
-
-    messages = await this.addPreambleToMessages(username, prompt, messages);
-
-    messages = messages.filter((message) => message.content);
-
-    logger.info(
-      `The length of the messages after filtering but before transformation is: ${messages.length}.`
-    );
-
-    messages = messages.map((msg) => ({
-      role: msg.role,
-      content:
-        typeof msg.content === "string"
-          ? msg.content
-          : JSON.stringify(msg.content),
-    }));
-
-    logger.info(
-      `The final length of the messages after transformation is: ${messages.length}.`
-    );
-
-    try {
-      logger.info(`🔧 Chat completion parameters:
-  - Temperature: ${temperature}
-  - Presence Penalty: ${presence_penalty}
- - Message Count: ${messages.length}.`);
-
-      const completion = await this.createChatCompletion(messages, {
-        temperature,
-        presence_penalty,
-      });
-
-      logger.info(`🔧 Chat completion created:\n-${completion.content}`);
-
-      const aiResponse = { role: completion.role, content: completion.content };
-      messages.push(aiResponse);
-
-      logger.info(
-        `The length of the messages array after appending AI response is: ${messages.length}`
-      );
-
-      return { messages, aiResponse };
-    } catch (err) {
-      logger.error(`Error creating chat completion ${err}`);
-      throw err;
-    }
-  }
-
-  /**
-   * Adds a preamble to the provided messages based on the username and prompt.
-   * @param {string} username - The username associated with the messages.
-   * @param {string} prompt - The prompt for the AI completion.
-   * @param {Array<Object>} messages - An array of message objects for the conversation.
-   * @returns {Promise<Array<Object>>} The messages array with the preamble added.
-   */
-  async addPreambleToMessages(username, prompt, messages) {
-    const preamble = await assembleMessagePreamble(username, prompt, messages);
-    return [...preamble, ...messages.flat()];
-  }
-}
-
-module.exports = new LLMHelper();
+s.render();
