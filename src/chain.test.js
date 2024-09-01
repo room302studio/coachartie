@@ -37,7 +37,7 @@ describe("processMessageChain", () => {
 
     const processedMessages = await processMessageChain(
       messages,
-      options,
+      options
     ).catch((e) => []);
     expect(Array.isArray(processedMessages)).toBe(true);
   });
@@ -115,7 +115,7 @@ describe("processMessageChain", () => {
       "calculator",
       "add",
       "10,20",
-      messages,
+      messages
     );
 
     // Assert that the response includes the sum of the two numbers
